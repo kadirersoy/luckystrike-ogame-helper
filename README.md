@@ -1,8 +1,31 @@
-# ⚡ LuckyStrike OGame Helper (v3.9)
+# ⚡ LuckyStrike OGame Helper (v4.0)
 
-OGame için özel olarak geliştirilmiş; **Maliyet Sepeti (Resmi Formüllerle Çoklu Kademe Hesabı)**, **Galaxy Scanner (Slot 8 & Çoklu Işınlanma Arayıcı)** ve **Player Finder (Oyuncu & Gezegen Bulucu)** modüllerini içeren gelişmiş Tampermonkey kullanıcı betiğidir.
+OGame için özel olarak geliştirilmiş; **Maliyet Sepeti (Resmi Formüllerle Çoklu Kademe Hesabı)**, **Galaxy Scanner (Slot 8 & Çoklu Işınlanma Arayıcı)** ve **Player Finder (Oyuncu & Gezegen Bulucu)** modüllerini içeren gelişmiş tarayıcı eklentisidir (**Chrome / Edge Extension - Manifest V3** ve **Tampermonkey Userscript**).
 
 Ban riski taşımayan resmi Gameforge XML API altyapısını kullanır, oyun içi arayüzle kusursuz entegre olur.
+
+---
+
+## 🚀 Kurulum (2 Farklı Yöntem)
+
+### Yöntem 1: Doğrudan Chrome / Edge Eklentisi Olarak (Önerilen 🌟)
+*Tampermonkey'e hiç ihtiyaç duymadan, tarayıcınızın kendi eklentisi olarak çalışır.*
+
+1. Bu depoyu indirin (`Code -> Download ZIP` veya bilgisayarınızdaki klasör).
+2. Tarayıcınızda eklentiler sayfasını açın:
+   * **Google Chrome için:** `chrome://extensions`
+   * **Microsoft Edge için:** `edge://extensions`
+3. Sağ üst köşedeki (veya sol menüdeki) **"Geliştirici Modu"** (Developer Mode) anahtarını açın.
+4. Sol üstte beliren **"Paketlenmemiş öğe yükle"** (Load unpacked) butonuna tıklayın.
+5. Deponun bulunduğu klasörü seçin (`luckystrike-ogame-helper`).
+6. Eklenti anında kurulacaktır! OGame sekmenizi açıp sayfayı yenilemeniz yeterlidir.
+
+---
+
+### Yöntem 2: Tampermonkey Kullanıcı Betiği Olarak
+1. Tarayıcınızdaki Tampermonkey eklenti panelini açın.
+2. Yeni script oluşturup [`ogame_auto_expedition.user.js`](file:///d:/_Antigravity/OGame/ogame_auto_expedition.user.js) dosyasının içeriğini yapıştırın.
+3. `Ctrl + S` ile kaydedin.
 
 ---
 
@@ -46,15 +69,3 @@ Ban riski taşımayan resmi Gameforge XML API altyapısını kullanır, oyun iç
 * **Sürüklenebilir Panel:** Paneli başlığından tutup ekranın istediğiniz yerine taşıyabilirsiniz; konumu hafızada (`localStorage`) saklanır.
 * **Sekme & Durum Hafızası:** Sayfayı yenilediğinizde veya gezegenler arası geçiş yaptığınızda açık olan sekmeniz ve panel durumu kaybolmaz.
 * **Karanlık Tema:** OGame'in modern karanlık temasıyla %100 uyumlu renk paleti.
-
----
-
-## 🛠️ Kurulum & Güncelleme
-
-1. Tarayıcınızda (Edge / Chrome) **Tampermonkey** eklentisinin açık olduğundan emin olun.
-2. Tampermonkey simgesine tıklayıp **"Kontrol Paneli"** (Dashboard) sekmesini açın.
-3. Mevcut scripti seçin (veya sol üstten **+** ile yeni script oluşturun).
-4. Editördeki tüm içeriği silip [`ogame_auto_expedition.user.js`](file:///d:/_Antigravity/OGame/ogame_auto_expedition.user.js) dosyasındaki güncel kodları yapıştırın.
-5. `Ctrl + S` ile kaydedin.
-6. OGame sekmesini açıp sayfayı yenileyin (**F5**).
-7. Sağ alttaki **⚡** butonuna basarak paneli kullanmaya başlayabilirsiniz!
