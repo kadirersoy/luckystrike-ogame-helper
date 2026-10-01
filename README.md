@@ -24,7 +24,7 @@ Ban riski taşımayan resmi Gameforge XML API altyapısını kullanır, oyun iç
 
 ### Yöntem 2: Tampermonkey Kullanıcı Betiği Olarak
 1. Tarayıcınızdaki Tampermonkey eklenti panelini açın.
-2. Yeni script oluşturup [`ogame_auto_expedition.user.js`](file:///d:/_Antigravity/OGame/ogame_auto_expedition.user.js) dosyasının içeriğini yapıştırın.
+2. Yeni script oluşturup [`luckystrike_ogame_helper.js`](luckystrike_ogame_helper.js) dosyasının içeriğini yapıştırın.
 3. `Ctrl + S` ile kaydedin.
 
 ---
