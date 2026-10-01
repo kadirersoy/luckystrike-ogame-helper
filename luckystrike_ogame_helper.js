@@ -2,7 +2,7 @@
 // @name         LuckyStrike OGame Helper
 // @namespace    http://tampermonkey.net/
 // @version      4.0
-// @description  OGame helper: Maliyet Sepeti (Formül Tabanlı Kesin Hesap), Galaxy Scanner, Player Finder
+// @description  LuckyStrike OGame Helper: Maliyet Sepeti, Galaxy Scanner, Player Finder
 // @author       LuckyStrike
 // @match        *://*.ogame.gameforge.com/game/index.php*
 // @grant        none
