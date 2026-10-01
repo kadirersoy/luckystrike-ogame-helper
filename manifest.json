@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "LuckyStrike OGame Helper",
+  "version": "4.0.0",
+  "description": "OGame helper: Maliyet Sepeti (Formül Tabanlı Kesin Hesap), Galaxy Scanner, Player Finder",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "LuckyStrike OGame Helper"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.ogame.gameforge.com/game/index.php*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
