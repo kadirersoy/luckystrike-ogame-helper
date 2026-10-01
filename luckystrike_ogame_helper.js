@@ -1,19 +1,18 @@
 // ==UserScript==
 // @name         LuckyStrike OGame Helper
 // @namespace    http://tampermonkey.net/
-// @version      4.0
+// @version      4.1
 // @description  LuckyStrike OGame Helper: Maliyet Sepeti, Galaxy Scanner, Player Finder
 // @author       LuckyStrike
 // @match        *://*.ogame.gameforge.com/game/index.php*
 // @grant        none
 // @run-at       document-end
 // ==/UserScript==
-
 (function() {
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v4.0 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v4.1 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -375,7 +374,7 @@
     }
     window.lsRemoveCartItem = removeCartItem;
 
-    window.lsCopyNumber = function(val, elemId) {
+    function copyNumber(val, elemId) {
         const absVal = Math.abs(val);
         navigator.clipboard.writeText(String(absVal)).then(() => {
             const el = document.getElementById(elemId);
@@ -386,7 +385,8 @@
                 setTimeout(() => { el.textContent = orig; el.style.color = ''; }, 1200);
             }
         });
-    };
+    }
+    window.lsCopyNumber = copyNumber;
 
     function renderCart() {
         const listEl = document.getElementById('ls-cart-list');
@@ -423,8 +423,19 @@
                             '<span style="color:' + (item.crystal < 0 ? '#e67e22' : '#5dade2') + '">' + sign(item.crystal) + '</span> · ' +
                             '<span style="color:' + (item.deuterium < 0 ? '#e67e22' : '#2ecc71') + '">' + sign(item.deuterium) + '</span>' +
                         '</div>' +
-                    '</div>' +
-                    '<button class="ls-x" onclick="window.lsRemoveCartItem(' + i + ')">✖</button>';
+                    '</div>';
+
+                const xBtn = document.createElement('button');
+                xBtn.className = 'ls-x';
+                xBtn.textContent = '✖';
+                xBtn.title = 'Sepetten Çıkar';
+                xBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    removeCartItem(i);
+                });
+                d.appendChild(xBtn);
+
                 listEl.appendChild(d);
             });
         }
@@ -441,32 +452,36 @@
                 '<span>🟡 Kalan Metal:</span>' +
                 '<span style="display:flex;align-items:center;gap:4px;">' +
                     '<b style="color:#aaa">' + fmt(tM) + '</b>' +
-                    '<button id="ls-cp-m" class="ls-cp-btn" onclick="window.lsCopyNumber(' + tM + ',\'ls-cp-m\')" title="Sayısını kopyala">📋</button>' +
+                    '<button id="ls-cp-m" class="ls-cp-btn" title="Sayısını kopyala">📋</button>' +
                 '</span>' +
             '</div>' +
             '<div class="ls-total-row">' +
                 '<span>🔵 Kalan Kristal:</span>' +
                 '<span style="display:flex;align-items:center;gap:4px;">' +
                     '<b style="color:#5dade2">' + fmt(tC) + '</b>' +
-                    '<button id="ls-cp-c" class="ls-cp-btn" onclick="window.lsCopyNumber(' + tC + ',\'ls-cp-c\')" title="Sayısını kopyala">📋</button>' +
+                    '<button id="ls-cp-c" class="ls-cp-btn" title="Sayısını kopyala">📋</button>' +
                 '</span>' +
             '</div>' +
             '<div class="ls-total-row">' +
                 '<span>🟢 Kalan Deuterium:</span>' +
                 '<span style="display:flex;align-items:center;gap:4px;">' +
                     '<b style="color:#2ecc71">' + fmt(tD) + '</b>' +
-                    '<button id="ls-cp-d" class="ls-cp-btn" onclick="window.lsCopyNumber(' + tD + ',\'ls-cp-d\')" title="Sayısını kopyala">📋</button>' +
+                    '<button id="ls-cp-d" class="ls-cp-btn" title="Sayısını kopyala">📋</button>' +
                 '</span>' +
             '</div>' +
             '<div class="ls-total-row" style="border-top:1px solid #333;padding-top:4px;margin-top:4px">' +
                 '<span>🔴 Net Kalan İhtiyaç:</span>' +
                 '<span style="display:flex;align-items:center;gap:4px;">' +
                     '<b style="color:#fff">' + fmt(netTotal) + '</b>' +
-                    '<button id="ls-cp-net" class="ls-cp-btn" onclick="window.lsCopyNumber(' + netTotal + ',\'ls-cp-net\')" title="Sayısını kopyala">📋</button>' +
+                    '<button id="ls-cp-net" class="ls-cp-btn" title="Sayısını kopyala">📋</button>' +
                 '</span>' +
             '</div>';
 
         document.getElementById('ls-deduct-btn')?.addEventListener('click', deductPlanetResources);
+        document.getElementById('ls-cp-m')?.addEventListener('click', () => copyNumber(tM, 'ls-cp-m'));
+        document.getElementById('ls-cp-c')?.addEventListener('click', () => copyNumber(tC, 'ls-cp-c'));
+        document.getElementById('ls-cp-d')?.addEventListener('click', () => copyNumber(tD, 'ls-cp-d'));
+        document.getElementById('ls-cp-net')?.addEventListener('click', () => copyNumber(netTotal, 'ls-cp-net'));
     }
 
     function copyCart() {
@@ -565,8 +580,13 @@
                     div.innerHTML =
                         '<div style="flex:1">' +
                             '<strong style="color:#00bcff">[' + r.g + ':' + r.s + ']</strong> ' + badges +
-                        '</div>' +
-                        '<button class="ls-btn-sm" onclick="window.lsNav(' + r.g + ',' + r.s + ')">🚀</button>';
+                        '</div>';
+                    const navBtn = document.createElement('button');
+                    navBtn.className = 'ls-btn-sm';
+                    navBtn.textContent = '🚀';
+                    navBtn.title = 'Galaksiye Git';
+                    navBtn.addEventListener('click', () => navigateToGalaxy(r.g, r.s));
+                    div.appendChild(navBtn);
                     resList.appendChild(div);
                 });
             }
@@ -674,7 +694,7 @@
                             const parts = pl.coords.split(':');
                             html += '<div class="ls-finder-planet">' +
                                 '<span>' + pl.name + ' <span style="color:#888">[' + pl.coords + ']</span></span>' +
-                                '<button class="ls-btn-sm" onclick="window.lsNav(' + parts[0] + ',' + parts[1] + ')">🚀</button>' +
+                                '<button class="ls-btn-sm ls-nav-btn" data-g="' + parts[0] + '" data-s="' + parts[1] + '" title="Galaksiye Git">🚀</button>' +
                             '</div>';
                         });
                         html += '</div>';
@@ -693,7 +713,7 @@
                                 '<strong style="color:#2ecc71">' + pl.name + '</strong> <span style="color:#888">[' + pl.coords + ']</span><br>' +
                                 '<span style="font-size:10px;color:#aaa">Sahip: ' + ownerName + '</span>' +
                             '</div>' +
-                            '<button class="ls-btn-sm" onclick="window.lsNav(' + parts[0] + ',' + parts[1] + ')">🚀</button>' +
+                            '<button class="ls-btn-sm ls-nav-btn" data-g="' + parts[0] + '" data-s="' + parts[1] + '" title="Galaksiye Git">🚀</button>' +
                         '</div>';
                     }
                 }
@@ -712,7 +732,7 @@
     // ============================================================
     // NAVIGATION
     // ============================================================
-    window.lsNav = function(g, s) {
+    function navigateToGalaxy(g, s) {
         const gInp = document.getElementById('galaxy_input');
         const sInp = document.getElementById('system_input');
         if (gInp && sInp) {
@@ -728,7 +748,8 @@
             if (submit) { submit.click(); return; }
         }
         window.location.href = '?page=ingame&component=galaxy&galaxy=' + g + '&system=' + s;
-    };
+    }
+    window.lsNav = navigateToGalaxy;
 
     // ============================================================
     // INJECT UI
@@ -1016,6 +1037,12 @@
         document.getElementById('ls-find-q').addEventListener('keydown', e => {
             if (e.key === 'Enter') startFinder();
         });
+        document.getElementById('ls-finder-results')?.addEventListener('click', e => {
+            const btn = e.target.closest('.ls-nav-btn');
+            if (btn && btn.dataset.g && btn.dataset.s) {
+                navigateToGalaxy(parseInt(btn.dataset.g, 10), parseInt(btn.dataset.s, 10));
+            }
+        });
     }
 
     // ============================================================
@@ -1072,13 +1099,13 @@
             downBtn.className = 'ls-lvl-btn';
             downBtn.textContent = '−';
             downBtn.title = 'Kademe azalt';
-            downBtn.onclick = (e) => {
+            downBtn.addEventListener('click', (e) => {
                 e.preventDefault(); e.stopPropagation();
                 if (selectedLevelsToAdd > 1) {
                     selectedLevelsToAdd--;
                     updateButtonLabel();
                 }
-            };
+            });
 
             const display = document.createElement('span');
             display.id = 'ls-lvl-display';
@@ -1088,11 +1115,11 @@
             upBtn.className = 'ls-lvl-btn';
             upBtn.textContent = '+';
             upBtn.title = 'Kademe artır';
-            upBtn.onclick = (e) => {
+            upBtn.addEventListener('click', (e) => {
                 e.preventDefault(); e.stopPropagation();
                 selectedLevelsToAdd++;
                 updateButtonLabel();
-            };
+            });
 
             stepperBox.appendChild(downBtn);
             stepperBox.appendChild(display);
