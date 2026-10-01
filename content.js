@@ -1,8 +1,8 @@
-﻿(function() {
+(function() {
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v4.0 yÃ¼kleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v4.0 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -22,7 +22,7 @@
     let scanSettings = JSON.parse(localStorage.getItem(KEYS.SCAN) || '{}');
     scanSettings = Object.assign({ gStart: 1, gEnd: 9, sStart: 1, sEnd: 499, slots: '8', minEmpty: 1 }, scanSettings);
 
-    // KaÃ§ kademe ekleneceÄŸi (+1, +2, +3...)
+    // Kaç kademe ekleneceği (+1, +2, +3...)
     let selectedLevelsToAdd = 1;
 
     // ============================================================
@@ -75,97 +75,97 @@
     }
 
     // ============================================================
-    // OGAME RESMÄ° ARTIÅ FAKTÃ–RLERÄ° (Resmi Gameforge LFMaster Tablosu)
+    // OGAME RESMİ ARTIŞ FAKTÖRLERİ (Resmi Gameforge LFMaster Tablosu)
     // ============================================================
     function getGrowthFactor(name) {
         const n = (name || '').toLowerCase().trim();
 
-        // --- ROCK'TAL BÄ°NALARI ---
-        if (n.includes('rÃ¼n teknoloji')) return 1.30;       // RÃ¼n Teknoloji Kurumu
-        if (n.includes('rÃ¼n demirci')) return 1.70;         // RÃ¼n Demircisi
+        // --- ROCK'TAL BİNALARI ---
+        if (n.includes('rün teknoloji')) return 1.30;       // Rün Teknoloji Kurumu
+        if (n.includes('rün demirci')) return 1.70;         // Rün Demircisi
         if (n.includes('oriktor')) return 1.65;             // Oriktoryum
         if (n.includes('magma demirci')) return 1.40;       // Magma Demircisi
-        if (n.includes('ayrÄ±ÅŸma odasÄ±')) return 1.20;       // AyrÄ±ÅŸma OdasÄ±
+        if (n.includes('ayrışma odası')) return 1.20;       // Ayrışma Odası
         if (n.includes('megalit')) return 1.50;             // Megalit
         if (n.includes('kristal rafinerisi')) return 1.40;  // Kristal Rafinerisi
-        if (n.includes('mineral araÅŸtÄ±rma')) return 1.80;   // Maden AraÅŸtÄ±rma Merkezi
-        if (n.includes('geri dÃ¶nÃ¼ÅŸÃ¼m tesisi')) return 1.50; // GeliÅŸmiÅŸ Geri DÃ¶nÃ¼ÅŸÃ¼m Tesisi
+        if (n.includes('mineral araştırma')) return 1.80;   // Maden Araştırma Merkezi
+        if (n.includes('geri dönüşüm tesisi')) return 1.50; // Gelişmiş Geri Dönüşüm Tesisi
 
-        // --- Ä°NSAN (HUMAN) BÄ°NALARI ---
-        if (n.includes('biyosfer')) return 1.23;            // Biyosfer Ã‡iftliÄŸi
+        // --- İNSAN (HUMAN) BİNALARI ---
+        if (n.includes('biyosfer')) return 1.23;            // Biyosfer Çiftliği
         if (n.includes('bilim akademisi')) return 1.70;     // Bilim Akademisi
-        if (n.includes('nÃ¶ro-kalibrasyon') || n.includes('noro')) return 1.70; // NÃ¶ro-Kalibrasyon Merkezi
-        if (n.includes('ergitme')) return 1.50;             // YÃ¼ksek Enerjili Ergitme
-        if (n.includes('gÄ±da silosu')) return 1.09;         // GÄ±da Silosu
-        if (n.includes('gÃ¶kdelen')) return 1.09;            // GÃ¶kdelen
-        if (n.includes('biyoteknoloji')) return 1.12;       // Biyoteknoloji LaboratuvarÄ±
+        if (n.includes('nöro-kalibrasyon') || n.includes('noro')) return 1.70; // Nöro-Kalibrasyon Merkezi
+        if (n.includes('ergitme')) return 1.50;             // Yüksek Enerjili Ergitme
+        if (n.includes('gıda silosu')) return 1.09;         // Gıda Silosu
+        if (n.includes('gökdelen')) return 1.09;            // Gökdelen
+        if (n.includes('biyoteknoloji')) return 1.12;       // Biyoteknoloji Laboratuvarı
         if (n.includes('metropol')) return 1.50;            // Metropol
         if (n.includes('kalkan') && n.includes('gezegensel')) return 1.15; // Gezegensel Kalkan
 
-        // --- MECHA BÄ°NALARI ---
-        if (n.includes('montaj hattÄ±')) return 1.21;
-        if (n.includes('fÃ¼zyon hÃ¼cresi')) return 1.18;
-        if (n.includes('gÃ¼ncelleme aÄŸÄ±')) return 1.80;
+        // --- MECHA BİNALARI ---
+        if (n.includes('montaj hattı')) return 1.21;
+        if (n.includes('füzyon hücresi')) return 1.18;
+        if (n.includes('güncelleme ağı')) return 1.80;
         if (n.includes('kuantum bilgisayar')) return 1.80;
         if (n.includes('otomatik montaj')) return 1.30;
-        if (n.includes('transformatÃ¶r')) return 1.50;
-        if (n.includes('mikroÃ§ip')) return 1.07;
-        if (n.includes('montaj holÃ¼')) return 1.14;
-        if (n.includes('nano onarÄ±m')) return 1.40;
+        if (n.includes('transformatör')) return 1.50;
+        if (n.includes('mikroçip')) return 1.07;
+        if (n.includes('montaj holü')) return 1.14;
+        if (n.includes('nano onarım')) return 1.40;
 
-        // --- KAELESH BÄ°NALARI ---
-        if (n.includes('barÄ±nak')) return 1.21;
-        if (n.includes('antimadde yoÄŸunlaÅŸtÄ±rÄ±cÄ±')) return 1.20;
+        // --- KAELESH BİNALARI ---
+        if (n.includes('barınak')) return 1.21;
+        if (n.includes('antimadde yoğunlaştırıcı')) return 1.20;
         if (n.includes('vorteks')) return 1.30;
-        if (n.includes('farkÄ±ndalÄ±k salonu')) return 1.80;
-        if (n.includes('aÅŸkÄ±nlÄ±k forumu')) return 1.80;
-        if (n.includes('antimadde konvektÃ¶rÃ¼')) return 1.25;
+        if (n.includes('farkındalık salonu')) return 1.80;
+        if (n.includes('aşkınlık forumu')) return 1.80;
+        if (n.includes('antimadde konvektörü')) return 1.25;
         if (n.includes('klonlama')) return 1.20;
         if (n.includes('krizalit')) return 1.05;
-        if (n.includes('biyo deÄŸiÅŸtirici')) return 1.20;
-        if (n.includes('psiÅŸik modÃ¼latÃ¶r')) return 1.40;
-        if (n.includes('yerÃ§ekimi odasÄ±')) return 1.20;
-        if (n.includes('dÃ¶nÃ¼ÅŸÃ¼m alanÄ±')) return 1.40;
+        if (n.includes('biyo değiştirici')) return 1.20;
+        if (n.includes('psişik modülatör')) return 1.40;
+        if (n.includes('yerçekimi odası')) return 1.20;
+        if (n.includes('dönüşüm alanı')) return 1.40;
 
-        // --- CANLI TÃœRÃœ GENEL NÃœFUS / Ã‡Ä°FTLÄ°K / ARAÅTIRMA MERKEZÄ° ---
-        if (n.includes('sÄ±ÄŸÄ±nak') || n.includes('meditasyon') || n.includes('konut') || n.includes('habitat') || n.includes('Ã§iftlik') || n.includes('sektÃ¶r')) {
+        // --- CANLI TÜRÜ GENEL NÜFUS / ÇİFTLİK / ARAŞTIRMA MERKEZİ ---
+        if (n.includes('sığınak') || n.includes('meditasyon') || n.includes('konut') || n.includes('habitat') || n.includes('çiftlik') || n.includes('sektör')) {
             return 1.20;
         }
-        if (n.includes('araÅŸtÄ±rma merkezi') || n.includes('robotik araÅŸtÄ±rma')) {
+        if (n.includes('araştırma merkezi') || n.includes('robotik araştırma')) {
             return 1.30;
         }
 
-        // --- CANLI TÃœRÃœ ARAÅTIRMALARI (LF Technologies) ---
-        if (n.includes('sÃ¼per bilgisayar') || n.includes('sapan otopilot') || n.includes('iyon kristali modÃ¼lleri')) {
+        // --- CANLI TÜRÜ ARAŞTIRMALARI (LF Technologies) ---
+        if (n.includes('süper bilgisayar') || n.includes('sapan otopilot') || n.includes('iyon kristali modülleri')) {
             return 1.20;
         }
-        if (n.includes('elÃ§i') || n.includes('yÃ¶rÃ¼nge') || n.includes('gizlilik') || n.includes('itici') || n.includes('terraformer') || n.includes('yapay zeka') || n.includes('sÃ¼periletken')) {
+        if (n.includes('elçi') || n.includes('yörünge') || n.includes('gizlilik') || n.includes('itici') || n.includes('terraformer') || n.includes('yapay zeka') || n.includes('süperiletken')) {
             return 1.30;
         }
         if (n.includes('obsidyen')) {
             return 1.40;
         }
-        if (n.includes('gÃ¼Ã§lendirmesi') && (n.includes('toplayÄ±cÄ±') || n.includes('general') || n.includes('kaÅŸif'))) {
+        if (n.includes('güçlendirmesi') && (n.includes('toplayıcı') || n.includes('general') || n.includes('kaşif'))) {
             return 1.70;
         }
 
-        // --- KLASÄ°K OGAME (Madenler & Standart YapÄ±lar) ---
+        // --- KLASİK OGAME (Madenler & Standart Yapılar) ---
         if (n.includes('kristal madeni')) return 1.60;
-        if (n.includes('metal madeni') || n.includes('deuterium sentezleyicisi') || n.includes('dÃ¶teryum sentezleyicisi') || n.includes('gÃ¼neÅŸ enerji')) return 1.50;
-        if (n.includes('fÃ¼zyon')) return 1.80;
+        if (n.includes('metal madeni') || n.includes('deuterium sentezleyicisi') || n.includes('döteryum sentezleyicisi') || n.includes('güneş enerji')) return 1.50;
+        if (n.includes('füzyon')) return 1.80;
         if (n.includes('astrofizik')) return 1.75;
 
-        // CanlÄ± tÃ¼rÃ¼ araÅŸtÄ±rmalarÄ± genel varsayÄ±lanÄ±
+        // Canlı türü araştırmaları genel varsayılanı
         if (window.location.href.includes('lfresearch')) {
             return 1.50;
         }
 
-        // Klasik OGame araÅŸtÄ±rmalarÄ± ve tesisler
+        // Klasik OGame araştırmaları ve tesisler
         return 2.00;
     }
 
     // ============================================================
-    // TEK KADEME TABAN MALÄ°YETÄ°NÄ° OKUMA (OGame DOM)
+    // TEK KADEME TABAN MALİYETİNİ OKUMA (OGame DOM)
     // ============================================================
     function parseNextLevelBaseCost(popup) {
         let m = 0, c = 0, d = 0;
@@ -196,7 +196,7 @@
     }
 
     // ============================================================
-    // Ã‡OKLU KADEME HESAPLAYICI (FormÃ¼l TabanlÄ±)
+    // ÇOKLU KADEME HESAPLAYICI (Formül Tabanlı)
     // ============================================================
     function parseCostsFromPopup() {
         const popup = document.getElementById('technologydetails');
@@ -222,7 +222,7 @@
             currentLevel = parseInt(lvlMatch[1], 10);
         }
 
-        // Tersane / Savunma adet kontrolÃ¼
+        // Tersane / Savunma adet kontrolü
         const qtyInput = popup.querySelector('#build_amount') ||
                          popup.querySelector('input[name="amount"]') ||
                          popup.querySelector('input#amount');
@@ -243,16 +243,16 @@
         if (selectedLevelsToAdd === 1) {
             result.level = String(nextLvl);
         } else {
-            result.level = `${nextLvl} â†’ ${targetLvl}`;
+            result.level = `${nextLvl} → ${targetLvl}`;
         }
 
         const baseCost = parseNextLevelBaseCost(popup);
         const nLow = result.name.toLowerCase();
         const isLifeform = window.location.href.includes('lfbuildings') || 
                            window.location.href.includes('lfresearch') ||
-                           nLow.includes('meditasyon') || nLow.includes('sÄ±ÄŸÄ±nak') ||
-                           nLow.includes('rÃ¼n') || nLow.includes('konut') ||
-                           nLow.includes('Ã§iftlik') || nLow.includes('oriktor') ||
+                           nLow.includes('meditasyon') || nLow.includes('sığınak') ||
+                           nLow.includes('rün') || nLow.includes('konut') ||
+                           nLow.includes('çiftlik') || nLow.includes('oriktor') ||
                            nLow.includes('magma') || nLow.includes('megalit') ||
                            nLow.includes('rafineri');
 
@@ -271,12 +271,12 @@
                 const prevLvl = thisLvl - 1;
 
                 if (isLifeform && prevLvl > 0) {
-                    // Resmi Gameforge formÃ¼lÃ¼: Cost(L) = Cost(L-1) * Factor * (L / (L-1))
+                    // Resmi Gameforge formülü: Cost(L) = Cost(L-1) * Factor * (L / (L-1))
                     curM = Math.round(curM * factor * (thisLvl / prevLvl));
                     curC = Math.round(curC * factor * (thisLvl / prevLvl));
                     curD = Math.round(curD * factor * (thisLvl / prevLvl));
                 } else {
-                    // Klasik OGame formÃ¼lÃ¼: Cost(L) = Cost(L-1) * Factor
+                    // Klasik OGame formülü: Cost(L) = Cost(L-1) * Factor
                     curM = Math.round(curM * factor);
                     curC = Math.round(curC * factor);
                     curD = Math.round(curD * factor);
@@ -292,7 +292,7 @@
         result.crystal = totC;
         result.deuterium = totD;
 
-        console.log(LS, result.name, result.level, `(IsLF: ${isLifeform}, FaktÃ¶r: ${factor}) ->`, result);
+        console.log(LS, result.name, result.level, `(IsLF: ${isLifeform}, Faktör: ${factor}) ->`, result);
         return result;
     }
 
@@ -322,7 +322,7 @@
 
         const btn = document.getElementById('ls-add-cart-btn');
         if (btn) {
-            btn.textContent = 'âœ“ Eklendi!';
+            btn.textContent = '✓ Eklendi!';
             btn.style.background = '#2ecc71';
             btn.style.borderColor = '#27ae60';
             setTimeout(() => {
@@ -338,7 +338,7 @@
         const pName = getCurrentPlanetName();
 
         if (live.metal === 0 && live.crystal === 0 && live.deuterium === 0) {
-            alert('Bu gezegende kaynak bulunamadÄ± veya okunamadÄ±.');
+            alert('Bu gezegende kaynak bulunamadı veya okunamadı.');
             return;
         }
 
@@ -370,7 +370,7 @@
             const el = document.getElementById(elemId);
             if (el) {
                 const orig = el.textContent;
-                el.textContent = 'âœ“';
+                el.textContent = '✓';
                 el.style.color = '#2ecc71';
                 setTimeout(() => { el.textContent = orig; el.style.color = ''; }, 1200);
             }
@@ -386,7 +386,7 @@
         let tM = 0, tC = 0, tD = 0;
 
         if (cart.length === 0) {
-            listEl.innerHTML = '<div style="text-align:center;color:#666;padding:15px;">Sepet boÅŸ</div>';
+            listEl.innerHTML = '<div style="text-align:center;color:#666;padding:15px;">Sepet boş</div>';
         } else {
             cart.forEach((item, i) => {
                 tM += item.metal; tC += item.crystal; tD += item.deuterium;
@@ -404,16 +404,16 @@
                 d.innerHTML =
                     '<div style="flex:1">' +
                         '<div style="color:' + (item.isDeduction ? '#e67e22' : '#00bcff') + ';font-weight:bold;font-size:11px">' +
-                            (item.isDeduction ? 'ğŸ“‰ ' : '') + label +
+                            (item.isDeduction ? '📉 ' : '') + label +
                         '</div>' +
                         '<div style="font-size:9px;color:#666">' + (item.planet || '') + '</div>' +
                         '<div style="font-size:10px;margin-top:2px">' +
-                            '<span style="color:' + color(item.metal) + '">' + sign(item.metal) + '</span> Â· ' +
-                            '<span style="color:' + (item.crystal < 0 ? '#e67e22' : '#5dade2') + '">' + sign(item.crystal) + '</span> Â· ' +
+                            '<span style="color:' + color(item.metal) + '">' + sign(item.metal) + '</span> · ' +
+                            '<span style="color:' + (item.crystal < 0 ? '#e67e22' : '#5dade2') + '">' + sign(item.crystal) + '</span> · ' +
                             '<span style="color:' + (item.deuterium < 0 ? '#e67e22' : '#2ecc71') + '">' + sign(item.deuterium) + '</span>' +
                         '</div>' +
                     '</div>' +
-                    '<button class="ls-x" onclick="window.lsRemoveCartItem(' + i + ')">âœ–</button>';
+                    '<button class="ls-x" onclick="window.lsRemoveCartItem(' + i + ')">✖</button>';
                 listEl.appendChild(d);
             });
         }
@@ -423,35 +423,35 @@
         totalsEl.innerHTML =
             '<div style="margin-bottom:8px">' +
                 '<button id="ls-deduct-btn" class="ls-btn-sm" style="width:100%;background:#d35400;color:#fff;padding:5px;">' +
-                    'ğŸ“‰ Mevcut Gezegen KaynaÄŸÄ±nÄ± Sepetten DÃ¼ÅŸ' +
+                    '📉 Mevcut Gezegen Kaynağını Sepetten Düş' +
                 '</button>' +
             '</div>' +
             '<div class="ls-total-row">' +
-                '<span>ğŸŸ¡ Kalan Metal:</span>' +
+                '<span>🟡 Kalan Metal:</span>' +
                 '<span style="display:flex;align-items:center;gap:4px;">' +
                     '<b style="color:#aaa">' + fmt(tM) + '</b>' +
-                    '<button id="ls-cp-m" class="ls-cp-btn" onclick="window.lsCopyNumber(' + tM + ',\'ls-cp-m\')" title="SayÄ±sÄ±nÄ± kopyala">ğŸ“‹</button>' +
+                    '<button id="ls-cp-m" class="ls-cp-btn" onclick="window.lsCopyNumber(' + tM + ',\'ls-cp-m\')" title="Sayısını kopyala">📋</button>' +
                 '</span>' +
             '</div>' +
             '<div class="ls-total-row">' +
-                '<span>ğŸ”µ Kalan Kristal:</span>' +
+                '<span>🔵 Kalan Kristal:</span>' +
                 '<span style="display:flex;align-items:center;gap:4px;">' +
                     '<b style="color:#5dade2">' + fmt(tC) + '</b>' +
-                    '<button id="ls-cp-c" class="ls-cp-btn" onclick="window.lsCopyNumber(' + tC + ',\'ls-cp-c\')" title="SayÄ±sÄ±nÄ± kopyala">ğŸ“‹</button>' +
+                    '<button id="ls-cp-c" class="ls-cp-btn" onclick="window.lsCopyNumber(' + tC + ',\'ls-cp-c\')" title="Sayısını kopyala">📋</button>' +
                 '</span>' +
             '</div>' +
             '<div class="ls-total-row">' +
-                '<span>ğŸŸ¢ Kalan Deuterium:</span>' +
+                '<span>🟢 Kalan Deuterium:</span>' +
                 '<span style="display:flex;align-items:center;gap:4px;">' +
                     '<b style="color:#2ecc71">' + fmt(tD) + '</b>' +
-                    '<button id="ls-cp-d" class="ls-cp-btn" onclick="window.lsCopyNumber(' + tD + ',\'ls-cp-d\')" title="SayÄ±sÄ±nÄ± kopyala">ğŸ“‹</button>' +
+                    '<button id="ls-cp-d" class="ls-cp-btn" onclick="window.lsCopyNumber(' + tD + ',\'ls-cp-d\')" title="Sayısını kopyala">📋</button>' +
                 '</span>' +
             '</div>' +
             '<div class="ls-total-row" style="border-top:1px solid #333;padding-top:4px;margin-top:4px">' +
-                '<span>ğŸ”´ Net Kalan Ä°htiyaÃ§:</span>' +
+                '<span>🔴 Net Kalan İhtiyaç:</span>' +
                 '<span style="display:flex;align-items:center;gap:4px;">' +
                     '<b style="color:#fff">' + fmt(netTotal) + '</b>' +
-                    '<button id="ls-cp-net" class="ls-cp-btn" onclick="window.lsCopyNumber(' + netTotal + ',\'ls-cp-net\')" title="SayÄ±sÄ±nÄ± kopyala">ğŸ“‹</button>' +
+                    '<button id="ls-cp-net" class="ls-cp-btn" onclick="window.lsCopyNumber(' + netTotal + ',\'ls-cp-net\')" title="Sayısını kopyala">📋</button>' +
                 '</span>' +
             '</div>';
 
@@ -459,13 +459,13 @@
     }
 
     function copyCart() {
-        let lines = ['â•â•â• LuckyStrike Maliyet Sepeti â•â•â•', ''];
+        let lines = ['═══ LuckyStrike Maliyet Sepeti ═══', ''];
         let tM = 0, tC = 0, tD = 0;
         cart.forEach(item => {
             let label = item.name;
             if (item.level) label += ' Kd ' + item.level;
             if (item.count > 1) label += ' x' + item.count;
-            lines.push('â€¢ ' + label + ' [' + item.planet + ']');
+            lines.push('• ' + label + ' [' + item.planet + ']');
             lines.push('  M: ' + fmt(item.metal) + ' | K: ' + fmt(item.crystal) + ' | D: ' + fmt(item.deuterium));
             tM += item.metal; tC += item.crystal; tD += item.deuterium;
         });
@@ -474,7 +474,7 @@
         lines.push('Genel Net: ' + fmt(tM + tC + tD));
         navigator.clipboard.writeText(lines.join('\n')).then(() => {
             const btn = document.getElementById('ls-cart-copy');
-            if (btn) { btn.textContent = 'âœ“ KopyalandÄ±!'; setTimeout(() => { btn.textContent = 'ğŸ“‹ Panoya Kopyala'; }, 2000); }
+            if (btn) { btn.textContent = '✓ Kopyalandı!'; setTimeout(() => { btn.textContent = '📋 Panoya Kopyala'; }, 2000); }
         });
     }
 
@@ -497,25 +497,25 @@
         const minEmpty = parseInt(document.getElementById('ls-min').value, 10) || 1;
 
         const targetSlots = slotsStr.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n) && n >= 1 && n <= 15);
-        if (targetSlots.length === 0) { statusEl.textContent = 'GeÃ§erli slot girilmedi!'; return; }
+        if (targetSlots.length === 0) { statusEl.textContent = 'Geçerli slot girilmedi!'; return; }
 
         scanSettings = { gStart, gEnd, sStart, sEnd, slots: slotsStr, minEmpty };
         localStorage.setItem(KEYS.SCAN, JSON.stringify(scanSettings));
 
         btn.disabled = true;
-        btn.textContent = 'â³ TaranÄ±yor...';
+        btn.textContent = '⏳ Taranıyor...';
         progEl.style.display = 'block';
         barEl.style.width = '0%';
         resBox.style.display = 'none';
         resList.innerHTML = '';
-        statusEl.textContent = 'Universe API Ã§ekiliyor...';
+        statusEl.textContent = 'Universe API çekiliyor...';
 
         try {
             const resp = await fetch('/api/universe.xml');
-            if (!resp.ok) throw new Error('API yanÄ±t vermedi (' + resp.status + ')');
+            if (!resp.ok) throw new Error('API yanıt vermedi (' + resp.status + ')');
             const xml = await resp.text();
 
-            statusEl.textContent = 'Veri iÅŸleniyor...';
+            statusEl.textContent = 'Veri işleniyor...';
             barEl.style.width = '40%';
 
             const doc = new DOMParser().parseFromString(xml, 'text/xml');
@@ -527,7 +527,7 @@
             }
 
             barEl.style.width = '60%';
-            statusEl.textContent = 'BoÅŸ slotlar hesaplanÄ±yor...';
+            statusEl.textContent = 'Boş slotlar hesaplanıyor...';
 
             const results = [];
             for (let g = gStart; g <= gEnd; g++) {
@@ -541,7 +541,7 @@
             }
 
             barEl.style.width = '100%';
-            statusEl.textContent = results.length + ' sonuÃ§ bulundu.';
+            statusEl.textContent = results.length + ' sonuç bulundu.';
 
             if (results.length > 0) {
                 resBox.style.display = 'block';
@@ -555,7 +555,7 @@
                         '<div style="flex:1">' +
                             '<strong style="color:#00bcff">[' + r.g + ':' + r.s + ']</strong> ' + badges +
                         '</div>' +
-                        '<button class="ls-btn-sm" onclick="window.lsNav(' + r.g + ',' + r.s + ')">ğŸš€</button>';
+                        '<button class="ls-btn-sm" onclick="window.lsNav(' + r.g + ',' + r.s + ')">🚀</button>';
                     resList.appendChild(div);
                 });
             }
@@ -564,22 +564,22 @@
             statusEl.textContent = 'Hata: ' + e.message;
         } finally {
             btn.disabled = false;
-            btn.textContent = 'ğŸ” TaramayÄ± BaÅŸlat';
+            btn.textContent = '🔍 Taramayı Başlat';
             setTimeout(() => { progEl.style.display = 'none'; }, 2000);
         }
     }
 
     function copyScanResults() {
         if (!window._lsScanResults) return;
-        const lines = ['â•â•â• Galaxy Scanner SonuÃ§larÄ± â•â•â•', ''];
+        const lines = ['═══ Galaxy Scanner Sonuçları ═══', ''];
         window._lsScanResults.forEach(r => {
-            lines.push('[' + r.g + ':' + r.s + '] â†’ BoÅŸ: ' + r.slots.join(', '));
+            lines.push('[' + r.g + ':' + r.s + '] → Boş: ' + r.slots.join(', '));
         });
         lines.push('');
         lines.push('Toplam: ' + window._lsScanResults.length + ' sistem');
         navigator.clipboard.writeText(lines.join('\n')).then(() => {
             const btn = document.getElementById('ls-scan-copy');
-            if (btn) { btn.textContent = 'âœ“ KopyalandÄ±!'; setTimeout(() => { btn.textContent = 'ğŸ“‹ Panoya Kopyala'; }, 2000); }
+            if (btn) { btn.textContent = '✓ Kopyalandı!'; setTimeout(() => { btn.textContent = '📋 Panoya Kopyala'; }, 2000); }
         });
     }
 
@@ -601,7 +601,7 @@
             fetch('/api/players.xml'),
             fetch('/api/universe.xml')
         ]);
-        if (!pResp.ok || !uResp.ok) throw new Error('API eriÅŸim hatasÄ±');
+        if (!pResp.ok || !uResp.ok) throw new Error('API erişim hatası');
 
         const pDoc = new DOMParser().parseFromString(await pResp.text(), 'text/xml');
         const uDoc = new DOMParser().parseFromString(await uResp.text(), 'text/xml');
@@ -640,7 +640,7 @@
         if (query.length < 2) { statusEl.textContent = 'En az 2 karakter giriniz.'; return; }
 
         btn.disabled = true;
-        statusEl.textContent = 'AranÄ±yor...';
+        statusEl.textContent = 'Aranıyor...';
         resultsEl.innerHTML = '';
 
         try {
@@ -663,7 +663,7 @@
                             const parts = pl.coords.split(':');
                             html += '<div class="ls-finder-planet">' +
                                 '<span>' + pl.name + ' <span style="color:#888">[' + pl.coords + ']</span></span>' +
-                                '<button class="ls-btn-sm" onclick="window.lsNav(' + parts[0] + ',' + parts[1] + ')">ğŸš€</button>' +
+                                '<button class="ls-btn-sm" onclick="window.lsNav(' + parts[0] + ',' + parts[1] + ')">🚀</button>' +
                             '</div>';
                         });
                         html += '</div>';
@@ -682,13 +682,13 @@
                                 '<strong style="color:#2ecc71">' + pl.name + '</strong> <span style="color:#888">[' + pl.coords + ']</span><br>' +
                                 '<span style="font-size:10px;color:#aaa">Sahip: ' + ownerName + '</span>' +
                             '</div>' +
-                            '<button class="ls-btn-sm" onclick="window.lsNav(' + parts[0] + ',' + parts[1] + ')">ğŸš€</button>' +
+                            '<button class="ls-btn-sm" onclick="window.lsNav(' + parts[0] + ',' + parts[1] + ')">🚀</button>' +
                         '</div>';
                     }
                 }
             }
 
-            statusEl.textContent = count === 0 ? 'SonuÃ§ bulunamadÄ±.' : count + ' sonuÃ§ bulundu.';
+            statusEl.textContent = count === 0 ? 'Sonuç bulunamadı.' : count + ' sonuç bulundu.';
             resultsEl.innerHTML = html;
         } catch (e) {
             console.error(LS, e);
@@ -727,9 +727,10 @@
         style.textContent = [
             '#ls-fab{position:fixed;bottom:65px;right:15px;width:44px;height:44px;border-radius:50%;',
             'background:linear-gradient(135deg,#00bcff,#005fbc);color:#fff;display:flex;align-items:center;',
-            'justify-content:center;font-size:22px;cursor:pointer;z-index:999999;box-shadow:0 4px 12px rgba(0,0,0,0.6);',
+            'justify-content:center;cursor:pointer;z-index:999999;box-shadow:0 4px 12px rgba(0,0,0,0.6);',
             'border:2px solid rgba(0,188,255,0.5);transition:transform .2s;user-select:none}',
             '#ls-fab:hover{transform:scale(1.12)}',
+            '#ls-fab svg{filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5))}',
 
             '#ls-panel{position:fixed;bottom:120px;right:15px;width:340px;background:rgba(11,16,26,0.97);',
             'border:1px solid #1a2c3f;border-radius:8px;color:#d1d8e0;font-family:sans-serif;font-size:12px;',
@@ -738,7 +739,7 @@
             '#ls-header{padding:8px 12px;background:linear-gradient(90deg,#0d1b2a,#1a2c3f);',
             'border-bottom:2px solid #00bcff;border-radius:8px 8px 0 0;cursor:move;display:flex;',
             'justify-content:space-between;align-items:center;user-select:none}',
-            '#ls-header span:first-child{font-weight:bold;color:#00bcff;font-size:13px}',
+            '#ls-header-title{font-weight:bold;color:#00bcff;font-size:13px;display:flex;align-items:center;gap:6px}',
             '#ls-close{cursor:pointer;color:#e74c3c;font-size:16px}',
             '#ls-close:hover{color:#ff6b6b}',
 
@@ -797,7 +798,7 @@
             '.ls-finder-planet{display:flex;justify-content:space-between;align-items:center;',
             'font-size:10px;padding:2px 0}',
 
-            /* Resmin sol alt kÃ¶ÅŸesinde Dikey HizalanmÄ±ÅŸ Kompakt Grup */
+            /* Resmin sol alt köşesinde Dikey Hizalanmış Kompakt Grup */
             '#ls-btn-group{position:absolute;top:150px;left:14px;z-index:99999;display:flex;flex-direction:column;align-items:flex-start;gap:3px;',
             'background:transparent;padding:0}',
 
@@ -821,10 +822,13 @@
         ].join('\n');
         document.head.appendChild(style);
 
+        // SVG Lightning Logo
+        const boltSvg = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" style="vertical-align:middle"><path d="M13 2L3 14h8l-1 8 11-12h-8l1-8z" fill="#ffeb3b" stroke="#000" stroke-width="0.75"/></svg>';
+
         // FAB
         const fab = document.createElement('div');
         fab.id = 'ls-fab';
-        fab.textContent = 'âš¡';
+        fab.innerHTML = boltSvg;
         fab.title = 'LuckyStrike OGame Helper';
         document.body.appendChild(fab);
 
@@ -833,21 +837,21 @@
         panel.id = 'ls-panel';
         panel.innerHTML =
             '<div id="ls-header">' +
-                '<span>âš¡ LuckyStrike Helper</span>' +
-                '<span id="ls-close">âœ–</span>' +
+                '<span id="ls-header-title">' + boltSvg + ' LuckyStrike Helper</span>' +
+                '<span id="ls-close">✖</span>' +
             '</div>' +
             '<div id="ls-tabs">' +
-                '<div class="ls-tab" data-tab="cart">ğŸ—ï¸ Maliyet</div>' +
-                '<div class="ls-tab" data-tab="scanner">ğŸŒŒ Scanner</div>' +
-                '<div class="ls-tab" data-tab="finder">ğŸ” Finder</div>' +
+                '<div class="ls-tab" data-tab="cart">🏗️ Maliyet</div>' +
+                '<div class="ls-tab" data-tab="scanner">🌌 Scanner</div>' +
+                '<div class="ls-tab" data-tab="finder">🔍 Finder</div>' +
             '</div>' +
             '<div id="ls-body">' +
 
                 // CART TAB
                 '<div id="tc-cart" class="ls-tc">' +
                     '<div style="display:flex;gap:6px;margin-bottom:8px">' +
-                        '<button id="ls-cart-copy" class="ls-btn" style="flex:1">ğŸ“‹ Panoya Kopyala</button>' +
-                        '<button id="ls-cart-clear" class="ls-btn ls-btn-d" style="flex:1">ğŸ—‘ï¸ Temizle</button>' +
+                        '<button id="ls-cart-copy" class="ls-btn" style="flex:1">📋 Panoya Kopyala</button>' +
+                        '<button id="ls-cart-clear" class="ls-btn ls-btn-d" style="flex:1">🗑️ Temizle</button>' +
                     '</div>' +
                     '<div id="ls-cart-list" style="max-height:160px;overflow-y:auto;margin-bottom:8px"></div>' +
                     '<div id="ls-cart-totals"></div>' +
@@ -855,51 +859,51 @@
 
                 // SCANNER TAB
                 '<div id="tc-scanner" class="ls-tc">' +
-                    '<div style="font-size:10px;color:#5dade2;margin-bottom:8px">â„¹ï¸ Resmi Gameforge API kullanÄ±lÄ±r. Ban riski yoktur.</div>' +
+                    '<div style="font-size:10px;color:#5dade2;margin-bottom:8px">ℹ️ Resmi Gameforge API kullanılır. Ban riski yoktur.</div>' +
                     '<div class="ls-row">' +
-                        '<div class="ls-col"><span class="ls-label">Galaksi BaÅŸlangÄ±Ã§</span><input type="number" id="ls-sg1" class="ls-inp" min="1" max="9" style="width:100%"></div>' +
-                        '<div class="ls-col"><span class="ls-label">Galaksi BitiÅŸ</span><input type="number" id="ls-sg2" class="ls-inp" min="1" max="9" style="width:100%"></div>' +
+                        '<div class="ls-col"><span class="ls-label">Galaksi Başlangıç</span><input type="number" id="ls-sg1" class="ls-inp" min="1" max="9" style="width:100%"></div>' +
+                        '<div class="ls-col"><span class="ls-label">Galaksi Bitiş</span><input type="number" id="ls-sg2" class="ls-inp" min="1" max="9" style="width:100%"></div>' +
                     '</div>' +
                     '<div class="ls-row">' +
-                        '<div class="ls-col"><span class="ls-label">Sistem BaÅŸlangÄ±Ã§</span><input type="number" id="ls-ss1" class="ls-inp" min="1" max="499" style="width:100%"></div>' +
-                        '<div class="ls-col"><span class="ls-label">Sistem BitiÅŸ</span><input type="number" id="ls-ss2" class="ls-inp" min="1" max="499" style="width:100%"></div>' +
+                        '<div class="ls-col"><span class="ls-label">Sistem Başlangıç</span><input type="number" id="ls-ss1" class="ls-inp" min="1" max="499" style="width:100%"></div>' +
+                        '<div class="ls-col"><span class="ls-label">Sistem Bitiş</span><input type="number" id="ls-ss2" class="ls-inp" min="1" max="499" style="width:100%"></div>' +
                     '</div>' +
                     '<div style="margin-bottom:6px">' +
-                        '<span class="ls-label">Hedef Slotlar (virgÃ¼lle ayÄ±rÄ±n)</span>' +
+                        '<span class="ls-label">Hedef Slotlar (virgülle ayırın)</span>' +
                         '<input type="text" id="ls-slots" class="ls-inp" style="width:100%" placeholder="8 veya 7, 8, 9">' +
                     '</div>' +
                     '<div style="margin-bottom:8px">' +
-                        '<span class="ls-chip" data-slots="8">ğŸ¯ Sadece 8</span>' +
-                        '<span class="ls-chip" data-slots="7, 8, 9">â­ 7, 8, 9</span>' +
-                        '<span class="ls-chip" data-slots="12, 13, 14, 15">â„ï¸ 12-15 (Deut)</span>' +
-                        '<span class="ls-chip" data-slots="1, 2, 3">â˜€ï¸ 1-3 (Solar)</span>' +
+                        '<span class="ls-chip" data-slots="8">🎯 Sadece 8</span>' +
+                        '<span class="ls-chip" data-slots="7, 8, 9">⭐ 7, 8, 9</span>' +
+                        '<span class="ls-chip" data-slots="12, 13, 14, 15">❄️ 12-15 (Deut)</span>' +
+                        '<span class="ls-chip" data-slots="1, 2, 3">☀️ 1-3 (Solar)</span>' +
                     '</div>' +
                     '<div class="ls-row">' +
                         '<div class="ls-col">' +
-                            '<span class="ls-label">ğŸ‘¥ Min EÅŸzamanlÄ± BoÅŸ Slot</span>' +
+                            '<span class="ls-label">👥 Min Eşzamanlı Boş Slot</span>' +
                             '<select id="ls-min" class="ls-inp" style="width:100%">' +
                                 '<option value="1">1</option><option value="2">2</option>' +
                                 '<option value="3">3</option><option value="4">4</option>' +
                             '</select>' +
                         '</div>' +
                     '</div>' +
-                    '<button id="ls-scan-btn" class="ls-btn" style="width:100%;margin-top:4px">ğŸ” TaramayÄ± BaÅŸlat</button>' +
+                    '<button id="ls-scan-btn" class="ls-btn" style="width:100%;margin-top:4px">🔍 Taramayı Başlat</button>' +
                     '<div class="ls-prog" id="ls-scan-progress"><div class="ls-prog-bar" id="ls-scan-bar"></div></div>' +
                     '<div id="ls-scan-status" style="font-size:10px;text-align:center;color:#8899aa;margin-top:4px"></div>' +
                     '<div id="ls-scan-results-box" style="display:none;margin-top:8px">' +
-                        '<button id="ls-scan-copy" class="ls-btn" style="width:100%;margin-bottom:6px">ğŸ“‹ KoordinatlarÄ± Kopyala</button>' +
+                        '<button id="ls-scan-copy" class="ls-btn" style="width:100%;margin-bottom:6px">📋 Koordinatları Kopyala</button>' +
                         '<div id="ls-scan-results" style="max-height:220px;overflow-y:auto"></div>' +
                     '</div>' +
                 '</div>' +
 
                 // FINDER TAB
                 '<div id="tc-finder" class="ls-tc">' +
-                    '<input type="text" id="ls-find-q" class="ls-inp" style="width:100%;margin-bottom:6px" placeholder="Oyuncu veya gezegen adÄ±...">' +
+                    '<input type="text" id="ls-find-q" class="ls-inp" style="width:100%;margin-bottom:6px" placeholder="Oyuncu veya gezegen adı...">' +
                     '<div style="margin-bottom:6px;font-size:11px">' +
-                        '<label style="margin-right:12px;cursor:pointer"><input type="radio" name="ls-find-type" value="player" checked> Oyuncu AdÄ±</label>' +
-                        '<label style="cursor:pointer"><input type="radio" name="ls-find-type" value="planet"> Gezegen AdÄ±</label>' +
+                        '<label style="margin-right:12px;cursor:pointer"><input type="radio" name="ls-find-type" value="player" checked> Oyuncu Adı</label>' +
+                        '<label style="cursor:pointer"><input type="radio" name="ls-find-type" value="planet"> Gezegen Adı</label>' +
                     '</div>' +
-                    '<button id="ls-find-btn" class="ls-btn" style="width:100%">ğŸ” Ara</button>' +
+                    '<button id="ls-find-btn" class="ls-btn" style="width:100%">🔍 Ara</button>' +
                     '<div id="ls-find-status" style="font-size:10px;text-align:center;color:#8899aa;margin-top:6px"></div>' +
                     '<div id="ls-find-results" style="max-height:250px;overflow-y:auto;margin-top:8px"></div>' +
                 '</div>' +
@@ -1014,11 +1018,11 @@
         const data = parseCostsFromPopup();
         if (countSpan) countSpan.textContent = `+${selectedLevelsToAdd}`;
 
-        let newText = 'ğŸ“¥ Sepete Ekle';
+        let newText = '📥 Sepete Ekle';
         if (data && data.level) {
-            newText = `ğŸ“¥ Sepete Ekle (Kd ${data.level})`;
+            newText = `📥 Sepete Ekle (Kd ${data.level})`;
         } else if (data && data.count > 1) {
-            newText = `ğŸ“¥ Sepete Ekle (x${data.count})`;
+            newText = `📥 Sepete Ekle (x${data.count})`;
         }
 
         if (btn.textContent !== newText) {
@@ -1035,7 +1039,6 @@
 
         const existingGroup = document.getElementById('ls-btn-group');
         if (existingGroup) {
-            // EÄŸer baÅŸlÄ±k deÄŸiÅŸmiÅŸse (kullanÄ±cÄ± baÅŸka binaya tÄ±klamÄ±ÅŸsa) resetle
             if (existingGroup.getAttribute('data-title') !== currentTitle) {
                 existingGroup.remove();
                 selectedLevelsToAdd = 1;
@@ -1056,7 +1059,7 @@
 
             const downBtn = document.createElement('button');
             downBtn.className = 'ls-lvl-btn';
-            downBtn.textContent = 'âˆ’';
+            downBtn.textContent = '−';
             downBtn.title = 'Kademe azalt';
             downBtn.onclick = (e) => {
                 e.preventDefault(); e.stopPropagation();
@@ -1073,7 +1076,7 @@
             const upBtn = document.createElement('button');
             upBtn.className = 'ls-lvl-btn';
             upBtn.textContent = '+';
-            upBtn.title = 'Kademe artÄ±r';
+            upBtn.title = 'Kademe artır';
             upBtn.onclick = (e) => {
                 e.preventDefault(); e.stopPropagation();
                 selectedLevelsToAdd++;
@@ -1088,7 +1091,7 @@
 
         const newBtn = document.createElement('button');
         newBtn.id = 'ls-add-cart-btn';
-        newBtn.textContent = 'ğŸ“¥ Sepete Ekle';
+        newBtn.textContent = '📥 Sepete Ekle';
         newBtn.addEventListener('click', e => {
             e.preventDefault();
             e.stopPropagation();
@@ -1108,7 +1111,6 @@
         });
         observer.observe(document.body, { childList: true, subtree: true });
 
-        // Ä°lk aÃ§Ä±lÄ±ÅŸta popup zaten aÃ§Ä±ksa yakala
         checkAndInjectButtons();
     }
 
@@ -1117,6 +1119,6 @@
     // ============================================================
     buildUI();
     setupObserver();
-    console.log(LS, 'LuckyStrike OGame Helper v4.0 hazÄ±r!');
+    console.log(LS, 'LuckyStrike OGame Helper v4.0 hazır!');
 
 })();
