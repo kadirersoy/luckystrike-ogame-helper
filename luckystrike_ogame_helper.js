@@ -1,8 +1,8 @@
-// ==UserScript==
+﻿// ==UserScript==
 // @name         LuckyStrike OGame Helper
 // @namespace    http://tampermonkey.net/
-// @version      4.1
-// @description  LuckyStrike OGame Helper: Maliyet Sepeti, Galaxy Scanner, Player Finder
+// @version      4.2
+// @description  LuckyStrike OGame Helper: Maliyet Sepeti, Galaxy Scanner, Player Finder, Sesli Saldırı/Sonda Alarmı
 // @author       LuckyStrike
 // @match        *://*.ogame.gameforge.com/game/index.php*
 // @grant        none
@@ -12,7 +12,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v4.1 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v4.2 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -22,8 +22,10 @@
         CART: 'LS_COST_CART',
         SCAN: 'LS_SCANNER_SETTINGS',
         POS: 'LS_PANEL_POS',
+        SIZE: 'LS_PANEL_SIZE',
         OPEN: 'LS_PANEL_OPEN',
-        API: 'LS_API_CACHE'
+        API: 'LS_API_CACHE',
+        ALARM: 'LS_ALARM_SETTINGS'
     };
 
     let cart = JSON.parse(localStorage.getItem(KEYS.CART) || '[]');
@@ -31,6 +33,25 @@
     let isPanelOpen = localStorage.getItem(KEYS.OPEN) === 'true';
     let scanSettings = JSON.parse(localStorage.getItem(KEYS.SCAN) || '{}');
     scanSettings = Object.assign({ gStart: 1, gEnd: 9, sStart: 1, sEnd: 499, slots: '8', minEmpty: 1 }, scanSettings);
+
+    let alarmSettings = Object.assign({
+        attackEnabled: true,
+        espionageEnabled: true,
+        attackSound: 'klaxon',
+        espionageSound: 'sonar_deep',
+        volume: 70,
+        repeatInterval: 30
+    }, JSON.parse(localStorage.getItem(KEYS.ALARM) || '{}'));
+
+    if (alarmSettings.espionageSound === 'sonar' || alarmSettings.espionageSound === 'radar' || alarmSettings.espionageSound === 'bass') {
+        if (alarmSettings.espionageSound === 'radar') alarmSettings.espionageSound = 'sonar_hunter';
+        else if (alarmSettings.espionageSound === 'bass') alarmSettings.espionageSound = 'sonar_echo';
+        else alarmSettings.espionageSound = 'sonar_deep';
+    }
+
+    function saveAlarmSettings() {
+        localStorage.setItem(KEYS.ALARM, JSON.stringify(alarmSettings));
+    }
 
     // Kaç kademe ekleneceği (+1, +2, +3...)
     let selectedLevelsToAdd = 1;
@@ -76,12 +97,43 @@
     }
 
     function getCurrentPlanetName() {
-        const el = document.querySelector('.planet-name') ||
-                   document.querySelector('#planetNameHeader') ||
-                   document.querySelector('#selectedPlanetName') ||
-                   document.querySelector('.planet-header .planet-name') ||
-                   document.querySelector('#planetList .smallplanet.selected .planet-name');
-        return el ? el.textContent.trim() : 'Gezegen';
+        // 1. Sidebar'daki aktif gezegen linki
+        const activeEl = document.querySelector('#planetList .smallplanet a.active .planet-name') ||
+                         document.querySelector('#planetList .smallplanet.hightlightStaff .planet-name') ||
+                         document.querySelector('#planetList .smallplanet.active .planet-name') ||
+                         document.querySelector('#myPlanets .smallplanet.hightlightStaff .planet-name') ||
+                         document.querySelector('#myPlanets .smallplanet a.active .planet-name') ||
+                         document.querySelector('.smallplanet.hightlightStaff .planet-name') ||
+                         document.querySelector('.smallplanet a.active .planet-name') ||
+                         document.querySelector('#planetList a.active .planet-name') ||
+                         document.querySelector('#planetList .smallplanet.selected .planet-name');
+        if (activeEl && activeEl.textContent.trim()) {
+            return activeEl.textContent.trim();
+        }
+
+        // 2. Aktif Ay seçimi varsa
+        const activeMoon = document.querySelector('#planetList .moonlink.active') ||
+                           document.querySelector('.smallplanet .moonlink.active');
+        if (activeMoon) {
+            const moonTitle = activeMoon.getAttribute('title') || activeMoon.textContent;
+            if (moonTitle && moonTitle.trim()) return moonTitle.split('[')[0].trim() || 'Ay';
+        }
+
+        // 3. OGame resmi meta etiketi (Sunucu tarafından aktif gezegene göre üretilir)
+        const metaName = document.querySelector('meta[name="ogame-planet-name"]')?.getAttribute('content');
+        if (metaName && metaName.trim()) {
+            return metaName.trim();
+        }
+
+        // 4. Üst başlık veya seçili gezegen başlığı
+        const headerEl = document.querySelector('#planetNameHeader') ||
+                         document.querySelector('#selectedPlanetName') ||
+                         document.querySelector('.planet-header .planet-name');
+        if (headerEl && headerEl.textContent.trim()) {
+            return headerEl.textContent.trim();
+        }
+
+        return 'Gezegen';
     }
 
     // ============================================================
@@ -406,23 +458,42 @@
                 if (item.isDeduction) d.style.borderLeft = '3px solid #e67e22';
 
                 let label = item.name;
-                if (item.level) label += ' Kd ' + item.level;
+                if (item.level) label += ' ' + item.level;
                 if (item.count > 1) label += ' x' + item.count;
 
                 const sign = (n) => n < 0 ? fmt(n) : '+' + fmt(n);
-                const color = (n) => n < 0 ? '#e67e22' : '#aaa';
+                const mColor = (n) => n < 0 ? '#e67e22' : '#ffbe3b';
+                const cColor = (n) => n < 0 ? '#e67e22' : '#5dade2';
+                const dColor = (n) => n < 0 ? '#e67e22' : '#2ecc71';
+
+                let titleHtml = '<span style="color:' + (item.isDeduction ? '#e67e22' : '#ffffff') + ';font-weight:bold">' +
+                    (item.isDeduction ? '📉 ' : '') + item.name +
+                '</span>';
+
+                if (item.level) {
+                    titleHtml += '<span style="color:#b0bec5;font-weight:bold;margin-left:6px">' + item.level + '</span>';
+                } else if (item.count > 1) {
+                    titleHtml += '<span style="color:#b0bec5;font-weight:bold;margin-left:6px">x' + item.count + '</span>';
+                }
+
+                const planetBadge = item.planet ?
+                    '<span style="color:#d29bfe;font-size:10px;font-weight:bold;background:rgba(179,136,255,0.12);border:1px solid rgba(179,136,255,0.28);padding:1px 6px;border-radius:4px;white-space:nowrap;user-select:none" title="Gezegen: ' + item.planet + '">' +
+                        item.planet +
+                    '</span>' : '';
 
                 d.innerHTML =
-                    '<div style="flex:1">' +
-                        '<div style="color:' + (item.isDeduction ? '#e67e22' : '#00bcff') + ';font-weight:bold;font-size:11px">' +
-                            (item.isDeduction ? '📉 ' : '') + label +
+                    '<div style="flex:1;min-width:0;margin-right:8px">' +
+                        '<div style="font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' +
+                            titleHtml +
                         '</div>' +
-                        '<div style="font-size:9px;color:#666">' + (item.planet || '') + '</div>' +
-                        '<div style="font-size:10px;margin-top:2px">' +
-                            '<span style="color:' + color(item.metal) + '">' + sign(item.metal) + '</span> · ' +
-                            '<span style="color:' + (item.crystal < 0 ? '#e67e22' : '#5dade2') + '">' + sign(item.crystal) + '</span> · ' +
-                            '<span style="color:' + (item.deuterium < 0 ? '#e67e22' : '#2ecc71') + '">' + sign(item.deuterium) + '</span>' +
+                        '<div style="font-size:10px;margin-top:2px;font-family:monospace">' +
+                            '<span style="color:' + mColor(item.metal) + '">' + sign(item.metal) + '</span> · ' +
+                            '<span style="color:' + cColor(item.crystal) + '">' + sign(item.crystal) + '</span> · ' +
+                            '<span style="color:' + dColor(item.deuterium) + '">' + sign(item.deuterium) + '</span>' +
                         '</div>' +
+                    '</div>' +
+                    '<div class="ls-item-right" style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:auto">' +
+                        planetBadge +
                     '</div>';
 
                 const xBtn = document.createElement('button');
@@ -434,7 +505,7 @@
                     e.stopPropagation();
                     removeCartItem(i);
                 });
-                d.appendChild(xBtn);
+                d.querySelector('.ls-item-right').appendChild(xBtn);
 
                 listEl.appendChild(d);
             });
@@ -448,31 +519,39 @@
                     '📉 Mevcut Gezegen Kaynağını Sepetten Düş' +
                 '</button>' +
             '</div>' +
-            '<div class="ls-total-row">' +
-                '<span>🟡 Kalan Metal:</span>' +
+            '<div class="ls-total-row" style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:11px">' +
+                '<div style="display:flex;align-items:center;width:110px;justify-content:space-between">' +
+                    '<span>🟡 Metal</span><span style="color:#7f8c8d;margin-right:2px">:</span>' +
+                '</div>' +
                 '<span style="display:flex;align-items:center;gap:4px;">' +
-                    '<b style="color:#aaa">' + fmt(tM) + '</b>' +
+                    '<b style="color:#ffbe3b;font-family:monospace;font-size:11.5px">' + fmt(tM) + '</b>' +
                     '<button id="ls-cp-m" class="ls-cp-btn" title="Sayısını kopyala">📋</button>' +
                 '</span>' +
             '</div>' +
-            '<div class="ls-total-row">' +
-                '<span>🔵 Kalan Kristal:</span>' +
+            '<div class="ls-total-row" style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:11px">' +
+                '<div style="display:flex;align-items:center;width:110px;justify-content:space-between">' +
+                    '<span>🔵 Kristal</span><span style="color:#7f8c8d;margin-right:2px">:</span>' +
+                '</div>' +
                 '<span style="display:flex;align-items:center;gap:4px;">' +
-                    '<b style="color:#5dade2">' + fmt(tC) + '</b>' +
+                    '<b style="color:#5dade2;font-family:monospace;font-size:11.5px">' + fmt(tC) + '</b>' +
                     '<button id="ls-cp-c" class="ls-cp-btn" title="Sayısını kopyala">📋</button>' +
                 '</span>' +
             '</div>' +
-            '<div class="ls-total-row">' +
-                '<span>🟢 Kalan Deuterium:</span>' +
+            '<div class="ls-total-row" style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:11px">' +
+                '<div style="display:flex;align-items:center;width:110px;justify-content:space-between">' +
+                    '<span>🟢 Deuterium</span><span style="color:#7f8c8d;margin-right:2px">:</span>' +
+                '</div>' +
                 '<span style="display:flex;align-items:center;gap:4px;">' +
-                    '<b style="color:#2ecc71">' + fmt(tD) + '</b>' +
+                    '<b style="color:#2ecc71;font-family:monospace;font-size:11.5px">' + fmt(tD) + '</b>' +
                     '<button id="ls-cp-d" class="ls-cp-btn" title="Sayısını kopyala">📋</button>' +
                 '</span>' +
             '</div>' +
-            '<div class="ls-total-row" style="border-top:1px solid #333;padding-top:4px;margin-top:4px">' +
-                '<span>🔴 Net Kalan İhtiyaç:</span>' +
+            '<div class="ls-total-row" style="border-top:1px solid #233446;padding-top:4px;margin-top:4px;display:flex;justify-content:space-between;align-items:center;font-size:11px">' +
+                '<div style="display:flex;align-items:center;width:110px;justify-content:space-between">' +
+                    '<span style="color:#ff6b6b;font-weight:bold">🔴 Total</span><span style="color:#7f8c8d;margin-right:2px">:</span>' +
+                '</div>' +
                 '<span style="display:flex;align-items:center;gap:4px;">' +
-                    '<b style="color:#fff">' + fmt(netTotal) + '</b>' +
+                    '<b style="color:#fff;font-family:monospace;font-size:12px;font-weight:bold">' + fmt(netTotal) + '</b>' +
                     '<button id="ls-cp-net" class="ls-cp-btn" title="Sayısını kopyala">📋</button>' +
                 '</span>' +
             '</div>';
@@ -489,15 +568,15 @@
         let tM = 0, tC = 0, tD = 0;
         cart.forEach(item => {
             let label = item.name;
-            if (item.level) label += ' Kd ' + item.level;
+            if (item.level) label += ' (' + item.level + ')';
             if (item.count > 1) label += ' x' + item.count;
             lines.push('• ' + label + ' [' + item.planet + ']');
             lines.push('  M: ' + fmt(item.metal) + ' | K: ' + fmt(item.crystal) + ' | D: ' + fmt(item.deuterium));
             tM += item.metal; tC += item.crystal; tD += item.deuterium;
         });
         lines.push('');
-        lines.push('NET KALAN: M: ' + fmt(tM) + ' | K: ' + fmt(tC) + ' | D: ' + fmt(tD));
-        lines.push('Genel Net: ' + fmt(tM + tC + tD));
+        lines.push('NET: M: ' + fmt(tM) + ' | K: ' + fmt(tC) + ' | D: ' + fmt(tD));
+        lines.push('Total: ' + fmt(tM + tC + tD));
         navigator.clipboard.writeText(lines.join('\n')).then(() => {
             const btn = document.getElementById('ls-cart-copy');
             if (btn) { btn.textContent = '✓ Kopyalandı!'; setTimeout(() => { btn.textContent = '📋 Panoya Kopyala'; }, 2000); }
@@ -576,13 +655,16 @@
                 results.forEach(r => {
                     const div = document.createElement('div');
                     div.className = 'ls-item';
+                    div.style.boxSizing = 'border-box';
+                    div.style.width = '100%';
                     const badges = r.slots.map(s => '<span class="ls-badge">' + s + '</span>').join(' ');
                     div.innerHTML =
-                        '<div style="flex:1">' +
-                            '<strong style="color:#00bcff">[' + r.g + ':' + r.s + ']</strong> ' + badges +
+                        '<div style="flex:1;min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:3px">' +
+                            '<strong style="color:#00bcff;margin-right:4px">[' + r.g + ':' + r.s + ']</strong> ' + badges +
                         '</div>';
                     const navBtn = document.createElement('button');
                     navBtn.className = 'ls-btn-sm';
+                    navBtn.style.flexShrink = '0';
                     navBtn.textContent = '🚀';
                     navBtn.title = 'Galaksiye Git';
                     navBtn.addEventListener('click', () => navigateToGalaxy(r.g, r.s));
@@ -752,6 +834,428 @@
     window.lsNav = navigateToGalaxy;
 
     // ============================================================
+    // THREAT ALARM & AUDIO SYNTHESIS
+    // ============================================================
+    let audioCtx = null;
+    function getAudioContext() {
+        if (!audioCtx) {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (AudioContextClass) {
+                audioCtx = new AudioContextClass();
+            }
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+        return audioCtx;
+    }
+
+    function unlockAudio() {
+        if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    }
+    ['click', 'keydown', 'touchstart'].forEach(evt => {
+        window.addEventListener(evt, unlockAudio, { once: true, passive: true });
+    });
+
+    function playAttackAlertSound(soundType) {
+        try {
+            const ctx = getAudioContext();
+            if (!ctx) return;
+            const volume = Math.max(0.01, Math.min(1.0, (alarmSettings.volume || 70) / 100));
+            const now = ctx.currentTime;
+            const type = soundType || alarmSettings.attackSound || 'klaxon';
+
+            if (type === 'siren') {
+                // 2. Kırmızı Alarm Sireni (Klasik Sci-Fi Siren) - 2 KEZ PEŞ PEŞE ÇALMA
+                [0, 1.05].forEach(cycleOffset => {
+                    const cycleStart = now + cycleOffset;
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    const filter = ctx.createBiquadFilter();
+
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(440, cycleStart);
+                    osc.frequency.linearRampToValueAtTime(880, cycleStart + 0.45);
+                    osc.frequency.linearRampToValueAtTime(480, cycleStart + 0.90);
+
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(1400, cycleStart);
+
+                    gain.gain.setValueAtTime(0.001, cycleStart);
+                    gain.gain.linearRampToValueAtTime(volume * 0.70, cycleStart + 0.08);
+                    gain.gain.setValueAtTime(volume * 0.70, cycleStart + 0.75);
+                    gain.gain.exponentialRampToValueAtTime(0.001, cycleStart + 0.95);
+
+                    osc.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(ctx.destination);
+
+                    osc.start(cycleStart);
+                    osc.stop(cycleStart + 0.98);
+                });
+            } else if (type === 'pulse') {
+                // 3. Acil Durum Nabzı (Staccato Klaxon) - 2 KEZ PEŞ PEŞE ÇALMA
+                [0, 0.75].forEach(cycleOffset => {
+                    const cycleStart = now + cycleOffset;
+                    const pulses = [
+                        { t: cycleStart + 0.00, dur: 0.09, freq: 880 },
+                        { t: cycleStart + 0.13, dur: 0.09, freq: 880 },
+                        { t: cycleStart + 0.26, dur: 0.15, freq: 1100 }
+                    ];
+
+                    pulses.forEach(p => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(p.freq, p.t);
+
+                        gain.gain.setValueAtTime(0.001, p.t);
+                        gain.gain.linearRampToValueAtTime(volume * 0.85, p.t + 0.015);
+                        gain.gain.exponentialRampToValueAtTime(0.001, p.t + p.dur);
+
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+
+                        osc.start(p.t);
+                        osc.stop(p.t + p.dur + 0.02);
+                    });
+                });
+            } else {
+                // 1. Taktiksel Klakson (Varsayılan) - 2 KEZ PEŞ PEŞE ÇALMA
+                [0, 0.70].forEach(cycleOffset => {
+                    const cycleStart = now + cycleOffset;
+                    const tones = [
+                        { start: cycleStart, f1: 587, f2: 740, dur: 0.28 },
+                        { start: cycleStart + 0.25, f1: 587, f2: 880, dur: 0.34 }
+                    ];
+
+                    tones.forEach(t => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(t.f1, t.start);
+                        osc.frequency.exponentialRampToValueAtTime(t.f2, t.start + (t.dur * 0.4));
+
+                        gain.gain.setValueAtTime(0.001, t.start);
+                        gain.gain.linearRampToValueAtTime(volume * 0.75, t.start + 0.02);
+                        gain.gain.setValueAtTime(volume * 0.75, t.start + (t.dur * 0.6));
+                        gain.gain.exponentialRampToValueAtTime(0.001, t.start + t.dur);
+
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+
+                        osc.start(t.start);
+                        osc.stop(t.start + t.dur + 0.05);
+                    });
+                });
+            }
+        } catch (e) {
+            console.error(LS, 'Saldırı sesi çalınamadı:', e);
+        }
+    }
+
+    function playEspionageAlertSound(soundType) {
+        try {
+            const ctx = getAudioContext();
+            if (!ctx) return;
+            const volume = Math.max(0.01, Math.min(1.0, (alarmSettings.volume || 70) / 100));
+            const now = ctx.currentTime;
+            const type = soundType || alarmSettings.espionageSound || 'sonar_deep';
+
+            if (type === 'sonar_hunter' || type === 'hunter') {
+                // 2. Aktif Avcı Sonarı (Yüksek Frekanslı Taktik Ping) - 2 KEZ PEŞ PEŞE ÇALMA
+                [0, 1.10].forEach(pingOffset => {
+                    const pingTime = now + pingOffset;
+
+                    const osc1 = ctx.createOscillator();
+                    const gain1 = ctx.createGain();
+                    osc1.type = 'sine';
+                    osc1.frequency.setValueAtTime(1650, pingTime);
+                    osc1.frequency.exponentialRampToValueAtTime(1630, pingTime + 1.0);
+
+                    gain1.gain.setValueAtTime(0.0001, pingTime);
+                    gain1.gain.linearRampToValueAtTime(volume * 0.75, pingTime + 0.007);
+                    gain1.gain.exponentialRampToValueAtTime(volume * 0.20, pingTime + 0.25);
+                    gain1.gain.exponentialRampToValueAtTime(0.0001, pingTime + 1.05);
+
+                    const osc2 = ctx.createOscillator();
+                    const gain2 = ctx.createGain();
+                    osc2.type = 'sine';
+                    osc2.frequency.setValueAtTime(3300, pingTime);
+                    osc2.frequency.exponentialRampToValueAtTime(3100, pingTime + 0.06);
+
+                    gain2.gain.setValueAtTime(0.0001, pingTime);
+                    gain2.gain.linearRampToValueAtTime(volume * 0.30, pingTime + 0.004);
+                    gain2.gain.exponentialRampToValueAtTime(0.0001, pingTime + 0.06);
+
+                    osc1.connect(gain1);
+                    gain1.connect(ctx.destination);
+                    osc2.connect(gain2);
+                    gain2.connect(ctx.destination);
+
+                    osc1.start(pingTime);
+                    osc1.stop(pingTime + 1.10);
+                    osc2.start(pingTime);
+                    osc2.stop(pingTime + 0.07);
+                });
+            } else if (type === 'sonar_echo' || type === 'echo') {
+                // 3. Taktik Yankı Sonarı (Çift Vuruşlu Eko Sonar) - 2 KEZ PEŞ PEŞE ÇALMA
+                [0, 1.35].forEach(cycleOffset => {
+                    const cycleStart = now + cycleOffset;
+
+                    const osc1 = ctx.createOscillator();
+                    const gain1 = ctx.createGain();
+                    osc1.type = 'sine';
+                    osc1.frequency.setValueAtTime(880, cycleStart);
+                    osc1.frequency.exponentialRampToValueAtTime(865, cycleStart + 0.8);
+
+                    gain1.gain.setValueAtTime(0.0001, cycleStart);
+                    gain1.gain.linearRampToValueAtTime(volume * 0.75, cycleStart + 0.008);
+                    gain1.gain.exponentialRampToValueAtTime(0.0001, cycleStart + 0.8);
+
+                    const osc2 = ctx.createOscillator();
+                    const gain2 = ctx.createGain();
+                    osc2.type = 'sine';
+                    osc2.frequency.setValueAtTime(700, cycleStart + 0.32);
+                    osc2.frequency.exponentialRampToValueAtTime(690, cycleStart + 1.05);
+
+                    gain2.gain.setValueAtTime(0.0001, cycleStart + 0.32);
+                    gain2.gain.linearRampToValueAtTime(volume * 0.40, cycleStart + 0.33);
+                    gain2.gain.exponentialRampToValueAtTime(0.0001, cycleStart + 1.05);
+
+                    osc1.connect(gain1);
+                    gain1.connect(ctx.destination);
+                    osc2.connect(gain2);
+                    gain2.connect(ctx.destination);
+
+                    osc1.start(cycleStart);
+                    osc1.stop(cycleStart + 0.85);
+                    osc2.start(cycleStart + 0.32);
+                    osc2.stop(cycleStart + 1.10);
+                });
+            } else {
+                // 1. Derin Deniz Sonarı (Klasik Ping - Varsayılan) - 2 KEZ PEŞ PEŞE ÇALMA
+                [0, 1.25].forEach(pingOffset => {
+                    const pingTime = now + pingOffset;
+
+                    const osc1 = ctx.createOscillator();
+                    const gain1 = ctx.createGain();
+                    osc1.type = 'sine';
+                    osc1.frequency.setValueAtTime(1020, pingTime);
+                    osc1.frequency.exponentialRampToValueAtTime(1005, pingTime + 1.2);
+
+                    gain1.gain.setValueAtTime(0.0001, pingTime);
+                    gain1.gain.linearRampToValueAtTime(volume * 0.8, pingTime + 0.008);
+                    gain1.gain.exponentialRampToValueAtTime(volume * 0.25, pingTime + 0.30);
+                    gain1.gain.exponentialRampToValueAtTime(0.0001, pingTime + 1.2);
+
+                    const osc2 = ctx.createOscillator();
+                    const gain2 = ctx.createGain();
+                    osc2.type = 'sine';
+                    osc2.frequency.setValueAtTime(2040, pingTime);
+                    osc2.frequency.exponentialRampToValueAtTime(1950, pingTime + 0.08);
+
+                    gain2.gain.setValueAtTime(0.0001, pingTime);
+                    gain2.gain.linearRampToValueAtTime(volume * 0.35, pingTime + 0.005);
+                    gain2.gain.exponentialRampToValueAtTime(0.0001, pingTime + 0.08);
+
+                    osc1.connect(gain1);
+                    gain1.connect(ctx.destination);
+                    osc2.connect(gain2);
+                    gain2.connect(ctx.destination);
+
+                    osc1.start(pingTime);
+                    osc1.stop(pingTime + 1.25);
+                    osc2.start(pingTime);
+                    osc2.stop(pingTime + 0.09);
+                });
+            }
+        } catch (e) {
+            console.error(LS, 'Sonar sesi çalınamadı:', e);
+        }
+    }
+
+    let lastAttackSoundTime = 0;
+    let lastEspionageSoundTime = 0;
+    let isCurrentlyUnderAttack = false;
+    let isCurrentlyUnderEspionage = false;
+    let isMutedForCurrentThreat = false;
+
+    function muteCurrentThreat() {
+        isMutedForCurrentThreat = true;
+        const stopBtn = document.getElementById('ls-alarm-stop-btn');
+        const headerStopBtn = document.getElementById('ls-header-stop-btn');
+        if (stopBtn) stopBtn.style.display = 'none';
+        if (headerStopBtn) headerStopBtn.style.display = 'none';
+        const text = document.getElementById('ls-alarm-status-text');
+        if (text) {
+            if (isCurrentlyUnderAttack) text.textContent = '🚨 Saldırı Var (Alarm Susturuldu)';
+            else if (isCurrentlyUnderEspionage) text.textContent = '📡 Sonda Geliyor (Alarm Susturuldu)';
+        }
+    }
+
+    function handleThreatState(hasAttack, hasEspionage) {
+        const now = Date.now();
+        const repeatSec = parseInt(alarmSettings.repeatInterval, 10);
+        const repeatMs = (isNaN(repeatSec) ? 30 : repeatSec) * 1000;
+
+        const banner = document.getElementById('ls-alarm-status-banner');
+        const dot = document.getElementById('ls-alarm-dot');
+        const text = document.getElementById('ls-alarm-status-text');
+        const stopBtn = document.getElementById('ls-alarm-stop-btn');
+        const headerStopBtn = document.getElementById('ls-header-stop-btn');
+
+        // İkisi de kapalıysa gözcüyü pasife al ve durdur
+        if (!alarmSettings.attackEnabled && !alarmSettings.espionageEnabled) {
+            if (banner) { banner.style.background = '#121820'; banner.style.borderColor = '#233446'; }
+            if (dot) { dot.style.background = '#7f8c8d'; dot.style.boxShadow = 'none'; }
+            if (text) { text.style.color = '#7f8c8d'; text.textContent = 'Gözcü Pasif (Alarmlar Kapalı)'; }
+            if (stopBtn) stopBtn.style.display = 'none';
+            if (headerStopBtn) headerStopBtn.style.display = 'none';
+            isCurrentlyUnderAttack = false;
+            isCurrentlyUnderEspionage = false;
+            isMutedForCurrentThreat = false;
+            return;
+        }
+
+        const isThreat = (hasAttack && alarmSettings.attackEnabled) || (hasEspionage && alarmSettings.espionageEnabled);
+
+        // Tehdit bittiğinde susturma durumunu ve bayrakları otomatik sıfırla
+        if (!isThreat) {
+            isMutedForCurrentThreat = false;
+            if (stopBtn) stopBtn.style.display = 'none';
+            if (headerStopBtn) headerStopBtn.style.display = 'none';
+            if (banner) { banner.style.background = '#162436'; banner.style.borderColor = '#1a3a5c'; }
+            if (dot) { dot.style.background = '#2ecc71'; dot.style.boxShadow = '0 0 6px #2ecc71'; }
+            if (text) { text.style.color = '#2ecc71'; text.textContent = 'Gözcü Aktif · Tehdit Yok'; }
+            isCurrentlyUnderAttack = false;
+            isCurrentlyUnderEspionage = false;
+            return;
+        }
+
+        // Tekrar sıklığı 1'den farklıysa (repeatMs > 0) ve susturulmadıysa Stop butonu göster
+        const canShowStop = repeatMs > 0 && !isMutedForCurrentThreat;
+        if (stopBtn) stopBtn.style.display = canShowStop ? 'inline-flex' : 'none';
+        if (headerStopBtn) headerStopBtn.style.display = canShowStop ? 'inline-flex' : 'none';
+
+        if (hasAttack && alarmSettings.attackEnabled) {
+            if (banner) { banner.style.background = '#301416'; banner.style.borderColor = '#e74c3c'; }
+            if (dot) { dot.style.background = '#e74c3c'; dot.style.boxShadow = '0 0 8px #e74c3c'; }
+            if (text) {
+                text.style.color = '#e74c3c';
+                text.textContent = isMutedForCurrentThreat ? '🚨 Saldırı Var (Alarm Susturuldu)' : '🚨 DİKKAT: GELEN SALDIRI VAR!';
+            }
+
+            if (!isMutedForCurrentThreat) {
+                const shouldPlay = !isCurrentlyUnderAttack || (repeatMs > 0 && (now - lastAttackSoundTime) >= repeatMs);
+                if (shouldPlay) {
+                    playAttackAlertSound(alarmSettings.attackSound);
+                    lastAttackSoundTime = now;
+                }
+            }
+        } else if (hasEspionage && alarmSettings.espionageEnabled) {
+            if (banner) { banner.style.background = '#0e2338'; banner.style.borderColor = '#3498db'; }
+            if (dot) { dot.style.background = '#3498db'; dot.style.boxShadow = '0 0 8px #3498db'; }
+            if (text) {
+                text.style.color = '#3498db';
+                text.textContent = isMutedForCurrentThreat ? '📡 Sonda Geliyor (Alarm Susturuldu)' : '📡 BİLGİ: Casus Sondası Geliyor';
+            }
+
+            if (!isMutedForCurrentThreat) {
+                const shouldPlay = !isCurrentlyUnderEspionage || (repeatMs > 0 && (now - lastEspionageSoundTime) >= repeatMs);
+                if (shouldPlay) {
+                    playEspionageAlertSound(alarmSettings.espionageSound);
+                    lastEspionageSoundTime = now;
+                }
+            }
+        }
+
+        isCurrentlyUnderAttack = hasAttack;
+        isCurrentlyUnderEspionage = hasEspionage;
+    }
+
+    function checkThreatsInDOM() {
+        if (!alarmSettings.attackEnabled && !alarmSettings.espionageEnabled) {
+            handleThreatState(false, false);
+            return;
+        }
+
+        let hasAttack = false;
+        let hasEspionage = false;
+
+        const attAlert = document.getElementById('attack_alert');
+        if (attAlert) {
+            const isAlert = attAlert.classList.contains('soon') ||
+                            attAlert.classList.contains('attack') ||
+                            attAlert.classList.contains('alert');
+            const isNoAttack = attAlert.classList.contains('noAttack') || attAlert.classList.contains('hide');
+            if (isAlert && !isNoAttack) {
+                hasAttack = true;
+            }
+        }
+
+        const hostileHeader = document.querySelector('#eventHeader.soon, #js_eventHeaderBox.soon, .event_cdr.soon');
+        if (hostileHeader) hasAttack = true;
+
+        const fleets = document.querySelectorAll('.eventFleet');
+        fleets.forEach(fl => {
+            const mission = fl.getAttribute('data-mission-type');
+            const isReturn = fl.getAttribute('data-return-flight') === 'true';
+            if (!isReturn) {
+                if (mission === '1' || mission === '2' || mission === '9' || fl.classList.contains('hostile')) {
+                    hasAttack = true;
+                } else if (mission === '6' || fl.classList.contains('espionage')) {
+                    hasEspionage = true;
+                }
+            }
+        });
+
+        handleThreatState(hasAttack, hasEspionage);
+    }
+
+    async function checkThreatsAsync() {
+        if (!alarmSettings.attackEnabled && !alarmSettings.espionageEnabled) return;
+
+        try {
+            const resp = await fetch('/game/index.php?page=componentOnly&component=eventList');
+            if (!resp.ok) return;
+            const html = await resp.text();
+
+            let hasAttack = false;
+            let hasEspionage = false;
+
+            const doc = new DOMParser().parseFromString(html, 'text/html');
+            const fleets = doc.querySelectorAll('.eventFleet');
+            fleets.forEach(fl => {
+                const mission = fl.getAttribute('data-mission-type');
+                const isReturn = fl.getAttribute('data-return-flight') === 'true';
+                if (!isReturn) {
+                    if (mission === '1' || mission === '2' || mission === '9' || fl.classList.contains('hostile')) {
+                        hasAttack = true;
+                    } else if (mission === '6' || fl.classList.contains('espionage')) {
+                        hasEspionage = true;
+                    }
+                }
+            });
+
+            if (!hasAttack) {
+                const attAlert = document.getElementById('attack_alert');
+                if (attAlert && (attAlert.classList.contains('soon') || attAlert.classList.contains('attack')) && !attAlert.classList.contains('noAttack')) {
+                    hasAttack = true;
+                }
+            }
+
+            handleThreatState(hasAttack, hasEspionage);
+        } catch (e) {
+            // Ignore
+        }
+    }
+
+    // ============================================================
     // INJECT UI
     // ============================================================
     function buildUI() {
@@ -764,9 +1268,20 @@
             '#ls-fab:hover{transform:scale(1.12)}',
             '#ls-fab svg{filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5))}',
 
-            '#ls-panel{position:fixed;bottom:120px;right:15px;width:340px;background:rgba(11,16,26,0.97);',
+            '#ls-panel, #ls-panel *{box-sizing:border-box}',
+            '#ls-panel{position:fixed;bottom:120px;right:15px;width:340px;min-width:280px;max-width:calc(100vw - 30px);',
+            'min-height:260px;max-height:calc(100vh - 30px);background:rgba(11,16,26,0.97);',
             'border:1px solid #1a2c3f;border-radius:8px;color:#d1d8e0;font-family:sans-serif;font-size:12px;',
-            'z-index:999998;box-shadow:0 10px 30px rgba(0,0,0,0.8);display:none;flex-direction:column;max-height:80vh}',
+            'z-index:999998;box-shadow:0 10px 30px rgba(0,0,0,0.8);display:none;flex-direction:column}',
+
+            '.ls-resize-h{position:absolute;z-index:999999}',
+            '.ls-rh-se{right:0;bottom:0;width:14px;height:14px;cursor:nwse-resize}',
+            '.ls-rh-sw{left:0;bottom:0;width:14px;height:14px;cursor:nesw-resize}',
+            '.ls-rh-ne{right:0;top:0;width:14px;height:14px;cursor:nesw-resize}',
+            '.ls-rh-nw{left:0;top:0;width:14px;height:14px;cursor:nwse-resize}',
+            '.ls-rh-e{right:0;top:14px;bottom:14px;width:6px;cursor:ew-resize}',
+            '.ls-rh-w{left:0;top:14px;bottom:14px;width:6px;cursor:ew-resize}',
+            '.ls-rh-s{bottom:0;left:14px;right:14px;height:6px;cursor:ns-resize}',
 
             '#ls-header{padding:8px 12px;background:linear-gradient(90deg,#0d1b2a,#1a2c3f);',
             'border-bottom:2px solid #00bcff;border-radius:8px 8px 0 0;cursor:move;display:flex;',
@@ -777,13 +1292,13 @@
 
             '#ls-tabs{display:flex;border-bottom:1px solid #1a2c3f}',
             '.ls-tab{flex:1;text-align:center;padding:7px 4px;cursor:pointer;font-size:10px;',
-            'background:rgba(26,44,63,0.4);transition:all .2s;color:#8899aa}',
+            'background:rgba(26,44,63,0.4);transition:all .2s;color:#8899aa;user-select:none}',
             '.ls-tab:hover{background:rgba(0,188,255,0.15);color:#fff}',
             '.ls-tab.active{background:rgba(0,188,255,0.25);color:#00bcff;font-weight:bold;',
             'border-bottom:2px solid #00bcff}',
 
-            '#ls-body{padding:10px;overflow-y:auto;flex:1}',
-            '.ls-tc{display:none}.ls-tc.active{display:block}',
+            '#ls-body{padding:10px;overflow-y:auto;overflow-x:hidden !important;flex:1;min-height:0}',
+            '.ls-tc{display:none;width:100%;overflow-x:hidden}.ls-tc.active{display:block}',
 
             '.ls-item{background:rgba(255,255,255,0.04);padding:6px 8px;margin-bottom:4px;border-radius:4px;',
             'display:flex;justify-content:space-between;align-items:center;gap:6px}',
@@ -848,6 +1363,13 @@
             'box-shadow:0 3px 8px rgba(0,0,0,0.85);max-width:170px;overflow:hidden;text-overflow:ellipsis}',
             '#ls-add-cart-btn:hover{background:linear-gradient(135deg, #f1c40f, #d39e00);transform:scale(1.02)}',
 
+            '.ls-toggle-switch{position:relative;display:inline-block;width:34px;height:18px;cursor:pointer}',
+            '.ls-toggle-switch input{opacity:0;width:0;height:0;position:absolute}',
+            '.ls-toggle-slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:#334455;transition:.2s;border-radius:18px}',
+            '.ls-toggle-slider:before{position:absolute;content:"";height:12px;width:12px;left:3px;bottom:3px;background-color:white;transition:.2s;border-radius:50%}',
+            '.ls-toggle-switch input:checked + .ls-toggle-slider{background-color:#2ecc71}',
+            '.ls-toggle-switch input:checked + .ls-toggle-slider:before{transform:translateX(16px)}',
+
             '#ls-body::-webkit-scrollbar{width:5px}',
             '#ls-body::-webkit-scrollbar-track{background:#0a0e17}',
             '#ls-body::-webkit-scrollbar-thumb{background:#00bcff;border-radius:3px}',
@@ -870,12 +1392,16 @@
         panel.innerHTML =
             '<div id="ls-header">' +
                 '<span id="ls-header-title">' + boltSvg + ' LuckyStrike Helper</span>' +
-                '<span id="ls-close">✖</span>' +
+                '<div style="display:flex;align-items:center;gap:6px">' +
+                    '<button id="ls-header-stop-btn" class="ls-btn-d ls-btn-sm" style="display:none;padding:2px 7px;font-size:10px;align-items:center;gap:3px;cursor:pointer" title="Tekrarlayan bu alarmı sustur">⏹️ Sustur</button>' +
+                    '<span id="ls-close">✖</span>' +
+                '</div>' +
             '</div>' +
             '<div id="ls-tabs">' +
                 '<div class="ls-tab" data-tab="cart">🏗️ Maliyet</div>' +
                 '<div class="ls-tab" data-tab="scanner">🌌 Scanner</div>' +
                 '<div class="ls-tab" data-tab="finder">🔍 Finder</div>' +
+                '<div class="ls-tab" data-tab="alarm">🚨 Alarm</div>' +
             '</div>' +
             '<div id="ls-body">' +
 
@@ -891,7 +1417,6 @@
 
                 // SCANNER TAB
                 '<div id="tc-scanner" class="ls-tc">' +
-                    '<div style="font-size:10px;color:#5dade2;margin-bottom:8px">ℹ️ Resmi Gameforge API kullanılır. Ban riski yoktur.</div>' +
                     '<div class="ls-row">' +
                         '<div class="ls-col"><span class="ls-label">Galaksi Başlangıç</span><input type="number" id="ls-sg1" class="ls-inp" min="1" max="9" style="width:100%"></div>' +
                         '<div class="ls-col"><span class="ls-label">Galaksi Bitiş</span><input type="number" id="ls-sg2" class="ls-inp" min="1" max="9" style="width:100%"></div>' +
@@ -904,44 +1429,156 @@
                         '<span class="ls-label">Hedef Slotlar (virgülle ayırın)</span>' +
                         '<input type="text" id="ls-slots" class="ls-inp" style="width:100%" placeholder="8 veya 7, 8, 9">' +
                     '</div>' +
-                    '<div style="margin-bottom:8px">' +
-                        '<span class="ls-chip" data-slots="8">🎯 Sadece 8</span>' +
-                        '<span class="ls-chip" data-slots="7, 8, 9">⭐ 7, 8, 9</span>' +
-                        '<span class="ls-chip" data-slots="12, 13, 14, 15">❄️ 12-15 (Deut)</span>' +
-                        '<span class="ls-chip" data-slots="1, 2, 3">☀️ 1-3 (Solar)</span>' +
+                    '<div style="margin-bottom:8px;display:flex;flex-wrap:wrap;gap:2px">' +
+                        '<span class="ls-chip" data-slots="8" data-min="1">🎯 Sadece 8</span>' +
+                        '<span class="ls-chip" data-slots="7, 8, 9" data-min="1">⭐ 7, 8, 9</span>' +
+                        '<span class="ls-chip" data-slots="12, 13, 14, 15" data-min="1">❄️ 12-15 (Deut)</span>' +
+                        '<span class="ls-chip" data-slots="1, 2, 3" data-min="1">☀️ 1-3 (Solar)</span>' +
+                        '<span class="ls-chip" data-slots="1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15" data-min="15">🪐 Tamamen Boş (1-15)</span>' +
                     '</div>' +
-                    '<div class="ls-row">' +
-                        '<div class="ls-col">' +
-                            '<span class="ls-label">👥 Min Eşzamanlı Boş Slot</span>' +
-                            '<select id="ls-min" class="ls-inp" style="width:100%">' +
-                                '<option value="1">1</option><option value="2">2</option>' +
-                                '<option value="3">3</option><option value="4">4</option>' +
-                            '</select>' +
-                        '</div>' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;background:rgba(255,255,255,0.03);padding:6px 8px;border-radius:4px;border:1px solid #1a2c3f">' +
+                        '<span class="ls-label" style="font-size:11px;color:#d1d8e0">👥 Min. Eşzamanlı Boş Slot:</span>' +
+                        '<select id="ls-min" class="ls-inp" style="width:80px;padding:3px 6px;text-align:center">' +
+                            '<option value="1">1 slot</option>' +
+                            '<option value="2">2 slot</option>' +
+                            '<option value="3">3 slot</option>' +
+                            '<option value="4">4 slot</option>' +
+                            '<option value="5">5 slot</option>' +
+                            '<option value="6">6 slot</option>' +
+                            '<option value="7">7 slot</option>' +
+                            '<option value="8">8 slot</option>' +
+                            '<option value="9">9 slot</option>' +
+                            '<option value="10">10 slot</option>' +
+                            '<option value="12">12 slot</option>' +
+                            '<option value="15">15 slot</option>' +
+                        '</select>' +
                     '</div>' +
                     '<button id="ls-scan-btn" class="ls-btn" style="width:100%;margin-top:4px">🔍 Taramayı Başlat</button>' +
                     '<div class="ls-prog" id="ls-scan-progress"><div class="ls-prog-bar" id="ls-scan-bar"></div></div>' +
                     '<div id="ls-scan-status" style="font-size:10px;text-align:center;color:#8899aa;margin-top:4px"></div>' +
                     '<div id="ls-scan-results-box" style="display:none;margin-top:8px">' +
                         '<button id="ls-scan-copy" class="ls-btn" style="width:100%;margin-bottom:6px">📋 Koordinatları Kopyala</button>' +
-                        '<div id="ls-scan-results" style="max-height:220px;overflow-y:auto"></div>' +
+                        '<div id="ls-scan-results" style="max-height:220px;overflow-y:auto;overflow-x:hidden;width:100%;box-sizing:border-box"></div>' +
                     '</div>' +
                 '</div>' +
 
                 // FINDER TAB
                 '<div id="tc-finder" class="ls-tc">' +
-                    '<input type="text" id="ls-find-q" class="ls-inp" style="width:100%;margin-bottom:6px" placeholder="Oyuncu veya gezegen adı...">' +
-                    '<div style="margin-bottom:6px;font-size:11px">' +
-                        '<label style="margin-right:12px;cursor:pointer"><input type="radio" name="ls-find-type" value="player" checked> Oyuncu Adı</label>' +
-                        '<label style="cursor:pointer"><input type="radio" name="ls-find-type" value="planet"> Gezegen Adı</label>' +
+                    '<div style="max-width:270px;margin:0 auto;text-align:center">' +
+                        '<div style="font-size:10px;color:#8899aa;margin-bottom:8px">Evrendeki tüm oyuncuları ve gezegenlerini bulun.</div>' +
+                        '<input type="text" id="ls-find-q" class="ls-inp" style="width:100%;margin-bottom:8px;padding:6px 10px;font-size:11px;text-align:center;border-radius:4px" placeholder="Oyuncu veya gezegen adı...">' +
+                        '<div style="display:flex;justify-content:center;gap:14px;margin-bottom:8px;font-size:11px">' +
+                            '<label style="cursor:pointer;display:inline-flex;align-items:center;gap:4px"><input type="radio" name="ls-find-type" value="player" checked> Oyuncu Adı</label>' +
+                            '<label style="cursor:pointer;display:inline-flex;align-items:center;gap:4px"><input type="radio" name="ls-find-type" value="planet"> Gezegen Adı</label>' +
+                        '</div>' +
+                        '<button id="ls-find-btn" class="ls-btn" style="width:100%;padding:6px 12px;font-size:11px">🔍 Ara</button>' +
+                        '<div id="ls-find-status" style="font-size:10px;text-align:center;color:#8899aa;margin-top:6px"></div>' +
                     '</div>' +
-                    '<button id="ls-find-btn" class="ls-btn" style="width:100%">🔍 Ara</button>' +
-                    '<div id="ls-find-status" style="font-size:10px;text-align:center;color:#8899aa;margin-top:6px"></div>' +
-                    '<div id="ls-find-results" style="max-height:250px;overflow-y:auto;margin-top:8px"></div>' +
+                    '<div id="ls-find-results" style="max-height:220px;overflow-y:auto;overflow-x:hidden;margin-top:8px"></div>' +
                 '</div>' +
 
-            '</div>';
+                // ALARM TAB
+                '<div id="tc-alarm" class="ls-tc">' +
+                    '<div id="ls-alarm-status-banner" style="background:#162436;border:1px solid #1a3a5c;border-radius:6px;padding:8px 10px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">' +
+                        '<div style="display:flex;align-items:center;gap:8px">' +
+                            '<span id="ls-alarm-dot" style="width:10px;height:10px;border-radius:50%;background:#2ecc71;display:inline-block;box-shadow:0 0 6px #2ecc71"></span>' +
+                            '<span id="ls-alarm-status-text" style="font-size:11px;font-weight:bold;color:#2ecc71">Gözcü Aktif · Tehdit Yok</span>' +
+                        '</div>' +
+                        '<button id="ls-alarm-stop-btn" class="ls-btn-d ls-btn-sm" style="display:none;padding:3px 8px;font-size:10px;align-items:center;gap:3px;cursor:pointer" title="Tekrarlayan bu alarmı sustur">⏹️ Sustur</button>' +
+                    '</div>' +
+
+                    // Attack alert card
+                    '<div style="background:#131d2a;border:1px solid #233446;border-radius:6px;padding:10px;margin-bottom:8px">' +
+                        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
+                            '<span style="font-weight:bold;color:#e74c3c;font-size:12px">🚨 Saldırı Alarmı</span>' +
+                            '<label class="ls-toggle-switch">' +
+                                '<input type="checkbox" id="ls-alarm-att-toggle">' +
+                                '<span class="ls-toggle-slider"></span>' +
+                            '</label>' +
+                        '</div>' +
+                        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+                            '<span style="font-size:11px;color:#d1d8e0">🎵 Ses Tipi:</span>' +
+                            '<select id="ls-alarm-att-sound" class="ls-inp" style="width:180px;padding:2px 4px;font-size:10px">' +
+                                '<option value="klaxon">Taktiksel Klakson (Varsayılan)</option>' +
+                                '<option value="siren">Kırmızı Alarm Sireni</option>' +
+                                '<option value="pulse">Acil Durum Nabzı</option>' +
+                            '</select>' +
+                        '</div>' +
+                        '<button id="ls-alarm-att-test" class="ls-btn-sm" style="background:#c0392b;color:#fff;border:none;padding:5px 10px;width:100%">🔊 Saldırı Sesini Test Et</button>' +
+                    '</div>' +
+
+                    // Espionage alert card
+                    '<div style="background:#131d2a;border:1px solid #233446;border-radius:6px;padding:10px;margin-bottom:8px">' +
+                        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
+                            '<span style="font-weight:bold;color:#3498db;font-size:12px">📡 Sonda / Casusluk Uyarısı</span>' +
+                            '<label class="ls-toggle-switch">' +
+                                '<input type="checkbox" id="ls-alarm-esp-toggle">' +
+                                '<span class="ls-toggle-slider"></span>' +
+                            '</label>' +
+                        '</div>' +
+                        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+                            '<span style="font-size:11px;color:#d1d8e0">🎵 Ses Tipi:</span>' +
+                            '<select id="ls-alarm-esp-sound" class="ls-inp" style="width:180px;padding:2px 4px;font-size:10px">' +
+                                '<option value="sonar_deep">Derin Deniz Sonarı (Klasik Ping)</option>' +
+                                '<option value="sonar_hunter">Aktif Avcı Sonarı (Yüksek Ping)</option>' +
+                                '<option value="sonar_echo">Taktik Yankı Sonarı (Çift Eko)</option>' +
+                            '</select>' +
+                        '</div>' +
+                        '<button id="ls-alarm-esp-test" class="ls-btn-sm" style="background:#2980b9;color:#fff;border:none;padding:5px 10px;width:100%">🔊 Sonda Sesini Test Et</button>' +
+                    '</div>' +
+
+                    // Volume slider card
+                    '<div style="background:#131d2a;border:1px solid #233446;border-radius:6px;padding:10px;margin-bottom:8px">' +
+                        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
+                            '<span style="color:#d1d8e0;font-size:11px">🔊 Ses Seviyesi:</span>' +
+                            '<span id="ls-volume-val" style="font-weight:bold;color:#00bcff;font-size:11px">70%</span>' +
+                        '</div>' +
+                        '<input type="range" id="ls-volume-slider" min="0" max="100" value="70" style="width:100%;accent-color:#00bcff;cursor:pointer">' +
+                    '</div>' +
+
+                    // Repeat interval card
+                    '<div style="background:#131d2a;border:1px solid #233446;border-radius:6px;padding:10px;margin-bottom:8px">' +
+                        '<div style="display:flex;justify-content:space-between;align-items:center">' +
+                            '<span style="color:#d1d8e0;font-size:11px">⏱️ Tekrar Sıklığı:</span>' +
+                            '<select id="ls-alarm-repeat" class="ls-select" style="width:145px;font-size:11px;padding:3px;background:#0a0e17;color:#fff;border:1px solid #2c3e50;border-radius:3px">' +
+                                '<option value="0">Sadece 1 kez çal</option>' +
+                                '<option value="5">Her 5 saniyede bir</option>' +
+                                '<option value="10">Her 10 saniyede bir</option>' +
+                                '<option value="15">Her 15 saniyede bir</option>' +
+                                '<option value="30">Her 30 saniyede bir</option>' +
+                                '<option value="60">Her 60 saniyede bir</option>' +
+                            '</select>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+
+            '</div>' +
+            '<div id="ls-footer-drag" style="padding:4px 8px;background:linear-gradient(90deg,#0d1b2a,#1a2c3f);border-top:1px solid #1a2c3f;border-radius:0 0 8px 8px;display:flex;justify-content:space-between;align-items:center;user-select:none;font-size:10px;color:#4a627a;position:relative" title="Pencereyi taşımak için sürükleyin">' +
+                '<span class="ls-corner-grip" data-dir="sw" style="cursor:nesw-resize;padding:0 6px;font-size:12px;color:#6b8aa8;line-height:1" title="Sol alt köşeden boyutlandır">⤡</span>' +
+                '<div id="ls-footer-drag-handle" style="flex:1;text-align:center;cursor:move;letter-spacing:6px;font-weight:bold;display:flex;align-items:center;justify-content:center;gap:10px">' +
+                    '<span style="color:#2f465e;font-size:9px;opacity:0.6;letter-spacing:0">⠿</span>' +
+                    '<span style="color:#9ec2e6;font-size:11px;letter-spacing:6px">O G A M E</span>' +
+                    '<span style="color:#2f465e;font-size:9px;opacity:0.6;letter-spacing:0">⠿</span>' +
+                '</div>' +
+                '<span class="ls-corner-grip" data-dir="se" style="cursor:nwse-resize;padding:0 6px;font-size:12px;color:#6b8aa8;line-height:1" title="Sağ alt köşeden boyutlandır">⤢</span>' +
+            '</div>' +
+            '<div class="ls-resize-h ls-rh-se" data-dir="se"></div>' +
+            '<div class="ls-resize-h ls-rh-sw" data-dir="sw"></div>' +
+            '<div class="ls-resize-h ls-rh-ne" data-dir="ne"></div>' +
+            '<div class="ls-resize-h ls-rh-nw" data-dir="nw"></div>' +
+            '<div class="ls-resize-h ls-rh-e" data-dir="e"></div>' +
+            '<div class="ls-resize-h ls-rh-w" data-dir="w"></div>' +
+            '<div class="ls-resize-h ls-rh-s" data-dir="s"></div>';
         document.body.appendChild(panel);
+
+        const savedSize = localStorage.getItem(KEYS.SIZE);
+        if (savedSize) {
+            try {
+                const s = JSON.parse(savedSize);
+                if (s.w) panel.style.width = Math.max(280, Math.min(window.innerWidth - 30, s.w)) + 'px';
+                if (s.h) panel.style.height = Math.max(260, Math.min(window.innerHeight - 30, s.h)) + 'px';
+            } catch (e) {}
+        }
 
         if (isPanelOpen) {
             panel.style.display = 'flex';
@@ -952,6 +1589,7 @@
             panel.style.display = willOpen ? 'flex' : 'none';
             isPanelOpen = willOpen;
             localStorage.setItem(KEYS.OPEN, willOpen ? 'true' : 'false');
+            if (willOpen) setTimeout(ensurePanelInView, 20);
         });
 
         document.getElementById('ls-close').addEventListener('click', () => {
@@ -970,23 +1608,107 @@
             } catch (e) {}
         }
 
-        const header = document.getElementById('ls-header');
-        header.addEventListener('mousedown', e => {
-            if (e.target.id === 'ls-close') return;
+        function ensurePanelInView() {
+            if (panel.style.display === 'none') return;
+            const rect = panel.getBoundingClientRect();
+            if (rect.top < 10) {
+                dy += (10 - rect.top);
+                panel.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+                localStorage.setItem(KEYS.POS, JSON.stringify({ x: dx, y: dy }));
+            }
+        }
+
+        function startDrag(e) {
+            if (e.target.id === 'ls-close' || e.target.closest('.ls-corner-grip') || e.target.closest('.ls-resize-h')) return;
             dragging = true;
             startX = e.clientX - dx;
             startY = e.clientY - dy;
             e.preventDefault();
+        }
+
+        const header = document.getElementById('ls-header');
+        if (header) header.addEventListener('mousedown', startDrag);
+        const footerDrag = document.getElementById('ls-footer-drag-handle') || document.getElementById('ls-footer-drag');
+        if (footerDrag) footerDrag.addEventListener('mousedown', startDrag);
+
+        let resizing = null;
+        let startW = 0, startH = 0, startMouseX = 0, startMouseY = 0, startDx = 0, startDy = 0;
+
+        function startResize(e, dir) {
+            e.preventDefault();
+            e.stopPropagation();
+            resizing = dir;
+            startW = panel.offsetWidth;
+            startH = panel.offsetHeight;
+            startMouseX = e.clientX;
+            startMouseY = e.clientY;
+            startDx = dx;
+            startDy = dy;
+        }
+
+        panel.querySelectorAll('.ls-resize-h, .ls-corner-grip').forEach(el => {
+            el.addEventListener('mousedown', e => {
+                const dir = el.getAttribute('data-dir');
+                if (dir) startResize(e, dir);
+            });
         });
+
         window.addEventListener('mousemove', e => {
-            if (!dragging) return;
-            dx = e.clientX - startX;
-            dy = e.clientY - startY;
-            panel.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+            if (resizing) {
+                const deltaX = e.clientX - startMouseX;
+                const deltaY = e.clientY - startMouseY;
+                let newW = startW;
+                let newH = startH;
+                let newDx = startDx;
+                let newDy = startDy;
+
+                const minW = 280, maxW = Math.max(minW, window.innerWidth - 30);
+                const minH = 260, maxH = Math.max(minH, window.innerHeight - 30);
+
+                if (resizing.includes('e')) {
+                    const candidateW = Math.min(maxW, Math.max(minW, startW + deltaX));
+                    newW = candidateW;
+                    newDx = startDx + (candidateW - startW);
+                }
+                if (resizing.includes('w')) {
+                    const candidateW = Math.min(maxW, Math.max(minW, startW - deltaX));
+                    newW = candidateW;
+                }
+                if (resizing.includes('s')) {
+                    const candidateH = Math.min(maxH, Math.max(minH, startH + deltaY));
+                    newH = candidateH;
+                    newDy = startDy + (candidateH - startH);
+                }
+                if (resizing.includes('n')) {
+                    const candidateH = Math.min(maxH, Math.max(minH, startH - deltaY));
+                    newH = candidateH;
+                }
+
+                dx = newDx;
+                dy = newDy;
+                panel.style.width = newW + 'px';
+                panel.style.height = newH + 'px';
+                panel.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+                return;
+            }
+
+            if (dragging) {
+                dx = e.clientX - startX;
+                dy = e.clientY - startY;
+                panel.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+            }
         });
+
         window.addEventListener('mouseup', () => {
+            if (resizing) {
+                resizing = null;
+                ensurePanelInView();
+                localStorage.setItem(KEYS.POS, JSON.stringify({ x: dx, y: dy }));
+                localStorage.setItem(KEYS.SIZE, JSON.stringify({ w: panel.offsetWidth, h: panel.offsetHeight }));
+            }
             if (dragging) {
                 dragging = false;
+                ensurePanelInView();
                 localStorage.setItem(KEYS.POS, JSON.stringify({ x: dx, y: dy }));
             }
         });
@@ -1001,6 +1723,7 @@
                 if (content) content.classList.add('active');
                 activeTab = t;
                 localStorage.setItem(KEYS.TAB, t);
+                setTimeout(ensurePanelInView, 20);
             });
         });
 
@@ -1030,6 +1753,11 @@
         document.querySelectorAll('.ls-chip[data-slots]').forEach(chip => {
             chip.addEventListener('click', () => {
                 document.getElementById('ls-slots').value = chip.getAttribute('data-slots');
+                const minVal = chip.getAttribute('data-min');
+                if (minVal) {
+                    const minSelect = document.getElementById('ls-min');
+                    if (minSelect) minSelect.value = minVal;
+                }
             });
         });
 
@@ -1043,6 +1771,109 @@
                 navigateToGalaxy(parseInt(btn.dataset.g, 10), parseInt(btn.dataset.s, 10));
             }
         });
+
+        // Alarm Tab Controls
+        const attToggle = document.getElementById('ls-alarm-att-toggle');
+        const espToggle = document.getElementById('ls-alarm-esp-toggle');
+        const volSlider = document.getElementById('ls-volume-slider');
+        const volVal = document.getElementById('ls-volume-val');
+        const repSelect = document.getElementById('ls-alarm-repeat');
+
+        if (attToggle) {
+            attToggle.checked = !!alarmSettings.attackEnabled;
+            attToggle.addEventListener('change', () => {
+                alarmSettings.attackEnabled = attToggle.checked;
+                saveAlarmSettings();
+                checkThreatsInDOM();
+            });
+        }
+
+        if (espToggle) {
+            espToggle.checked = !!alarmSettings.espionageEnabled;
+            espToggle.addEventListener('change', () => {
+                alarmSettings.espionageEnabled = espToggle.checked;
+                saveAlarmSettings();
+                checkThreatsInDOM();
+            });
+        }
+
+        if (volSlider && volVal) {
+            volSlider.value = alarmSettings.volume ?? 70;
+            volVal.textContent = (alarmSettings.volume ?? 70) + '%';
+            volSlider.addEventListener('input', () => {
+                alarmSettings.volume = parseInt(volSlider.value, 10);
+                volVal.textContent = alarmSettings.volume + '%';
+                saveAlarmSettings();
+            });
+        }
+
+        if (repSelect) {
+            repSelect.value = String(alarmSettings.repeatInterval ?? 30);
+            repSelect.addEventListener('change', () => {
+                alarmSettings.repeatInterval = parseInt(repSelect.value, 10);
+                saveAlarmSettings();
+            });
+        }
+
+        const attSoundSelect = document.getElementById('ls-alarm-att-sound');
+        if (attSoundSelect) {
+            attSoundSelect.value = alarmSettings.attackSound || 'klaxon';
+            attSoundSelect.addEventListener('change', () => {
+                alarmSettings.attackSound = attSoundSelect.value;
+                saveAlarmSettings();
+            });
+        }
+
+        const espSoundSelect = document.getElementById('ls-alarm-esp-sound');
+        if (espSoundSelect) {
+            espSoundSelect.value = alarmSettings.espionageSound || 'sonar_deep';
+            espSoundSelect.addEventListener('change', () => {
+                alarmSettings.espionageSound = espSoundSelect.value;
+                saveAlarmSettings();
+            });
+        }
+
+        document.getElementById('ls-alarm-stop-btn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            muteCurrentThreat();
+        });
+
+        document.getElementById('ls-header-stop-btn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            muteCurrentThreat();
+        });
+
+        document.getElementById('ls-alarm-att-test')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            unlockAudio();
+            playAttackAlertSound(attSoundSelect?.value);
+        });
+
+        document.getElementById('ls-alarm-esp-test')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            unlockAudio();
+            playEspionageAlertSound(espSoundSelect?.value);
+        });
+
+        // Initialize Threat Monitoring
+        const attEl = document.getElementById('attack_alert');
+        if (attEl) {
+            const obs = new MutationObserver(() => checkThreatsInDOM());
+            obs.observe(attEl, { attributes: true, attributeFilter: ['class', 'style'] });
+        }
+        const eventHdr = document.getElementById('eventHeader') || document.getElementById('js_eventHeaderBox');
+        if (eventHdr) {
+            const obsHdr = new MutationObserver(() => checkThreatsInDOM());
+            obsHdr.observe(eventHdr, { attributes: true, childList: true, subtree: true });
+        }
+
+        setInterval(checkThreatsInDOM, 2500);
+        setInterval(checkThreatsAsync, 25000);
+
+        setTimeout(() => {
+            checkThreatsInDOM();
+            checkThreatsAsync();
+        }, 1500);
     }
 
     // ============================================================
@@ -1058,7 +1889,7 @@
 
         let newText = '📥 Sepete Ekle';
         if (data && data.level) {
-            newText = `📥 Sepete Ekle (Kd ${data.level})`;
+            newText = `📥 Sepete Ekle (${data.level})`;
         } else if (data && data.count > 1) {
             newText = `📥 Sepete Ekle (x${data.count})`;
         }
@@ -1157,6 +1988,6 @@
     // ============================================================
     buildUI();
     setupObserver();
-    console.log(LS, 'LuckyStrike OGame Helper v4.0 hazır!');
+    console.log(LS, 'LuckyStrike OGame Helper v4.2 hazır!');
 
 })();

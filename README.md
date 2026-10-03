@@ -1,8 +1,8 @@
-# ⚡ LuckyStrike OGame Helper (v4.1)
+# ⚡ LuckyStrike OGame Helper (v4.2)
 
-OGame için özel olarak geliştirilmiş; **Maliyet Sepeti (Resmi Formüllerle Çoklu Kademe Hesabı)**, **Galaxy Scanner (Slot 8 & Çoklu Işınlanma Arayıcı)** ve **Player Finder (Oyuncu & Gezegen Bulucu)** modüllerini içeren gelişmiş tarayıcı eklentisidir (**Chrome / Edge Extension - Manifest V3** ve **Tampermonkey Userscript**).
+OGame için özel olarak geliştirilmiş; **Maliyet Sepeti (Resmi Formüllerle Çoklu Kademe Hesabı)**, **Galaxy Scanner (Slot 8 & Çoklu Işınlanma Arayıcı)**, **Player Finder (Oyuncu & Gezegen Bulucu)** ve **Sesli Saldırı & Sonda Alarmı** modüllerini içeren gelişmiş tarayıcı eklentisidir (**Chrome / Edge Extension - Manifest V3** ve **Tampermonkey Userscript**).
 
-Ban riski taşımayan resmi Gameforge XML API altyapısını kullanır, oyun içi arayüzle kusursuz entegre olur.
+Ban riski taşımayan resmi Gameforge XML API altyapısını ve yerel ses sentezleme (Web Audio API) teknolojisini kullanır, oyun içi arayüzle kusursuz entegre olur.
 
 ---
 
@@ -32,6 +32,11 @@ Ban riski taşımayan resmi Gameforge XML API altyapısını kullanır, oyun iç
 ## 🌟 Öne Çıkan Özellikler
 
 ### 1. 🏗️ Maliyet Sepeti (Cost Cart)
+
+<p align="center">
+  <img src="screenshots/tab_cart.png" width="380" alt="LuckyStrike Maliyet Sepeti">
+</p>
+
 * **Kompakt Entegrasyon:** Herhangi bir bina, araştırma veya canlı türü detayına tıkladığınızda sol alttaki görselin üzerinde `[ − ] [ +N ] [ + ]` kademe ayarı ve `[📥 Sepete Ekle]` butonu belirir.
 * **Resmi Formül & Katsayılarla Çoklu Kademe Hesabı:**
   * **Klasik Binalar & Madenler:** Metal (`1.50`), Kristal (`1.60`), Deut (`1.50`), Füzyon (`1.80`), Astrofizik (`1.75`), Araştırmalar (`2.00`).
@@ -44,18 +49,27 @@ Ban riski taşımayan resmi Gameforge XML API altyapısını kullanır, oyun iç
 ---
 
 ### 2. 🌌 Galaxy Scanner (Boş Slot & Işınlanma Arayıcı)
+
+<p align="center">
+  <img src="screenshots/tab_scanner.png" width="380" alt="LuckyStrike Galaxy Scanner">
+</p>
+
 * **Saniyeler İçinde Tüm Evren Analizi:** Resmi `/api/universe.xml` verisini çekerek 9 galaksi ve 499 güneş sistemindeki tüm dolu gezegenleri anında eler.
 * **Hedef Slot Filtreleme:**
   * En büyük gezegenlerin çıktığı **8. slot** veya `7, 8, 9` kombinasyonları.
-  * Hızlı seçim çipleri: `[🎯 Sadece 8]`, `[⭐ 7, 8, 9]`, `[❄️ 12-15 (Deut)]`, `[☀️ 1-3 (Solar)]`.
+  * Hızlı seçim çipleri: `[🎯 Sadece 8]`, `[⭐ 7, 8, 9]`, `[❄️ 12-15 (Deut)]`, `[☀️ 1-3 (Solar)]`, `[🌌 Tümü Boş]`.
 * **👥 Min Eşzamanlı Boş Slot (Grupça Işınlanma):**
-  * Seçtiğiniz slotlardan aynı güneş sisteminde aynı anda en az 2, 3 veya 4 tanesinin boş olduğu sistemleri listeler. Arkadaşlarınızla aynı sisteme yan yana ışınlanmak (relocate) için idealdir.
+  * Seçtiğiniz slotlardan aynı güneş sisteminde aynı anda en az 2, 3, 4 veya 5 tanesinin boş olduğu sistemleri listeler. Arkadaşlarınızla aynı sisteme yan yana ışınlanmak (relocate) için idealdir.
 * **🚀 Tek Tıkla Galaksiye Git:** Çıkan her sonucun yanındaki `🚀` butonu oyunda doğrudan o galaksi ve sisteme yönlendirir.
-* **ℹ️ Önemli Not (Yok Edilmiş / İskan Slotları):** Terk edilmiş ("Yok edilmiş gezegen") veya başka bir oyuncunun 24 saatliğine kilitlediği ("İskan için rezerve edilmiş") slotlar, Gameforge'un resmi API'sinde henüz fiziksel bir gezegen olmadığı için boş olarak listelenir. Listelenen adayların yanındaki `🚀` butonuna tıklayarak slotun durumunu oyun içinden canlı olarak 1 saniyede doğrulayabilirsiniz.
 
 ---
 
 ### 3. 🔍 Player Finder (Oyuncu & Gezegen Arama)
+
+<p align="center">
+  <img src="screenshots/tab_finder.png" width="380" alt="LuckyStrike Player Finder">
+</p>
+
 * **Resmi API Tabanlı:** `/api/players.xml` ve `/api/universe.xml` verilerini 24 saatlik önbellekle kullanarak ban riski olmadan çalışır.
 * **Esnek Arama Modları:**
   * **Oyuncu Adıyla:** Oyuncunun aktiflik durumunu (`aktif`, `(i)`, `(v)`, vb.) ve sahip olduğu tüm gezegenlerin koordinatlarını listeler.
@@ -64,8 +78,24 @@ Ban riski taşımayan resmi Gameforge XML API altyapısını kullanır, oyun iç
 
 ---
 
-### 4. 🎨 Modern & Kullanıcı Dostu UI
-* **⚡ Kayan Eylem Butonu (FAB):** Ekranın sağ alt köşesinde (sohbet baloncuğunun üstünde) şık, kompakt `⚡` butonu.
-* **Sürüklenebilir Panel:** Paneli başlığından tutup ekranın istediğiniz yerine taşıyabilirsiniz; konumu hafızada (`localStorage`) saklanır.
-* **Sekme & Durum Hafızası:** Sayfayı yenilediğinizde veya gezegenler arası geçiş yaptığınızda açık olan sekmeniz ve panel durumu kaybolmaz.
+### 4. 🚨 Saldırı & Sonda Sesli Alarmı (Threat Alarm)
+
+<p align="center">
+  <img src="screenshots/tab_alarm.png" width="380" alt="LuckyStrike Sesli Alarm">
+</p>
+
+* **İki Ayrı Tehdit Algılama:** Gelen gerçek filo saldırıları ile casus sondası taramaları bağımsız olarak izlenir.
+* **Özel Ses Sentezleme (Web Audio API):**
+  * **🚨 Saldırı Sesleri:** Taktiksel Klakson, Kırmızı Alarm Sireni, Acil Durum Nabzı (Kaçırılmaması için 2 kez peş peşe çalar).
+  * **📡 Sonda Sesleri:** Gerçekçi denizaltı sonar akustiği (Derin Deniz Sonarı, Aktif Avcı Sonarı, Taktik Yankı Sonarı).
+* **Ses Seviyesi & Tekrar Sıklığı Ayarı:** 1 kez veya her 5 - 10 - 15 - 30 - 60 saniyede bir tekrarlama seçeneği.
+* **⏹️ Akıllı Susturma (Stop):** Devam eden tehditler için panodaki ve başlıktaki `[ ⏹️ Sustur ]` butonuna basıldığında alarm sessize alınır. Tehdit bittiğinde sistem kendini otomatik olarak sıfırlayıp bir sonraki tehdide yeniden hazır hale gelir.
+
+---
+
+### 5. 🎨 Modern & Kullanıcı Dostu UI
+* **⚡ Kayan Eylem Butonu (FAB):** Ekranın sağ alt köşesinde şık, kompakt `⚡` butonu.
+* **Sürüklenebilir & Boyutlandırılabilir:** Paneli hem üst başlığından hem de alt `⠿ O G A M E ⠿` çubuğundan taşıyabilir; köşelerinden tutarak dilediğiniz gibi büyütüp küçültebilirsiniz.
+* **Sekme & Durum Hafızası:** Sayfayı yenilediğinizde açık olan sekmeniz, boyutlar ve panel konumu korunur.
 * **Karanlık Tema:** OGame'in modern karanlık temasıyla %100 uyumlu renk paleti.
+
