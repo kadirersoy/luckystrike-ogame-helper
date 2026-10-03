@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name         LuckyStrike OGame Helper
 // @namespace    http://tampermonkey.net/
-// @version      4.2
+// @version      4.3
 // @description  LuckyStrike OGame Helper: Maliyet Sepeti, Galaxy Scanner, Player Finder, Sesli Saldırı/Sonda Alarmı
 // @author       LuckyStrike
 // @match        *://*.ogame.gameforge.com/game/index.php*
@@ -12,7 +12,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v4.2 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v4.3 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -1079,26 +1079,52 @@
         }
     }
 
-    let lastAttackSoundTime = 0;
-    let lastEspionageSoundTime = 0;
-    let isCurrentlyUnderAttack = false;
-    let isCurrentlyUnderEspionage = false;
-    let isMutedForCurrentThreat = false;
+    // ============================================================
+    // THREAT MONITORING, PERSISTENCE & ALARM DISPATCH
+    // ============================================================
+    const THREAT_STORAGE_KEY = 'LS_THREAT_STATE';
+
+    function getStoredThreatState() {
+        try {
+            return JSON.parse(sessionStorage.getItem(THREAT_STORAGE_KEY) || '{}');
+        } catch (e) {
+            return {};
+        }
+    }
+
+    function setStoredThreatState(state) {
+        try {
+            sessionStorage.setItem(THREAT_STORAGE_KEY, JSON.stringify(state));
+        } catch (e) {}
+    }
+
+    function clearStoredThreatState() {
+        try {
+            sessionStorage.removeItem(THREAT_STORAGE_KEY);
+        } catch (e) {}
+    }
 
     function muteCurrentThreat() {
-        isMutedForCurrentThreat = true;
+        const stored = getStoredThreatState();
+        stored.muted = true;
+        setStoredThreatState(stored);
+
         const stopBtn = document.getElementById('ls-alarm-stop-btn');
         const headerStopBtn = document.getElementById('ls-header-stop-btn');
         if (stopBtn) stopBtn.style.display = 'none';
         if (headerStopBtn) headerStopBtn.style.display = 'none';
+
         const text = document.getElementById('ls-alarm-status-text');
         if (text) {
-            if (isCurrentlyUnderAttack) text.textContent = '🚨 Saldırı Var (Alarm Susturuldu)';
-            else if (isCurrentlyUnderEspionage) text.textContent = '📡 Sonda Geliyor (Alarm Susturuldu)';
+            if (stored.type === 'attack') text.textContent = '🚨 Saldırı Var (Alarm Susturuldu)';
+            else if (stored.type === 'espionage') text.textContent = '📡 Sonda Geliyor (Alarm Susturuldu)';
         }
     }
 
-    function handleThreatState(hasAttack, hasEspionage) {
+    let lastKnownEspionage = false;
+    let lastKnownEspionageSig = '';
+
+    function handleThreatState(hasAttack, hasEspionage, threatSignature) {
         const now = Date.now();
         const repeatSec = parseInt(alarmSettings.repeatInterval, 10);
         const repeatMs = (isNaN(repeatSec) ? 30 : repeatSec) * 1000;
@@ -1109,84 +1135,101 @@
         const stopBtn = document.getElementById('ls-alarm-stop-btn');
         const headerStopBtn = document.getElementById('ls-header-stop-btn');
 
-        // İkisi de kapalıysa gözcüyü pasife al ve durdur
+        // 1. İkisi de ayarlardan kapalıysa gözcüyü pasife al
         if (!alarmSettings.attackEnabled && !alarmSettings.espionageEnabled) {
             if (banner) { banner.style.background = '#121820'; banner.style.borderColor = '#233446'; }
             if (dot) { dot.style.background = '#7f8c8d'; dot.style.boxShadow = 'none'; }
             if (text) { text.style.color = '#7f8c8d'; text.textContent = 'Gözcü Pasif (Alarmlar Kapalı)'; }
             if (stopBtn) stopBtn.style.display = 'none';
             if (headerStopBtn) headerStopBtn.style.display = 'none';
-            isCurrentlyUnderAttack = false;
-            isCurrentlyUnderEspionage = false;
-            isMutedForCurrentThreat = false;
+            clearStoredThreatState();
             return;
         }
 
-        const isThreat = (hasAttack && alarmSettings.attackEnabled) || (hasEspionage && alarmSettings.espionageEnabled);
+        const isAttackThreat = hasAttack && alarmSettings.attackEnabled;
+        const isEspionageThreat = hasEspionage && alarmSettings.espionageEnabled;
+        const isThreat = isAttackThreat || isEspionageThreat;
 
-        // Tehdit bittiğinde susturma durumunu ve bayrakları otomatik sıfırla
+        // 2. Tehdit bittiğinde susturma ve kayıt durumunu sıfırla
         if (!isThreat) {
-            isMutedForCurrentThreat = false;
+            clearStoredThreatState();
             if (stopBtn) stopBtn.style.display = 'none';
             if (headerStopBtn) headerStopBtn.style.display = 'none';
             if (banner) { banner.style.background = '#162436'; banner.style.borderColor = '#1a3a5c'; }
             if (dot) { dot.style.background = '#2ecc71'; dot.style.boxShadow = '0 0 6px #2ecc71'; }
             if (text) { text.style.color = '#2ecc71'; text.textContent = 'Gözcü Aktif · Tehdit Yok'; }
-            isCurrentlyUnderAttack = false;
-            isCurrentlyUnderEspionage = false;
             return;
         }
 
+        // 3. Aktif tehdit var: sessionStorage'daki durumu oku
+        const currentType = isAttackThreat ? 'attack' : 'espionage';
+        const currentSig = threatSignature || currentType;
+        const stored = getStoredThreatState();
+
+        const isSameThreat = (stored.signature && stored.signature === currentSig) ||
+                             (stored.type === currentType && stored.lastPlayTime && (now - stored.lastPlayTime) < 45000);
+
+        const isMuted = isSameThreat && !!stored.muted;
+        const playedOnce = isSameThreat && !!stored.playedOnce;
+        const lastPlayTime = (isSameThreat && stored.lastPlayTime) ? stored.lastPlayTime : 0;
+
         // Tekrar sıklığı 1'den farklıysa (repeatMs > 0) ve susturulmadıysa Stop butonu göster
-        const canShowStop = repeatMs > 0 && !isMutedForCurrentThreat;
+        const canShowStop = repeatMs > 0 && !isMuted;
         if (stopBtn) stopBtn.style.display = canShowStop ? 'inline-flex' : 'none';
         if (headerStopBtn) headerStopBtn.style.display = canShowStop ? 'inline-flex' : 'none';
 
-        if (hasAttack && alarmSettings.attackEnabled) {
+        // Banner güncelle
+        if (isAttackThreat) {
             if (banner) { banner.style.background = '#301416'; banner.style.borderColor = '#e74c3c'; }
             if (dot) { dot.style.background = '#e74c3c'; dot.style.boxShadow = '0 0 8px #e74c3c'; }
             if (text) {
                 text.style.color = '#e74c3c';
-                text.textContent = isMutedForCurrentThreat ? '🚨 Saldırı Var (Alarm Susturuldu)' : '🚨 DİKKAT: GELEN SALDIRI VAR!';
+                text.textContent = isMuted ? '🚨 Saldırı Var (Alarm Susturuldu)' : '🚨 DİKKAT: GELEN SALDIRI VAR!';
             }
-
-            if (!isMutedForCurrentThreat) {
-                const shouldPlay = !isCurrentlyUnderAttack || (repeatMs > 0 && (now - lastAttackSoundTime) >= repeatMs);
-                if (shouldPlay) {
-                    playAttackAlertSound(alarmSettings.attackSound);
-                    lastAttackSoundTime = now;
-                }
-            }
-        } else if (hasEspionage && alarmSettings.espionageEnabled) {
+        } else if (isEspionageThreat) {
             if (banner) { banner.style.background = '#0e2338'; banner.style.borderColor = '#3498db'; }
             if (dot) { dot.style.background = '#3498db'; dot.style.boxShadow = '0 0 8px #3498db'; }
             if (text) {
                 text.style.color = '#3498db';
-                text.textContent = isMutedForCurrentThreat ? '📡 Sonda Geliyor (Alarm Susturuldu)' : '📡 BİLGİ: Casus Sondası Geliyor';
+                text.textContent = isMuted ? '📡 Sonda Geliyor (Alarm Susturuldu)' : '📡 BİLGİ: Casus Sondası Geliyor';
             }
+        }
 
-            if (!isMutedForCurrentThreat) {
-                const shouldPlay = !isCurrentlyUnderEspionage || (repeatMs > 0 && (now - lastEspionageSoundTime) >= repeatMs);
-                if (shouldPlay) {
-                    playEspionageAlertSound(alarmSettings.espionageSound);
-                    lastEspionageSoundTime = now;
+        // 4. Ses çalma kararı (Tek seferlik ve tekrarlı kontroller)
+        if (!isMuted) {
+            let shouldPlay = false;
+
+            if (repeatMs === 0) {
+                // Sadece 1 kez çal seçiliyse: BU TEHDİT İÇİN DAHA ÖNCE HİÇ ÇALINMADIYSA ÇAL
+                if (!playedOnce) {
+                    shouldPlay = true;
+                }
+            } else {
+                // Tekrarlama seçiliyse: İlk kez ise veya aralık süresi dolduysa çal
+                if (!playedOnce || (now - lastPlayTime) >= repeatMs) {
+                    shouldPlay = true;
                 }
             }
-        }
 
-        isCurrentlyUnderAttack = hasAttack;
-        isCurrentlyUnderEspionage = hasEspionage;
+            if (shouldPlay) {
+                if (isAttackThreat) {
+                    playAttackAlertSound(alarmSettings.attackSound);
+                } else if (isEspionageThreat) {
+                    playEspionageAlertSound(alarmSettings.espionageSound);
+                }
+
+                setStoredThreatState({
+                    signature: currentSig,
+                    type: currentType,
+                    muted: false,
+                    playedOnce: true,
+                    lastPlayTime: now
+                });
+            }
+        }
     }
 
-    function checkThreatsInDOM() {
-        if (!alarmSettings.attackEnabled && !alarmSettings.espionageEnabled) {
-            handleThreatState(false, false);
-            return;
-        }
-
-        let hasAttack = false;
-        let hasEspionage = false;
-
+    function isDOMAttackAlert() {
         const attAlert = document.getElementById('attack_alert');
         if (attAlert) {
             const isAlert = attAlert.classList.contains('soon') ||
@@ -1194,27 +1237,70 @@
                             attAlert.classList.contains('alert');
             const isNoAttack = attAlert.classList.contains('noAttack') || attAlert.classList.contains('hide');
             if (isAlert && !isNoAttack) {
-                hasAttack = true;
+                return true;
             }
         }
+        const hostileHdr = document.querySelector('#eventHeader.hostile, #js_eventHeaderBox.hostile, .event_cdr.hostile');
+        if (hostileHdr) return true;
+        return false;
+    }
 
-        const hostileHeader = document.querySelector('#eventHeader.soon, #js_eventHeaderBox.soon, .event_cdr.soon');
-        if (hostileHeader) hasAttack = true;
+    function parseHostileFleets(doc) {
+        let hasAttack = false;
+        let hasEspionage = false;
+        const hostileIds = [];
 
-        const fleets = document.querySelectorAll('.eventFleet');
+        const fleets = doc.querySelectorAll('.eventFleet');
         fleets.forEach(fl => {
-            const mission = fl.getAttribute('data-mission-type');
+            // SADECE düşman filoları tehdittir! Oyuncunun kendi filoları 'friendly' class'ına sahiptir
+            const isHostile = fl.classList.contains('hostile') && !fl.classList.contains('friendly');
             const isReturn = fl.getAttribute('data-return-flight') === 'true';
-            if (!isReturn) {
-                if (mission === '1' || mission === '2' || mission === '9' || fl.classList.contains('hostile')) {
-                    hasAttack = true;
-                } else if (mission === '6' || fl.classList.contains('espionage')) {
+
+            if (isHostile && !isReturn) {
+                const mission = fl.getAttribute('data-mission-type');
+                const arrival = fl.getAttribute('data-arrival-time') || '';
+                const id = fl.id || (mission + '_' + arrival);
+                hostileIds.push(id);
+
+                if (mission === '6' || fl.classList.contains('espionage')) {
                     hasEspionage = true;
+                } else {
+                    hasAttack = true;
                 }
             }
         });
 
-        handleThreatState(hasAttack, hasEspionage);
+        return { hasAttack, hasEspionage, hostileIds, count: fleets.length };
+    }
+
+    function checkThreatsInDOM() {
+        if (!alarmSettings.attackEnabled && !alarmSettings.espionageEnabled) {
+            handleThreatState(false, false, '');
+            return;
+        }
+
+        const domFleets = document.querySelectorAll('.eventFleet');
+        if (domFleets.length > 0) {
+            const parsed = parseHostileFleets(document);
+            let hasAttack = parsed.hasAttack || isDOMAttackAlert();
+            let hasEspionage = parsed.hasEspionage;
+            let sig = '';
+            if (hasAttack) sig = 'ATT:' + parsed.hostileIds.join(',');
+            else if (hasEspionage) sig = 'ESP:' + parsed.hostileIds.join(',');
+
+            lastKnownEspionage = hasEspionage;
+            lastKnownEspionageSig = sig;
+            handleThreatState(hasAttack, hasEspionage, sig);
+        } else {
+            const hasAttack = isDOMAttackAlert();
+            if (hasAttack) {
+                handleThreatState(true, false, 'DOM_ATTACK');
+            } else if (lastKnownEspionage) {
+                handleThreatState(false, true, lastKnownEspionageSig);
+            } else {
+                handleThreatState(false, false, '');
+            }
+        }
     }
 
     async function checkThreatsAsync() {
@@ -1225,31 +1311,19 @@
             if (!resp.ok) return;
             const html = await resp.text();
 
-            let hasAttack = false;
-            let hasEspionage = false;
-
             const doc = new DOMParser().parseFromString(html, 'text/html');
-            const fleets = doc.querySelectorAll('.eventFleet');
-            fleets.forEach(fl => {
-                const mission = fl.getAttribute('data-mission-type');
-                const isReturn = fl.getAttribute('data-return-flight') === 'true';
-                if (!isReturn) {
-                    if (mission === '1' || mission === '2' || mission === '9' || fl.classList.contains('hostile')) {
-                        hasAttack = true;
-                    } else if (mission === '6' || fl.classList.contains('espionage')) {
-                        hasEspionage = true;
-                    }
-                }
-            });
+            const parsed = parseHostileFleets(doc);
 
-            if (!hasAttack) {
-                const attAlert = document.getElementById('attack_alert');
-                if (attAlert && (attAlert.classList.contains('soon') || attAlert.classList.contains('attack')) && !attAlert.classList.contains('noAttack')) {
-                    hasAttack = true;
-                }
-            }
+            let hasAttack = parsed.hasAttack || isDOMAttackAlert();
+            let hasEspionage = parsed.hasEspionage;
+            let sig = '';
+            if (hasAttack) sig = 'ATT:' + parsed.hostileIds.join(',');
+            else if (hasEspionage) sig = 'ESP:' + parsed.hostileIds.join(',');
 
-            handleThreatState(hasAttack, hasEspionage);
+            lastKnownEspionage = hasEspionage;
+            lastKnownEspionageSig = sig;
+
+            handleThreatState(hasAttack, hasEspionage, sig);
         } catch (e) {
             // Ignore
         }
@@ -1868,12 +1942,12 @@
         }
 
         setInterval(checkThreatsInDOM, 2500);
-        setInterval(checkThreatsAsync, 25000);
+        setInterval(checkThreatsAsync, 10000);
 
         setTimeout(() => {
             checkThreatsInDOM();
             checkThreatsAsync();
-        }, 1500);
+        }, 1000);
     }
 
     // ============================================================
@@ -1988,6 +2062,6 @@
     // ============================================================
     buildUI();
     setupObserver();
-    console.log(LS, 'LuckyStrike OGame Helper v4.2 hazır!');
+    console.log(LS, 'LuckyStrike OGame Helper v4.3 hazır!');
 
 })();

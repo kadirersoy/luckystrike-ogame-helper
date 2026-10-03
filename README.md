@@ -1,4 +1,4 @@
-# ⚡ LuckyStrike OGame Helper (v4.2)
+# ⚡ LuckyStrike OGame Helper (v4.3)
 
 OGame için özel olarak geliştirilmiş; **Maliyet Sepeti (Resmi Formüllerle Çoklu Kademe Hesabı)**, **Galaxy Scanner (Slot 8 & Çoklu Işınlanma Arayıcı)**, **Player Finder (Oyuncu & Gezegen Bulucu)** ve **Sesli Saldırı & Sonda Alarmı** modüllerini içeren gelişmiş tarayıcı eklentisidir (**Chrome / Edge Extension - Manifest V3** ve **Tampermonkey Userscript**).
 
