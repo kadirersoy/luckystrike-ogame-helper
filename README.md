@@ -1,6 +1,6 @@
-# ⚡ LuckyStrike OGame Helper (v4.3)
+# ⚡ LuckyStrike OGame Helper (v5.0)
 
-OGame için özel olarak geliştirilmiş; **Maliyet Sepeti (Resmi Formüllerle Çoklu Kademe Hesabı)**, **Galaxy Scanner (Slot 8 & Çoklu Işınlanma Arayıcı)**, **Player Finder (Oyuncu & Gezegen Bulucu)** ve **Sesli Saldırı & Sonda Alarmı** modüllerini içeren gelişmiş tarayıcı eklentisidir (**Chrome / Edge Extension - Manifest V3** ve **Tampermonkey Userscript**).
+OGame için özel olarak geliştirilmiş; **Maliyet Sepeti (Resmi Formüllerle Çoklu Kademe Hesabı)**, **Galaxy Scanner (Slot 8 & Çoklu Işınlanma Arayıcı)**, **Player Finder (Oyuncu & Gezegen Bulucu)**, **Sesli Saldırı & Sonda Alarmı** ve **Harabe Avcısı (Debris Hunter)** modüllerini içeren gelişmiş tarayıcı eklentisidir (**Chrome / Edge Extension - Manifest V3** ve **Tampermonkey Userscript**).
 
 Ban riski taşımayan resmi Gameforge XML API altyapısını ve yerel ses sentezleme (Web Audio API) teknolojisini kullanır, oyun içi arayüzle kusursuz entegre olur.
 
@@ -93,7 +93,27 @@ Ban riski taşımayan resmi Gameforge XML API altyapısını ve yerel ses sentez
 
 ---
 
-### 5. 🎨 Modern & Kullanıcı Dostu UI
+### 5. 🛰️ Harabe Avcısı (Debris Hunter)
+
+<p align="center">
+  <img src="screenshots/tab_debris.png" width="380" alt="LuckyStrike Harabe Avcısı">
+</p>
+
+* **🪐 Gezinirken Arka Planda Otomatik Tespit:** Galaksi sayfasında gezerken arka planda ekrana gelen harabeleri kural ihlali veya bot riski olmadan (pasif DOM izleme) anında okur.
+* **⚡ Eşik Belirleme & Hızlı Seçim:** İster minimum kaynak eşiğini kendiniz yazın, ister hızlı çiplerden (`50K`, `100K`, `250K`, `500K`, `1M`, `5M`) tek tıkla belirleyin.
+* **🎵 Akıllı Sesli Uyarı & Sonar Seçenekleri:**
+  * Sadece belirlediğiniz eşiğin üzerindeki ve **listeye yeni eklenen** harabelerde ses çalar.
+  * Zaten listede olan harabelerde veya sayfa geçişlerindeki yenilenmelerde tekrar tekrar ötmez.
+  * 3 farklı denizaltı sonar sesi (Derin Deniz Sonarı, Aktif Avcı Sonarı, Taktik Yankı Sonarı) ve anında test butonu.
+* **🚛 İhtiyaç Duyulan Geri Dönüşümcü (GD) Hesabı:** Her harabenin toplam kaynağına göre kaç adet Geri Dönüşümcü gemisi gerektiği anında hesaplanır.
+* **📊 Detaylı Hammadde Dağılımı:** Metal, Kristal ve Deuterium miktarları renk kodlu olarak net şekilde listelenir.
+* **🚀 Tek Tıkla Koordinata Git:** Listelenen harabenin koordinatına veya `🚀 Git` butonuna basarak doğrudan galakside o sisteme sıçrayabilirsiniz.
+* **🗑️ Kolay Yönetim:** İstemediğiniz harabeyi tek tek `✖` butonuyla kaldırabilir veya `🗑️ Listeyi Temizle` ile tüm listeyi sıfırlayabilirsiniz.
+* **🟢 Aktif / Pasif İzleme Anahtarı:** Dilediğiniz zaman harabe izlemesini tek tuşla pasife alabilirsiniz.
+
+---
+
+### 6. 🎨 Modern & Kullanıcı Dostu UI
 * **⚡ Kayan Eylem Butonu (FAB):** Ekranın sağ alt köşesinde şık, kompakt `⚡` butonu.
 * **Sürüklenebilir & Boyutlandırılabilir:** Paneli hem üst başlığından hem de alt `⠿ O G A M E ⠿` çubuğundan taşıyabilir; köşelerinden tutarak dilediğiniz gibi büyütüp küçültebilirsiniz.
 * **Sekme & Durum Hafızası:** Sayfayı yenilediğinizde açık olan sekmeniz, boyutlar ve panel konumu korunur.

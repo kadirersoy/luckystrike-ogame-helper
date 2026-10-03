@@ -2,7 +2,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v4.3 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v5.0 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -15,7 +15,9 @@
         SIZE: 'LS_PANEL_SIZE',
         OPEN: 'LS_PANEL_OPEN',
         API: 'LS_API_CACHE',
-        ALARM: 'LS_ALARM_SETTINGS'
+        ALARM: 'LS_ALARM_SETTINGS',
+        DEBRIS_LIST: 'LS_DEBRIS_LIST',
+        DEBRIS_SETTINGS: 'LS_DEBRIS_SETTINGS'
     };
 
     let cart = JSON.parse(localStorage.getItem(KEYS.CART) || '[]');
@@ -43,6 +45,14 @@
         localStorage.setItem(KEYS.ALARM, JSON.stringify(alarmSettings));
     }
 
+    let debrisSettings = Object.assign({
+        enabled: true,
+        minThreshold: 100000,
+        sound: 'sonar_deep'
+    }, JSON.parse(localStorage.getItem(KEYS.DEBRIS_SETTINGS) || '{}'));
+
+    let debrisList = JSON.parse(localStorage.getItem(KEYS.DEBRIS_LIST) || '[]');
+
     // Kaç kademe ekleneceği (+1, +2, +3...)
     let selectedLevelsToAdd = 1;
 
@@ -69,10 +79,16 @@
         else if (/k$/i.test(str)) mult = 1e3;
 
         let numStr = str.replace(/[^0-9.,]/g, '');
-        if (numStr.includes('.') && numStr.includes(',')) {
-            numStr = numStr.replace(/\./g, '').replace(',', '.');
-        } else if (numStr.includes(',')) {
-            numStr = numStr.replace(',', '.');
+        if (mult > 1) {
+            // Sonek varsa (k, m, mrd), nokta veya virgül ondalık basamaktır (örn: 36,4K veya 1.5M)
+            if (numStr.includes(',') && numStr.includes('.')) {
+                numStr = numStr.replace(/\./g, '').replace(',', '.');
+            } else if (numStr.includes(',')) {
+                numStr = numStr.replace(',', '.');
+            }
+        } else {
+            // Sonek yoksa (tam sayı), nokta ve virgül OGame'de binlik ayracıdır (örn: 36.423 veya 1.250.000)
+            numStr = numStr.replace(/[.,]/g, '');
         }
 
         const val = parseFloat(numStr) || 0;
@@ -1320,6 +1336,378 @@
     }
 
     // ============================================================
+    // DEBRIS HUNTER (HARABE AVCISI)
+    // ============================================================
+    let debrisScanDebounceTimer = null;
+
+    function saveDebrisSettings() {
+        localStorage.setItem(KEYS.DEBRIS_SETTINGS, JSON.stringify(debrisSettings));
+    }
+
+    function saveDebrisList() {
+        localStorage.setItem(KEYS.DEBRIS_LIST, JSON.stringify(debrisList));
+    }
+
+    function getCurrentGalaxyCoords() {
+        let g = 0, s = 0;
+        const gInput = document.getElementById('galaxy_input') || document.querySelector('input[name="galaxy"]');
+        const sInput = document.getElementById('system_input') || document.querySelector('input[name="system"]');
+        if (gInput && gInput.value) g = parseInt(gInput.value, 10);
+        if (sInput && sInput.value) s = parseInt(sInput.value, 10);
+
+        if (!g || !s) {
+            const galaxyHead = document.getElementById('galaxyhead') || document.querySelector('.galaxy_head');
+            if (galaxyHead) {
+                const m = galaxyHead.textContent.match(/(\d+)\s*[:/]\s*(\d+)/);
+                if (m) {
+                    if (!g) g = parseInt(m[1], 10);
+                    if (!s) s = parseInt(m[2], 10);
+                }
+            }
+        }
+
+        if (!g || !s) {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.has('galaxy')) g = parseInt(urlParams.get('galaxy'), 10);
+                if (urlParams.has('system')) s = parseInt(urlParams.get('system'), 10);
+            } catch (e) {}
+        }
+
+        return { g: g || 0, s: s || 0 };
+    }
+
+    function parseDebrisText(text) {
+        if (!text) return null;
+        let m = 0, c = 0, d = 0, rec = 0;
+
+        const mMatch = text.match(/Metal:\s*([0-9.,kKmMbBrd]+)/i);
+        if (mMatch) m = parseOgNum(mMatch[1]);
+
+        const cMatch = text.match(/(?:Kristal|Crystal):\s*([0-9.,kKmMbBrd]+)/i);
+        if (cMatch) c = parseOgNum(cMatch[1]);
+
+        const dMatch = text.match(/(?:Deuterium|Deut):\s*([0-9.,kKmMbBrd]+)/i);
+        if (dMatch) d = parseOgNum(dMatch[1]);
+
+        const rMatch = text.match(/(?:Gereken geri d[öo]n[üu][şs][üu]mc[üu]ler|Recyclers needed|Recycler[s]?):\s*([0-9.,kKmMbBrd]+)/i);
+        if (rMatch) rec = parseOgNum(rMatch[1]);
+
+        const total = m + c + d;
+        if (total <= 0) return null;
+        if (rec <= 0) rec = Math.ceil(total / 20000);
+
+        return { metal: m, crystal: c, deut: d, total: total, recyclers: rec };
+    }
+
+    function parseDebrisFromCell(cell) {
+        if (!cell) return null;
+
+        // 1. Tooltip içeriği kontrolü
+        const tipEl = cell.querySelector('[data-tooltip-content], [title]') || cell;
+        const tipAttr = tipEl.getAttribute('data-tooltip-content') || tipEl.getAttribute('title') || '';
+        if (tipAttr.startsWith('#')) {
+            const target = document.querySelector(tipAttr);
+            if (target) {
+                const parsed = parseDebrisText(target.textContent);
+                if (parsed) return parsed;
+            }
+        }
+        if (tipAttr) {
+            const parsedTip = parseDebrisText(tipAttr);
+            if (parsedTip) return parsedTip;
+        }
+
+        // 2. Hücre içi doğrudan metin kontrolü
+        const parsedText = parseDebrisText(cell.textContent);
+        if (parsedText) return parsedText;
+
+        // 3. Hücre içindeki sayı satırları kontrolü (örn: 0 / 36,4K / 0)
+        const tokens = cell.textContent.trim().split(/\s+/).filter(t => /[0-9]/.test(t));
+        if (tokens.length >= 2) {
+            const m = parseOgNum(tokens[0]);
+            const c = parseOgNum(tokens[1]);
+            const d = tokens.length >= 3 ? parseOgNum(tokens[2]) : 0;
+            const total = m + c + d;
+            if (total > 0) {
+                return {
+                    metal: m,
+                    crystal: c,
+                    deut: d,
+                    total: total,
+                    recyclers: Math.ceil(total / 20000)
+                };
+            }
+        }
+
+        return null;
+    }
+
+    function processFoundDebris(g, s, p, data) {
+        const id = `${g}:${s}:${p}`;
+        const existingIndex = debrisList.findIndex(item => item.id === id);
+
+        if (existingIndex >= 0) {
+            const item = debrisList[existingIndex];
+            const changed = item.metal !== data.metal || item.crystal !== data.crystal || item.total !== data.total;
+            if (changed) {
+                item.metal = data.metal;
+                item.crystal = data.crystal;
+                item.deut = data.deut;
+                item.total = data.total;
+                item.recyclers = data.recyclers;
+                item.timestamp = Date.now();
+                return { isNew: false, changed: true };
+            }
+            return { isNew: false, changed: false };
+        } else {
+            debrisList.unshift({
+                id: id,
+                g: g,
+                s: s,
+                p: p,
+                metal: data.metal,
+                crystal: data.crystal,
+                deut: data.deut,
+                total: data.total,
+                recyclers: data.recyclers,
+                timestamp: Date.now()
+            });
+            return { isNew: true, changed: true };
+        }
+    }
+
+    function updateDebrisStatusBanner() {
+        const banner = document.getElementById('ls-debris-status-banner');
+        const dot = document.getElementById('ls-debris-dot');
+        const text = document.getElementById('ls-debris-status-text');
+        if (!banner || !dot || !text) return;
+
+        if (debrisSettings.enabled) {
+            banner.style.background = '#162436';
+            banner.style.borderColor = '#1a3a5c';
+            dot.style.background = '#2ecc71';
+            dot.style.boxShadow = '0 0 6px #2ecc71';
+            text.style.color = '#2ecc71';
+            text.textContent = 'Harabe Avcısı Aktif · Galaksi İzleniyor';
+        } else {
+            banner.style.background = '#121820';
+            banner.style.borderColor = '#233446';
+            dot.style.background = '#7f8c8d';
+            dot.style.boxShadow = 'none';
+            text.style.color = '#7f8c8d';
+            text.textContent = 'Harabe Avcısı Pasif (İzleme Kapalı)';
+        }
+    }
+
+    function renderDebrisList() {
+        const listEl = document.getElementById('ls-debris-list');
+        const countTitle = document.getElementById('ls-debris-count-title');
+        if (countTitle) countTitle.textContent = `🛰️ Bulunan Harabeler (${debrisList.length})`;
+        if (!listEl) return;
+
+        listEl.innerHTML = '';
+        if (debrisList.length === 0) {
+            listEl.innerHTML = '<div style="text-align:center;color:#8899aa;font-size:11px;padding:16px 8px;background:rgba(255,255,255,0.02);border-radius:4px">' +
+                '🪐 Henüz harabe tespit edilmedi.<br><span style="font-size:10px;color:#5c7080;margin-top:4px;display:inline-block">Galakside gezdikçe belirlediğiniz eşiğin üzerindeki harabeler otomatik listelenir.</span>' +
+            '</div>';
+            return;
+        }
+
+        debrisList.forEach((item, index) => {
+            const card = document.createElement('div');
+            card.className = 'ls-item';
+            card.style.flexDirection = 'column';
+            card.style.alignItems = 'stretch';
+            card.style.gap = '4px';
+            card.style.padding = '7px 8px';
+            card.style.borderLeft = '3px solid #00bcff';
+
+            const coordStr = `[${item.g}:${item.s}:${item.p}]`;
+
+            card.innerHTML =
+                '<div style="display:flex;justify-content:space-between;align-items:center">' +
+                    '<div style="display:flex;align-items:center;gap:6px">' +
+                        '<b style="color:#00bcff;font-family:monospace;font-size:12px;cursor:pointer" class="ls-debris-coord" data-g="' + item.g + '" data-s="' + item.s + '" title="Galakside bu sisteme git">' + coordStr + '</b>' +
+                        '<span style="color:#2ecc71;font-size:10px;background:rgba(46,204,113,0.12);padding:1px 5px;border-radius:3px;border:1px solid rgba(46,204,113,0.25)">' +
+                            '🚛 ' + fmt(item.recyclers) + ' GD' +
+                        '</span>' +
+                    '</div>' +
+                    '<div style="display:flex;align-items:center;gap:5px">' +
+                        '<button class="ls-btn-sm ls-debris-nav-btn" data-g="' + item.g + '" data-s="' + item.s + '" style="padding:2px 7px;cursor:pointer;display:inline-flex;align-items:center;gap:2px" title="Galakside [' + item.g + ':' + item.s + '] sistemine git">' +
+                            '🚀 Git' +
+                        '</button>' +
+                        '<button class="ls-x ls-debris-del" data-idx="' + index + '" title="Bu harabeyi listeden kaldır">✖</button>' +
+                    '</div>' +
+                '</div>' +
+                '<div style="font-size:10.5px;font-family:monospace;display:flex;gap:6px;align-items:center;margin-top:2px">' +
+                    '<span style="color:#ffbe3b">M: ' + fmt(item.metal) + '</span> · ' +
+                    '<span style="color:#5dade2">K: ' + fmt(item.crystal) + '</span>' +
+                    (item.deut > 0 ? (' · <span style="color:#2ecc71">D: ' + fmt(item.deut) + '</span>') : '') +
+                    ' · <span style="color:#ffffff;font-weight:bold">T: ' + fmt(item.total) + '</span>' +
+                '</div>';
+
+            listEl.appendChild(card);
+        });
+
+        listEl.querySelectorAll('.ls-debris-nav-btn, .ls-debris-coord').forEach(el => {
+            el.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const g = parseInt(el.getAttribute('data-g'), 10);
+                const s = parseInt(el.getAttribute('data-s'), 10);
+                if (g && s) navigateToGalaxy(g, s);
+            });
+        });
+
+        listEl.querySelectorAll('.ls-debris-del').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const idx = parseInt(btn.getAttribute('data-idx'), 10);
+                if (!isNaN(idx)) {
+                    debrisList.splice(idx, 1);
+                    saveDebrisList();
+                    renderDebrisList();
+                }
+            });
+        });
+    }
+
+    function scanCurrentGalaxyPageForDebris() {
+        if (!debrisSettings.enabled) return;
+
+        const content = document.getElementById('galaxyContent');
+        if (!content) return;
+
+        // 1. AJAX yüklenme anında tarama yapma
+        const loader = document.getElementById('galaxyLoading') || content.querySelector('.galaxyLoading, .loading');
+        if (loader && window.getComputedStyle(loader).display !== 'none') {
+            return;
+        }
+
+        const inputCoords = getCurrentGalaxyCoords();
+        if (!inputCoords.g || !inputCoords.s) return;
+
+        let actualG = inputCoords.g;
+        let actualS = inputCoords.s;
+
+        // 2. Tablodaki gerçek koordinatları doğrula (sayfa geçişlerinde eski tablonun okunmasını engeller)
+        const mCoord = content.innerHTML.match(/\[(\d+):(\d+):(\d+)\]/);
+        if (mCoord) {
+            const renderedG = parseInt(mCoord[1], 10);
+            const renderedS = parseInt(mCoord[2], 10);
+            if (renderedG !== inputCoords.g || renderedS !== inputCoords.s) {
+                // Tablo henüz yeni sisteme güncellenmemiş, bekle
+                return;
+            }
+            actualG = renderedG;
+            actualS = renderedS;
+        }
+
+        let hasBrandNewDebris = false;
+        let listChanged = false;
+
+        // 3. DOM'daki #debris1 .. #debris16 ipucu elementlerini tara
+        for (let pos = 1; pos <= 16; pos++) {
+            const debEl = document.getElementById(`debris${pos}`) || document.getElementById(`debris_${pos}`);
+            if (debEl) {
+                let itemCoord = { g: actualG, s: actualS, p: pos };
+                const tipCoord = debEl.textContent.match(/\[(\d+):(\d+):(\d+)\]/);
+                if (tipCoord) {
+                    itemCoord.g = parseInt(tipCoord[1], 10);
+                    itemCoord.s = parseInt(tipCoord[2], 10);
+                    itemCoord.p = parseInt(tipCoord[3], 10);
+                    if (itemCoord.g !== actualG || itemCoord.s !== actualS) continue;
+                }
+
+                const data = parseDebrisText(debEl.textContent);
+                if (data && data.total >= (debrisSettings.minThreshold || 100000)) {
+                    const res = processFoundDebris(itemCoord.g, itemCoord.s, itemCoord.p, data);
+                    if (res.isNew) hasBrandNewDebris = true;
+                    if (res.changed) listChanged = true;
+                }
+            }
+        }
+
+        // 4. Galaksi tablosundaki satırları tara
+        const galaxyRows = content.querySelectorAll('.ct_row, .galaxyRow, #galaxytable tbody tr, tr[data-position]');
+        galaxyRows.forEach(row => {
+            let pos = parseInt(row.getAttribute('data-position'), 10);
+            if (isNaN(pos) || pos < 1 || pos > 16) {
+                const firstCell = row.querySelector('td:first-child, .cellPosition, .position');
+                if (firstCell) {
+                    const pNum = parseInt(firstCell.textContent.trim(), 10);
+                    if (!isNaN(pNum) && pNum >= 1 && pNum <= 16) pos = pNum;
+                }
+            }
+            if (!pos) return;
+
+            const debCell = row.querySelector('.cellDebris, .debris, .ha, td:nth-child(4)');
+            if (debCell) {
+                const hasDebrisContent = debCell.querySelector('.debris, [data-tooltip-content], [title], img, svg') ||
+                                         debCell.classList.contains('debris') ||
+                                         /[0-9]/.test(debCell.textContent);
+                if (hasDebrisContent) {
+                    const data = parseDebrisFromCell(debCell);
+                    if (data && data.total >= (debrisSettings.minThreshold || 100000)) {
+                        const res = processFoundDebris(actualG, actualS, pos, data);
+                        if (res.isNew) hasBrandNewDebris = true;
+                        if (res.changed) listChanged = true;
+                    }
+                }
+            }
+        });
+
+        if (listChanged) {
+            saveDebrisList();
+            renderDebrisList();
+        }
+
+        // SADECE ve SADECE daha önce listede olmayan YENİ bir harabe keşfedildiğinde ses çal!
+        if (hasBrandNewDebris) {
+            unlockAudio();
+            playEspionageAlertSound(debrisSettings.sound || 'sonar_deep');
+        }
+    }
+
+    function scanGalaxyForDebrisDebounced() {
+        if (!debrisSettings.enabled) return;
+        clearTimeout(debrisScanDebounceTimer);
+        debrisScanDebounceTimer = setTimeout(() => {
+            scanCurrentGalaxyPageForDebris();
+        }, 180);
+    }
+
+    function setupDebrisObserver() {
+        const target = document.getElementById('galaxyContent') || document.body;
+        const obs = new MutationObserver((mutations) => {
+            if (!debrisSettings.enabled) return;
+            let relevant = false;
+            for (const m of mutations) {
+                if (m.target && (
+                    m.target.id === 'galaxyContent' ||
+                    m.target.id === 'galaxytable' ||
+                    (m.target.classList && (m.target.classList.contains('galaxyRow') || m.target.classList.contains('ct_row') || m.target.classList.contains('cellDebris'))) ||
+                    m.target.closest?.('#galaxyContent')
+                )) {
+                    relevant = true;
+                    break;
+                }
+            }
+            if (relevant) {
+                scanGalaxyForDebrisDebounced();
+            }
+        });
+
+        obs.observe(target, { childList: true, subtree: true });
+
+        if (window.location.href.includes('component=galaxy') || document.getElementById('galaxyContent')) {
+            scanGalaxyForDebrisDebounced();
+        }
+    }
+
+    // ============================================================
     // INJECT UI
     // ============================================================
     function buildUI() {
@@ -1466,6 +1854,7 @@
                 '<div class="ls-tab" data-tab="scanner">🌌 Scanner</div>' +
                 '<div class="ls-tab" data-tab="finder">🔍 Finder</div>' +
                 '<div class="ls-tab" data-tab="alarm">🚨 Alarm</div>' +
+                '<div class="ls-tab" data-tab="debris">🛰️ Harabe</div>' +
             '</div>' +
             '<div id="ls-body">' +
 
@@ -1500,7 +1889,7 @@
                         '<span class="ls-chip" data-slots="1, 2, 3" data-min="1">☀️ 1-3 (Solar)</span>' +
                         '<span class="ls-chip" data-slots="1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15" data-min="15">🪐 Tamamen Boş (1-15)</span>' +
                     '</div>' +
-                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;background:rgba(255,255,255,0.03);padding:6px 8px;border-radius:4px;border:1px solid #1a2c3f">' +
+                    '<div style="display:justify;justify-content:space-between;align-items:center;margin-bottom:8px;background:rgba(255,255,255,0.03);padding:6px 8px;border-radius:4px;border:1px solid #1a2c3f;display:flex">' +
                         '<span class="ls-label" style="font-size:11px;color:#d1d8e0">👥 Min. Eşzamanlı Boş Slot:</span>' +
                         '<select id="ls-min" class="ls-inp" style="width:80px;padding:3px 6px;text-align:center">' +
                             '<option value="1">1 slot</option>' +
@@ -1614,6 +2003,54 @@
                             '</select>' +
                         '</div>' +
                     '</div>' +
+                '</div>' +
+
+                // DEBRIS TAB (HARABE AVCISI)
+                '<div id="tc-debris" class="ls-tc">' +
+                    '<div id="ls-debris-status-banner" style="background:#162436;border:1px solid #1a3a5c;border-radius:6px;padding:8px 10px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">' +
+                        '<div style="display:flex;align-items:center;gap:8px">' +
+                            '<span id="ls-debris-dot" style="width:10px;height:10px;border-radius:50%;background:#2ecc71;display:inline-block;box-shadow:0 0 6px #2ecc71"></span>' +
+                            '<span id="ls-debris-status-text" style="font-size:11px;font-weight:bold;color:#2ecc71">Harabe Avcısı Aktif · Galaksi İzleniyor</span>' +
+                        '</div>' +
+                        '<label class="ls-toggle-switch" title="Harabe izlemeyi aç/kapat">' +
+                            '<input type="checkbox" id="ls-debris-toggle">' +
+                            '<span class="ls-toggle-slider"></span>' +
+                        '</label>' +
+                    '</div>' +
+
+                    // Debris settings card
+                    '<div style="background:#131d2a;border:1px solid #233446;border-radius:6px;padding:10px;margin-bottom:8px">' +
+                        '<div style="margin-bottom:6px">' +
+                            '<span class="ls-label" style="color:#d1d8e0">⚡ Min. Harabe Eşiği (Toplam Kaynak):</span>' +
+                            '<input type="text" id="ls-debris-min" class="ls-inp" style="width:100%;font-weight:bold;color:#00bcff;font-family:monospace;margin-top:2px" placeholder="100.000">' +
+                        '</div>' +
+                        '<div style="display:flex;flex-wrap:wrap;gap:2px;margin-bottom:8px">' +
+                            '<span class="ls-chip ls-debris-chip" data-min="50000">50K</span>' +
+                            '<span class="ls-chip ls-debris-chip" data-min="100000">100K</span>' +
+                            '<span class="ls-chip ls-debris-chip" data-min="250000">250K</span>' +
+                            '<span class="ls-chip ls-debris-chip" data-min="500000">500K</span>' +
+                            '<span class="ls-chip ls-debris-chip" data-min="1000000">1M</span>' +
+                            '<span class="ls-chip ls-debris-chip" data-min="5000000">5M</span>' +
+                        '</div>' +
+                        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+                            '<span style="font-size:11px;color:#d1d8e0">🎵 Uyarı Sesi:</span>' +
+                            '<select id="ls-debris-sound" class="ls-inp" style="width:180px;padding:2px 4px;font-size:10px">' +
+                                '<option value="sonar_deep">Derin Deniz Sonarı (Klasik Ping)</option>' +
+                                '<option value="sonar_hunter">Aktif Avcı Sonarı (Yüksek Ping)</option>' +
+                                '<option value="sonar_echo">Taktik Yankı Sonarı (Çift Eko)</option>' +
+                            '</select>' +
+                        '</div>' +
+                        '<button id="ls-debris-test-sound" class="ls-btn-sm" style="background:#2980b9;color:#fff;border:none;padding:5px 10px;width:100%">🔊 Harabe Sesini Test Et</button>' +
+                    '</div>' +
+
+                    // Debris list header with clear button
+                    '<div style="display:flex;justify-content:space-between;align-items:center;margin:10px 0 6px 0;padding-bottom:4px;border-bottom:1px solid #1a2c3f">' +
+                        '<span style="font-size:11px;font-weight:bold;color:#00bcff" id="ls-debris-count-title">🛰️ Bulunan Harabeler (0)</span>' +
+                        '<button id="ls-debris-clear-all" class="ls-btn ls-btn-d ls-btn-sm" style="padding:2px 7px;font-size:10px" title="Tüm harabeleri listeden temizle">🗑️ Listeyi Temizle</button>' +
+                    '</div>' +
+
+                    // Debris items list
+                    '<div id="ls-debris-list" style="max-height:220px;overflow-y:auto;overflow-x:hidden;width:100%;box-sizing:border-box"></div>' +
                 '</div>' +
 
             '</div>' +
@@ -1787,6 +2224,7 @@
                 if (content) content.classList.add('active');
                 activeTab = t;
                 localStorage.setItem(KEYS.TAB, t);
+                if (t === 'debris') renderDebrisList();
                 setTimeout(ensurePanelInView, 20);
             });
         });
@@ -1918,6 +2356,65 @@
             unlockAudio();
             playEspionageAlertSound(espSoundSelect?.value);
         });
+
+        // Debris Tab Controls (Harabe Avcısı)
+        const debToggle = document.getElementById('ls-debris-toggle');
+        const debMinInp = document.getElementById('ls-debris-min');
+        const debSoundSelect = document.getElementById('ls-debris-sound');
+
+        if (debToggle) {
+            debToggle.checked = !!debrisSettings.enabled;
+            debToggle.addEventListener('change', () => {
+                debrisSettings.enabled = debToggle.checked;
+                saveDebrisSettings();
+                updateDebrisStatusBanner();
+                if (debrisSettings.enabled) {
+                    scanGalaxyForDebrisDebounced();
+                }
+            });
+        }
+
+        if (debMinInp) {
+            debMinInp.value = fmt(debrisSettings.minThreshold || 100000);
+            debMinInp.addEventListener('change', () => {
+                const val = parseOgNum(debMinInp.value) || 100000;
+                debrisSettings.minThreshold = val;
+                debMinInp.value = fmt(val);
+                saveDebrisSettings();
+            });
+        }
+
+        document.querySelectorAll('.ls-debris-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                const minVal = parseInt(chip.getAttribute('data-min'), 10) || 100000;
+                debrisSettings.minThreshold = minVal;
+                if (debMinInp) debMinInp.value = fmt(minVal);
+                saveDebrisSettings();
+            });
+        });
+
+        if (debSoundSelect) {
+            debSoundSelect.value = debrisSettings.sound || 'sonar_deep';
+            debSoundSelect.addEventListener('change', () => {
+                debrisSettings.sound = debSoundSelect.value;
+                saveDebrisSettings();
+            });
+        }
+
+        document.getElementById('ls-debris-test-sound')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            unlockAudio();
+            playEspionageAlertSound(debSoundSelect?.value);
+        });
+
+        document.getElementById('ls-debris-clear-all')?.addEventListener('click', () => {
+            debrisList = [];
+            saveDebrisList();
+            renderDebrisList();
+        });
+
+        updateDebrisStatusBanner();
+        renderDebrisList();
 
         // Initialize Threat Monitoring
         const attEl = document.getElementById('attack_alert');
@@ -2052,6 +2549,7 @@
     // ============================================================
     buildUI();
     setupObserver();
-    console.log(LS, 'LuckyStrike OGame Helper v4.3 hazır!');
+    setupDebrisObserver();
+    console.log(LS, 'LuckyStrike OGame Helper v5.0 hazır!');
 
 })();
