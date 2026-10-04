@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         LuckyStrike OGame Helper
 // @namespace    http://tampermonkey.net/
-// @version      5.1
-// @description  LuckyStrike OGame Helper: Maliyet Sepeti, Galaxy Scanner, Player Finder, Sesli Alarm, Harabe Avcısı
+// @version      6.0
+// @description  LuckyStrike OGame Helper: Maliyet Sepeti, Galaxy Scanner, Player Finder, Sesli Alarm, Harabe AvcÄ±sÄ±
 // @author       LuckyStrike
 // @match        *://*.ogame.gameforge.com/game/index.php*
 // @grant        none
@@ -12,7 +12,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v5.1 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v6.0 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -39,6 +39,7 @@
     let alarmSettings = Object.assign({
         attackEnabled: true,
         espionageEnabled: true,
+        desktopNotification: false,
         attackSound: 'klaxon',
         espionageSound: 'sonar_deep',
         volume: 70,
@@ -62,6 +63,20 @@
     }, JSON.parse(localStorage.getItem(KEYS.DEBRIS_SETTINGS) || '{}'));
 
     let debrisList = JSON.parse(localStorage.getItem(KEYS.DEBRIS_LIST) || '[]');
+    // Otomatik temizlik: Eski hatalı yapışık okumaları (örn: 2.162.180) temizle
+    if (Array.isArray(debrisList)) {
+        const initialCount = debrisList.length;
+        debrisList = debrisList.filter(item => {
+            if (!item || !item.id) return false;
+            if (item.p === 16 && (item.crystal === 0 || item.metal > 1000000 || item.total > 1000000)) {
+                return false;
+            }
+            return true;
+        });
+        if (debrisList.length !== initialCount) {
+            localStorage.setItem(KEYS.DEBRIS_LIST, JSON.stringify(debrisList));
+        }
+    }
 
     // Kaç kademe ekleneceği (+1, +2, +3...)
     let selectedLevelsToAdd = 1;
@@ -74,6 +89,16 @@
         return Number(n).toLocaleString('tr-TR');
     }
 
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
     function parseOgNum(str) {
         if (!str) return 0;
         str = String(str).trim();
@@ -81,6 +106,12 @@
 
         let neg = str.startsWith('-') ? -1 : 1;
         str = str.replace(/^-/, '');
+
+        // Güvenlik önlemi: Eğer kazara yapışık iki token (örn: 21,6K21,8K0) geldiyse, sadece ilkini al
+        const gluedMatch = str.match(/^([0-9]+(?:[.,][0-9]+)*[ \t]*(?:mrd|mn|[kKmMbBrd])?)/i);
+        if (gluedMatch && gluedMatch[1].length < str.length && /[0-9]/.test(str.substring(gluedMatch[1].length))) {
+            str = gluedMatch[1];
+        }
 
         let mult = 1;
         if (/mrd$/i.test(str)) mult = 1e9;
@@ -106,10 +137,21 @@
     }
 
     function getLiveResources() {
-        const m = parseInt(document.getElementById('resources_metal')?.getAttribute('data-raw') || '0', 10);
-        const c = parseInt(document.getElementById('resources_crystal')?.getAttribute('data-raw') || '0', 10);
-        const d = parseInt(document.getElementById('resources_deuterium')?.getAttribute('data-raw') || '0', 10);
-        return { metal: m, crystal: c, deuterium: d };
+        const readRes = (id) => {
+            const el = document.getElementById(id);
+            if (!el) return 0;
+            const raw = el.getAttribute('data-raw') || el.getAttribute('data-value');
+            if (raw) {
+                const parsed = parseInt(raw, 10);
+                if (!isNaN(parsed) && parsed >= 0) return parsed;
+            }
+            return parseOgNum(el.textContent);
+        };
+        return {
+            metal: readRes('resources_metal'),
+            crystal: readRes('resources_crystal'),
+            deuterium: readRes('resources_deuterium')
+        };
     }
 
     function getCurrentPlanetName() {
@@ -153,9 +195,95 @@
     }
 
     // ============================================================
-    // OGAME RESMİ ARTIŞ FAKTÖRLERİ (Resmi Gameforge LFMaster Tablosu)
+    // OGAME RESMİ ARTIŞ FAKTÖRLERİ & BİNA VERİLERİ (Gameforge & Infinity BUIDLING_INFO)
     // ============================================================
-    function checkIsLifeform(name) {
+    const LF_BUILDING_DATA = {
+        // İnsan (Human: 11101 - 11112)
+        11101: { name: 'Residential Sector', factor: 1.20, base: [7, 2, 0] },
+        11102: { name: 'Biosphere Farm', factor: 1.23, base: [5, 2, 0] },
+        11103: { name: 'Research Centre', factor: 1.30, base: [20000, 25000, 10000] },
+        11104: { name: 'Academy of Sciences', factor: 1.70, base: [5000, 3200, 1500] },
+        11105: { name: 'Neuro-Calibration Centre', factor: 1.70, base: [50000, 40000, 50000] },
+        11106: { name: 'High Energy Smelting', factor: 1.50, base: [9000, 6000, 3000] },
+        11107: { name: 'Food Silo', factor: 1.09, base: [25000, 13000, 7000] },
+        11108: { name: 'Fusion-Powered Production', factor: 1.50, base: [50000, 25000, 15000] },
+        11109: { name: 'Skyscraper', factor: 1.09, base: [75000, 20000, 25000] },
+        11110: { name: 'Biotech Lab', factor: 1.12, base: [150000, 30000, 15000] },
+        11111: { name: 'Metropolis', factor: 1.50, base: [80000, 35000, 60000] },
+        11112: { name: 'Planetary Shield', factor: 1.15, base: [250000, 125000, 125000] },
+
+        // Rock'tal (12101 - 12112)
+        12101: { name: 'Meditation Enclave', factor: 1.20, base: [9, 3, 0] },
+        12102: { name: 'Crystal Farm', factor: 1.20, base: [7, 2, 0] },
+        12103: { name: 'Rune Technologium', factor: 1.30, base: [40000, 10000, 15000] },
+        12104: { name: 'Rune Forge', factor: 1.70, base: [5000, 3800, 1000] },
+        12105: { name: 'Oriktorium', factor: 1.65, base: [50000, 40000, 50000] },
+        12106: { name: 'Magma Forge', factor: 1.40, base: [10000, 8000, 1000] },
+        12107: { name: 'Disruption Chamber', factor: 1.20, base: [20000, 15000, 10000] },
+        12108: { name: 'Megalith', factor: 1.50, base: [50000, 35000, 15000] },
+        12109: { name: 'Crystal Refinery', factor: 1.40, base: [85000, 44000, 25000] },
+        12110: { name: 'Deuterium Synthesiser', factor: 1.40, base: [120000, 50000, 20000] },
+        12111: { name: 'Mineral Research Centre', factor: 1.80, base: [250000, 150000, 100000] },
+        12112: { name: 'Advanced Recycling Plant', factor: 1.50, base: [250000, 125000, 125000] },
+
+        // Mecha (13101 - 13112)
+        13101: { name: 'Assembly Line', factor: 1.21, base: [6, 2, 0] },
+        13102: { name: 'Fusion Cell Factory', factor: 1.18, base: [5, 2, 0] },
+        13103: { name: 'Robotics Research Centre', factor: 1.30, base: [30000, 20000, 10000] },
+        13104: { name: 'Update Network', factor: 1.80, base: [5000, 3800, 1000] },
+        13105: { name: 'Quantum Computer Centre', factor: 1.80, base: [50000, 40000, 50000] },
+        13106: { name: 'Automatised Assembly Centre', factor: 1.30, base: [7500, 7000, 1000] },
+        13107: { name: 'High-Performance Transformer', factor: 1.50, base: [35000, 15000, 10000] },
+        13108: { name: 'Microchip Assembly Line', factor: 1.07, base: [50000, 20000, 30000] },
+        13109: { name: 'Production Assembly Hall', factor: 1.14, base: [100000, 10000, 3000] },
+        13110: { name: 'High-Performance Synthesiser', factor: 1.50, base: [100000, 40000, 20000] },
+        13111: { name: 'Chip Mass Production', factor: 1.50, base: [55000, 50000, 30000] },
+        13112: { name: 'Nano Repair Bots', factor: 1.40, base: [250000, 125000, 125000] },
+
+        // Kaelesh (14101 - 14112)
+        14101: { name: 'Sanctuary', factor: 1.21, base: [4, 3, 0] },
+        14102: { name: 'Antimatter Condenser', factor: 1.20, base: [6, 3, 0] },
+        14103: { name: 'Vortex Chamber', factor: 1.30, base: [20000, 15000, 15000] },
+        14104: { name: 'Halls of Realisation', factor: 1.80, base: [7500, 5000, 800] },
+        14105: { name: 'Forum of Transcendence', factor: 1.80, base: [60000, 30000, 50000] },
+        14106: { name: 'Antimatter Convector', factor: 1.25, base: [8500, 5000, 3000] },
+        14107: { name: 'Cloning Laboratory', factor: 1.20, base: [15000, 15000, 5000] },
+        14108: { name: 'Chrysalis Accelerator', factor: 1.05, base: [75000, 25000, 30000] },
+        14109: { name: 'Bio Modifier', factor: 1.20, base: [87500, 25000, 30000] },
+        14110: { name: 'Psionic Modulator', factor: 1.40, base: [150000, 30000, 30000] },
+        14111: { name: 'Ship Manufacturing Hall', factor: 1.20, base: [75000, 50000, 55000] },
+        14112: { name: 'Supra Refractor', factor: 1.40, base: [500000, 250000, 250000] }
+    };
+
+    function getTechnologyId(popup) {
+        if (!popup) popup = document.getElementById('technologydetails');
+        if (!popup) return null;
+
+        let tid = popup.getAttribute('data-technology-id') || popup.getAttribute('data-technology');
+        if (tid && parseInt(tid, 10) > 0) return parseInt(tid, 10);
+
+        const elWithTech = popup.querySelector('[data-technology-id], [data-technology], .upgrade[data-technology], .action a[data-technology]');
+        if (elWithTech) {
+            tid = elWithTech.getAttribute('data-technology-id') || elWithTech.getAttribute('data-technology');
+            if (tid && parseInt(tid, 10) > 0) return parseInt(tid, 10);
+        }
+
+        const activeTech = document.querySelector('.technology.showsDetails, .technology.active, .hasDetails.showsDetails');
+        if (activeTech) {
+            tid = activeTech.getAttribute('data-technology') || activeTech.getAttribute('data-technology-id');
+            if (tid && parseInt(tid, 10) > 0) return parseInt(tid, 10);
+        }
+
+        const classMatch = (popup.className + ' ' + (popup.querySelector('.lifeformsprite, .sprite')?.className || '')).match(/(?:tech|technologydetails_|technology-)(\d+)/i);
+        if (classMatch && parseInt(classMatch[1], 10) > 0) {
+            return parseInt(classMatch[1], 10);
+        }
+
+        return null;
+    }
+
+    function checkIsLifeform(name, techId) {
+        if (techId && techId >= 11101 && techId <= 19999) return true;
         const n = (name || '').toLowerCase();
         if (window.location.href.includes('lfbuildings') || 
             window.location.href.includes('lfresearch') || 
@@ -167,10 +295,10 @@
             'üretim hattı', 'montaj hattı', 'füzyon hücresi', 'robotik araştırma', 'güncelleme ağı',
             'kuantum bilgisayar', 'otomatik montaj', 'otomatize montaj', 'transformatör', 'mikroçip',
             'montaj salonu', 'montaj holü', 'üretim montaj', 'sentezleyici', 'çip seri', 'nano onarım',
-            'yaşam alanı', 'konut alanı', 'biyosfer', 'bilim akademisi', 'nöro-kalibrasyon', 'noro-kalibrasyon',
+            'yaşam alanı', 'konut alanı', 'yerleşim', 'biyosfer', 'bilim akademisi', 'nöro-kalibrasyon', 'noro-kalibrasyon',
             'ergitme', 'gıda silosu', 'gökdelen', 'biyoteknoloji', 'metropol', 'gezegensel kalkan',
             'meditasyon', 'kristal çiftliği', 'kristal rafinerisi', 'rün teknoloji', 'rün demirci',
-            'oriktor', 'magma demirci', 'ayrışma odası', 'megalit', 'mineral rafinerisi',
+            'oriktor', 'magma demirci', 'ayrışma odası', 'megalit', 'kaya anıtı', 'mineral rafinerisi',
             'volkanik batarya', 'maden araştırma', 'mineral araştırma', 'geri dönüşüm tesisi',
             'barınak', 'antimadde yoğunlaştırıcı', 'vorteks', 'farkındalık salonu', 'aşkınlık forumu',
             'antimadde konvektörü', 'klonlama', 'krizalit', 'biyo değiştirici', 'psişik modülatör',
@@ -179,10 +307,43 @@
         return lfKeywords.some(kw => n.includes(kw));
     }
 
-    function getGrowthFactor(name) {
+    function getGrowthFactor(name, techId) {
+        if (techId && LF_BUILDING_DATA[techId]) {
+            return LF_BUILDING_DATA[techId].factor;
+        }
+
         const n = (name || '').toLowerCase().trim();
 
-        // --- MECHA BİNALARI (3001 - 3012) ---
+        // --- İNSAN (HUMAN) BİNALARI (11101 - 11112) ---
+        if (n.includes('yerleşim') || n.includes('yaşam alanı') || n.includes('konut alanı') || n.includes('residential sector') || (n.includes('konut') && !n.includes('çiftlik'))) return 1.20;
+        if (n.includes('biyosfer') || n.includes('biosphere')) return 1.23;
+        if ((n.includes('araştırma merkezi') || n.includes('research centre')) && !n.includes('robotik') && !n.includes('mineral') && !n.includes('maden')) return 1.30;
+        if (n.includes('bilim akademisi') || n.includes('academy of sciences')) return 1.70;
+        if (n.includes('nöro-kalibrasyon') || n.includes('noro') || n.includes('neuro-calibration')) return 1.70;
+        if (n.includes('ergitme') || n.includes('high energy smelting')) return 1.50;
+        if (n.includes('gıda silosu') || n.includes('food silo')) return 1.09;
+        if (n.includes('füzyon enerji santrali') || n.includes('fusion-powered') || (n.includes('füzyon') && n.includes('üretim'))) return 1.50;
+        if (n.includes('gökdelen') || n.includes('skyscraper')) return 1.09;
+        if (n.includes('biyoteknoloji') || n.includes('biotech')) return 1.12;
+        if (n.includes('metropol') || n.includes('metropolis')) return 1.50;
+        if ((n.includes('kalkan') || n.includes('shield')) && (n.includes('gezegensel') || n.includes('planetary'))) return 1.15;
+
+        // --- ROCK'TAL BİNALARI (12101 - 12112) ---
+        if (n.includes('meditasyon') || n.includes('meditation')) return 1.20;
+        if (n.includes('kristal rafinerisi') || n.includes('crystal refinery')) return 1.40;
+        if (n.includes('kristal çiftliği') || (n.includes('kristal') && (n.includes('çiftlik') || n.includes('farm')))) return 1.20;
+        if (n.includes('rün teknoloji') || n.includes('rune technol')) return 1.30;
+        if (n.includes('rün demirci') || n.includes('rune forge')) return 1.70;
+        if (n.includes('oriktor')) return 1.65;
+        if (n.includes('magma demirci') || n.includes('magma forge')) return 1.40;
+        if (n.includes('ayrışma odası') || n.includes('disruption chamber')) return 1.20;
+        if (n.includes('kaya anıtı') || n.includes('megalit') || n.includes('megalith')) return 1.50;
+        if (n.includes('mineral rafinerisi') || n.includes('mineral refinery')) return 1.40;
+        if (n.includes('volkanik batarya') || n.includes('volcanic batter')) return 1.40;
+        if (n.includes('mineral araştırma') || n.includes('maden araştırma') || n.includes('mineral research')) return 1.80;
+        if (n.includes('geri dönüşüm tesisi') || n.includes('advanced recycling')) return 1.50;
+
+        // --- MECHA BİNALARI (13101 - 13112) ---
         if (n.includes('üretim hattı') || n.includes('montaj hattı') || n.includes('assembly line')) return 1.21;
         if (n.includes('füzyon hücresi') || n.includes('fusion cell')) return 1.18;
         if (n.includes('robotik araştırma') || n.includes('robotics research')) return 1.30;
@@ -196,35 +357,7 @@
         if (n.includes('çip seri') || n.includes('chip mass')) return 1.50;
         if (n.includes('nano onarım') || n.includes('nano repair')) return 1.40;
 
-        // --- İNSAN (HUMAN) BİNALARI (1001 - 1012) ---
-        if (n.includes('yaşam alanı') || n.includes('konut alanı') || n.includes('residential sector') || (n.includes('konut') && !n.includes('çiftlik'))) return 1.20;
-        if (n.includes('biyosfer') || n.includes('biosphere')) return 1.23;
-        if ((n.includes('araştırma merkezi') || n.includes('research centre')) && !n.includes('robotik') && !n.includes('mineral') && !n.includes('maden')) return 1.30;
-        if (n.includes('bilim akademisi') || n.includes('academy of sciences')) return 1.70;
-        if (n.includes('nöro-kalibrasyon') || n.includes('noro') || n.includes('neuro-calibration')) return 1.70;
-        if (n.includes('ergitme') || n.includes('high energy smelting')) return 1.50;
-        if (n.includes('gıda silosu') || n.includes('food silo')) return 1.09;
-        if (n.includes('füzyon enerji santrali') || n.includes('fusion-powered') || (n.includes('füzyon') && n.includes('üretim'))) return 1.50;
-        if (n.includes('gökdelen') || n.includes('skyscraper')) return 1.09;
-        if (n.includes('biyoteknoloji') || n.includes('biotech')) return 1.12;
-        if (n.includes('metropol') || n.includes('metropolis')) return 1.50;
-        if ((n.includes('kalkan') || n.includes('shield')) && (n.includes('gezegensel') || n.includes('planetary'))) return 1.15;
-
-        // --- ROCK'TAL BİNALARI (2001 - 2012) ---
-        if (n.includes('meditasyon') || n.includes('meditation')) return 1.20;
-        if ((n.includes('kristal') && (n.includes('çiftlik') || n.includes('farm'))) || (n.includes('kristal rafinerisi') && !n.includes('maden'))) return 1.20;
-        if (n.includes('rün teknoloji') || n.includes('rune technol')) return 1.30;
-        if (n.includes('rün demirci') || n.includes('rune forge')) return 1.70;
-        if (n.includes('oriktor')) return 1.65;
-        if (n.includes('magma demirci') || n.includes('magma forge')) return 1.40;
-        if (n.includes('ayrışma odası') || n.includes('disruption chamber')) return 1.20;
-        if (n.includes('megalit') || n.includes('megalith')) return 1.50;
-        if (n.includes('mineral rafinerisi') || n.includes('mineral refinery')) return 1.40;
-        if (n.includes('volkanik batarya') || n.includes('volcanic batter')) return 1.40;
-        if (n.includes('mineral araştırma') || n.includes('maden araştırma') || n.includes('mineral research')) return 1.80;
-        if (n.includes('geri dönüşüm tesisi') || n.includes('advanced recycling')) return 1.50;
-
-        // --- KAELESH BİNALARI (4001 - 4012) ---
+        // --- KAELESH BİNALARI (14101 - 14112) ---
         if (n.includes('barınak') || n.includes('sanctuary') || (n.includes('sığınak') && !n.includes('meditasyon'))) return 1.21;
         if (n.includes('antimadde yoğunlaştırıcı') || n.includes('antimatter condenser')) return 1.20;
         if (n.includes('vorteks') || n.includes('vortex')) return 1.30;
@@ -232,11 +365,11 @@
         if (n.includes('aşkınlık forumu') || n.includes('forum of transcendence')) return 1.80;
         if (n.includes('antimadde konvektörü') || n.includes('antimatter convector')) return 1.25;
         if (n.includes('klonlama') || n.includes('cloning')) return 1.20;
-        if (n.includes('krizalit') || n.includes('chrysalite')) return 1.05;
+        if (n.includes('krizalit') || n.includes('chrysalite') || n.includes('chrysalis')) return 1.05;
         if (n.includes('biyo değiştirici') || n.includes('bio modifier')) return 1.20;
         if (n.includes('psişik modülatör') || n.includes('psionic modulator')) return 1.40;
-        if (n.includes('yerçekimi odası') || n.includes('gravity well')) return 1.20;
-        if (n.includes('dönüşüm alanı') || n.includes('distortion field')) return 1.40;
+        if (n.includes('yerçekimi odası') || n.includes('gravity well') || n.includes('ship manufacturing')) return 1.20;
+        if (n.includes('dönüşüm alanı') || n.includes('distortion field') || n.includes('supra refractor')) return 1.40;
 
         // --- CANLI TÜRÜ GENEL NÜFUS / ÇİFTLİK / ARAŞTIRMA MERKEZİ ---
         if (n.includes('sığınak') || n.includes('habitat') || n.includes('çiftlik') || n.includes('sektör')) return 1.20;
@@ -270,7 +403,10 @@
         costLis.forEach(li => {
             const cls = li.className.toLowerCase();
             const dv = li.getAttribute('data-value') || li.getAttribute('data-total');
-            const val = dv ? parseInt(dv, 10) : parseOgNum(li.textContent);
+            // Infinity'nin enjekte ettiği alt elemanları (.ogk-sum, .overmark vs.) çıkararak temiz text al
+            let cleanLi = li.cloneNode(true);
+            cleanLi.querySelectorAll('.ogk-sum, .overmark, .undermark').forEach(el => el.remove());
+            const val = dv ? parseInt(dv, 10) : parseOgNum(cleanLi.textContent);
             if (val > 0) {
                 if (cls.includes('metal')) m = val;
                 else if (cls.includes('crystal')) c = val;
@@ -292,7 +428,7 @@
     }
 
     // ============================================================
-    // ÇOKLU KADEME HESAPLAYICI (Formül Tabanlı)
+    // ÇOKLU KADEME HESAPLAYICI (Infinity Uyumu & Formül Tabanlı)
     // ============================================================
     function parseCostsFromPopup() {
         const popup = document.getElementById('technologydetails');
@@ -342,33 +478,69 @@
             result.level = `${nextLvl} → ${targetLvl}`;
         }
 
+        const techId = getTechnologyId(popup);
         const baseCost = parseNextLevelBaseCost(popup);
-        const isLifeform = checkIsLifeform(result.name);
-        const factor = getGrowthFactor(result.name);
+        const isLifeform = checkIsLifeform(result.name, techId);
+        const factor = getGrowthFactor(result.name, techId);
 
         let totM = 0, totC = 0, totD = 0;
         let directParsed = false;
 
-        // 1. ÖNCELİK: Eğer sayfada (Infinity / OGame arayüzünde) doğrudan hedef kademe aralığı metni varsa onu oku
-        // Örn: "48-57 68,7m 22,9m" veya "48 - 57 68,7m 22,9m"
+        // 1. ÖNCELİK: Infinity Eklentisinin DOM değerlerini okuma
+        // Infinity açık ve hedef seviyeye getirilmişse eklediği .ogk-sum değerlerini %100 birebir al
         if (selectedLevelsToAdd > 1) {
-            const popupText = popup.innerText || popup.textContent || '';
-            const rangePattern = new RegExp(`(?:^|\\s)${nextLvl}\\s*-\\s*${targetLvl}\\s+([0-9.,]+[kKmMnNrRdD]?)(?:\\s+([0-9.,]+[kKmMnNrRdD]?))?(?:\\s+([0-9.,]+[kKmMnNrRdD]?))?`, 'im');
-            const rangeMatch = popupText.match(rangePattern);
-            if (rangeMatch) {
-                const parsedM = parseOgNum(rangeMatch[1]);
-                const parsedC = rangeMatch[2] ? parseOgNum(rangeMatch[2]) : 0;
-                const parsedD = rangeMatch[3] ? parseOgNum(rangeMatch[3]) : 0;
-                if (parsedM > 0 || parsedC > 0) {
-                    totM = parsedM;
-                    totC = parsedC;
-                    totD = parsedD;
-                    directParsed = true;
+            const infLvlEl = popup.querySelector('.ogk-lvl') || document.querySelector('.ogk-lvl');
+            const infTargetLvl = infLvlEl ? parseInt(infLvlEl.textContent.replace(/\D/g, ''), 10) : null;
+
+            const metalSumEl = popup.querySelector('.costs .metal .ogk-sum') || document.querySelector('.costs .metal .ogk-sum');
+            const crystalSumEl = popup.querySelector('.costs .crystal .ogk-sum') || document.querySelector('.costs .crystal .ogk-sum');
+            const deutSumEl = popup.querySelector('.costs .deuterium .ogk-sum') || document.querySelector('.costs .deuterium .ogk-sum');
+
+            if (metalSumEl || crystalSumEl || deutSumEl) {
+                if (infTargetLvl === targetLvl || !infTargetLvl) {
+                    const readVal = (el) => {
+                        if (!el) return 0;
+                        const dt = el.getAttribute('data-title');
+                        if (dt) {
+                            const parsed = parseOgNum(dt);
+                            if (parsed > 0) return parsed;
+                        }
+                        return parseOgNum(el.textContent);
+                    };
+
+                    const infM = readVal(metalSumEl);
+                    const infC = readVal(crystalSumEl);
+                    const infD = readVal(deutSumEl);
+
+                    if (infM > 0 || infC > 0 || infD > 0) {
+                        totM = infM;
+                        totC = infC;
+                        totD = infD;
+                        directParsed = true;
+                    }
+                }
+            }
+
+            // 2. ÖNCELİK: Metin içi aralık eşleşmesi
+            if (!directParsed) {
+                const popupText = popup.innerText || popup.textContent || '';
+                const rangePattern = new RegExp(`(?:^|\\s)${nextLvl}\\s*-\\s*${targetLvl}\\s+([0-9.,]+[kKmMnNrRdD]?)(?:\\s+([0-9.,]+[kKmMnNrRdD]?))?(?:\\s+([0-9.,]+[kKmMnNrRdD]?))?`, 'im');
+                const rangeMatch = popupText.match(rangePattern);
+                if (rangeMatch) {
+                    const parsedM = parseOgNum(rangeMatch[1]);
+                    const parsedC = rangeMatch[2] ? parseOgNum(rangeMatch[2]) : 0;
+                    const parsedD = rangeMatch[3] ? parseOgNum(rangeMatch[3]) : 0;
+                    if (parsedM > 0 || parsedC > 0) {
+                        totM = parsedM;
+                        totC = parsedC;
+                        totD = parsedD;
+                        directParsed = true;
+                    }
                 }
             }
         }
 
-        // 2. YÖNTEM: Matematiksel formül ile hesaplama
+        // 3. YÖNTEM: Matematiksel formül ile hesaplama (Resmi GF formülü + Math.floor)
         if (!directParsed) {
             let curM = baseCost.metal, curC = baseCost.crystal, curD = baseCost.deuterium;
 
@@ -382,15 +554,16 @@
                     const prevLvl = thisLvl - 1;
 
                     if (isLifeform && prevLvl > 0) {
-                        // Resmi Gameforge formülü: Cost(L) = Cost(L-1) * Factor * (L / (L-1))
-                        curM = Math.round(curM * factor * (thisLvl / prevLvl));
-                        curC = Math.round(curC * factor * (thisLvl / prevLvl));
-                        curD = Math.round(curD * factor * (thisLvl / prevLvl));
+                        // Gameforge / Infinity resmi formülü:
+                        // Cost(L) = Math.floor(Cost(L-1) * Factor * (L / (L-1)))
+                        curM = Math.floor(curM * factor * (thisLvl / prevLvl));
+                        curC = Math.floor(curC * factor * (thisLvl / prevLvl));
+                        curD = Math.floor(curD * factor * (thisLvl / prevLvl));
                     } else {
-                        // Klasik OGame formülü: Cost(L) = Cost(L-1) * Factor
-                        curM = Math.round(curM * factor);
-                        curC = Math.round(curC * factor);
-                        curD = Math.round(curD * factor);
+                        // Klasik OGame formülü: Cost(L) = Math.floor(Cost(L-1) * Factor)
+                        curM = Math.floor(curM * factor);
+                        curC = Math.floor(curC * factor);
+                        curD = Math.floor(curD * factor);
                     }
 
                     totM += curM;
@@ -404,7 +577,7 @@
         result.crystal = totC;
         result.deuterium = totD;
 
-        console.log(LS, result.name, result.level, `(IsLF: ${isLifeform}, Faktör: ${factor}) ->`, result);
+        console.log(LS, result.name, result.level, `(TechID: ${techId}, IsLF: ${isLifeform}, Faktör: ${factor}, Direct: ${directParsed}) ->`, result);
         return result;
     }
 
@@ -488,7 +661,6 @@
             }
         });
     }
-    window.lsCopyNumber = copyNumber;
 
     function renderCart() {
         const listEl = document.getElementById('ls-cart-list');
@@ -507,9 +679,9 @@
                 d.className = 'ls-item';
                 if (item.isDeduction) d.style.borderLeft = '3px solid #e67e22';
 
-                let label = item.name;
-                if (item.level) label += ' ' + item.level;
-                if (item.count > 1) label += ' x' + item.count;
+                const safeName = escapeHtml(item.name);
+                const safeLevel = item.level ? escapeHtml(item.level) : null;
+                const safePlanet = item.planet ? escapeHtml(item.planet) : null;
 
                 const sign = (n) => n < 0 ? fmt(n) : '+' + fmt(n);
                 const mColor = (n) => n < 0 ? '#e67e22' : '#ffbe3b';
@@ -517,18 +689,18 @@
                 const dColor = (n) => n < 0 ? '#e67e22' : '#2ecc71';
 
                 let titleHtml = '<span style="color:' + (item.isDeduction ? '#e67e22' : '#ffffff') + ';font-weight:bold">' +
-                    (item.isDeduction ? '📉 ' : '') + item.name +
+                    (item.isDeduction ? '📉 ' : '') + safeName +
                 '</span>';
 
-                if (item.level) {
-                    titleHtml += '<span style="color:#b0bec5;font-weight:bold;margin-left:6px">' + item.level + '</span>';
+                if (safeLevel) {
+                    titleHtml += '<span style="color:#b0bec5;font-weight:bold;margin-left:6px">' + safeLevel + '</span>';
                 } else if (item.count > 1) {
-                    titleHtml += '<span style="color:#b0bec5;font-weight:bold;margin-left:6px">x' + item.count + '</span>';
+                    titleHtml += '<span style="color:#b0bec5;font-weight:bold;margin-left:6px">x' + parseInt(item.count, 10) + '</span>';
                 }
 
-                const planetBadge = item.planet ?
-                    '<span style="color:#d29bfe;font-size:10px;font-weight:bold;background:rgba(179,136,255,0.12);border:1px solid rgba(179,136,255,0.28);padding:1px 6px;border-radius:4px;white-space:nowrap;user-select:none" title="Gezegen: ' + item.planet + '">' +
-                        item.planet +
+                const planetBadge = safePlanet ?
+                    '<span style="color:#d29bfe;font-size:10px;font-weight:bold;background:rgba(179,136,255,0.12);border:1px solid rgba(179,136,255,0.28);padding:1px 6px;border-radius:4px;white-space:nowrap;user-select:none" title="Gezegen: ' + safePlanet + '">' +
+                        safePlanet +
                     '</span>' : '';
 
                 d.innerHTML =
@@ -562,6 +734,19 @@
         }
 
         const netTotal = tM + tC + tD;
+        const neededBN = netTotal > 0 ? Math.ceil(netTotal / 25000) : 0;
+        const neededKN = netTotal > 0 ? Math.ceil(netTotal / 5000) : 0;
+
+        const cargoHtml = netTotal > 0 ? (
+            '<div style="margin-top:6px;padding:4px 8px;background:rgba(255,255,255,0.03);border:1px solid #1a2c3f;border-radius:4px;font-size:10.5px;display:flex;justify-content:space-between;align-items:center">' +
+                '<span style="color:#8899aa">🚛 Nakliye İhtiyacı:</span>' +
+                '<span style="color:#d1d8e0">' +
+                    '<b style="color:#00bcff">' + fmt(neededBN) + '</b> <span style="font-size:9.5px;color:#8899aa">BN</span> ' +
+                    '<span style="color:#34495e">|</span> ' +
+                    '<b style="color:#2ecc71">' + fmt(neededKN) + '</b> <span style="font-size:9.5px;color:#8899aa">KN</span>' +
+                '</span>' +
+            '</div>'
+        ) : '';
 
         totalsEl.innerHTML =
             '<div style="margin-bottom:8px">' +
@@ -604,7 +789,8 @@
                     '<b style="color:#fff;font-family:monospace;font-size:12px;font-weight:bold">' + fmt(netTotal) + '</b>' +
                     '<button id="ls-cp-net" class="ls-cp-btn" title="Sayısını kopyala">📋</button>' +
                 '</span>' +
-            '</div>';
+            '</div>' +
+            cargoHtml;
 
         document.getElementById('ls-deduct-btn')?.addEventListener('click', deductPlanetResources);
         document.getElementById('ls-cp-m')?.addEventListener('click', () => copyNumber(tM, 'ls-cp-m'));
@@ -699,18 +885,18 @@
             statusEl.textContent = results.length + ' sonuç bulundu.';
 
             if (results.length > 0) {
-                resBox.style.display = 'block';
-                window._lsScanResults = results;
+                resBox.style.display = 'flex';
+                lastScanResults = results;
 
                 results.forEach(r => {
                     const div = document.createElement('div');
                     div.className = 'ls-item';
                     div.style.boxSizing = 'border-box';
                     div.style.width = '100%';
-                    const badges = r.slots.map(s => '<span class="ls-badge">' + s + '</span>').join(' ');
+                    const badges = r.slots.map(s => '<span class="ls-badge">' + parseInt(s, 10) + '</span>').join(' ');
                     div.innerHTML =
                         '<div style="flex:1;min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:3px">' +
-                            '<strong style="color:#00bcff;margin-right:4px">[' + r.g + ':' + r.s + ']</strong> ' + badges +
+                            '<strong style="color:#00bcff;margin-right:4px">[' + parseInt(r.g, 10) + ':' + parseInt(r.s, 10) + ']</strong> ' + badges +
                         '</div>';
                     const navBtn = document.createElement('button');
                     navBtn.className = 'ls-btn-sm';
@@ -732,14 +918,16 @@
         }
     }
 
+    let lastScanResults = null;
+
     function copyScanResults() {
-        if (!window._lsScanResults) return;
+        if (!lastScanResults) return;
         const lines = ['═══ Galaxy Scanner Sonuçları ═══', ''];
-        window._lsScanResults.forEach(r => {
+        lastScanResults.forEach(r => {
             lines.push('[' + r.g + ':' + r.s + '] → Boş: ' + r.slots.join(', '));
         });
         lines.push('');
-        lines.push('Toplam: ' + window._lsScanResults.length + ' sistem');
+        lines.push('Toplam: ' + lastScanResults.length + ' sistem');
         navigator.clipboard.writeText(lines.join('\n')).then(() => {
             const btn = document.getElementById('ls-scan-copy');
             if (btn) { btn.textContent = '✓ Kopyalandı!'; setTimeout(() => { btn.textContent = '📋 Panoya Kopyala'; }, 2000); }
@@ -749,12 +937,19 @@
     // ============================================================
     // PLAYER FINDER
     // ============================================================
+    let apiCacheInMemory = null;
+
     async function loadApiData() {
-        const raw = localStorage.getItem(KEYS.API);
+        if (apiCacheInMemory && (Date.now() - apiCacheInMemory.ts < 24 * 3600 * 1000)) {
+            return apiCacheInMemory;
+        }
+
+        const raw = sessionStorage.getItem(KEYS.API) || localStorage.getItem(KEYS.API);
         if (raw) {
             try {
                 const cache = JSON.parse(raw);
                 if (cache.ts && (Date.now() - cache.ts < 24 * 3600 * 1000) && cache.players && cache.planets) {
+                    apiCacheInMemory = cache;
                     return cache;
                 }
             } catch (e) { /* ignore */ }
@@ -789,7 +984,12 @@
         }
 
         const data = { ts: Date.now(), players, planets };
-        try { localStorage.setItem(KEYS.API, JSON.stringify(data)); } catch (e) { /* storage full */ }
+        apiCacheInMemory = data;
+        try {
+            sessionStorage.setItem(KEYS.API, JSON.stringify(data));
+        } catch (e) {
+            try { localStorage.setItem(KEYS.API, JSON.stringify(data)); } catch (e2) { /* storage full, in-memory cache active */ }
+        }
         return data;
     }
 
@@ -818,15 +1018,18 @@
                         count++;
                         if (count > 50) break;
                         const pPlanets = data.planets.filter(pl => pl.player === pid);
-                        const sts = p.status ? ' <span style="color:#e74c3c">(' + p.status + ')</span>' : ' <span style="color:#2ecc71">(aktif)</span>';
+                        const safePName = escapeHtml(p.name);
+                        const sts = p.status ? ' <span style="color:#e74c3c">(' + escapeHtml(p.status) + ')</span>' : ' <span style="color:#2ecc71">(aktif)</span>';
 
                         html += '<div class="ls-finder-card">';
-                        html += '<div style="font-weight:bold;color:#fff;margin-bottom:4px">' + p.name + sts + '</div>';
+                        html += '<div style="font-weight:bold;color:#fff;margin-bottom:4px">' + safePName + sts + '</div>';
                         pPlanets.forEach(pl => {
-                            const parts = pl.coords.split(':');
+                            const parts = (pl.coords || '1:1:1').split(':');
+                            const safePlName = escapeHtml(pl.name);
+                            const safeCoords = escapeHtml(pl.coords);
                             html += '<div class="ls-finder-planet">' +
-                                '<span>' + pl.name + ' <span style="color:#888">[' + pl.coords + ']</span></span>' +
-                                '<button class="ls-btn-sm ls-nav-btn" data-g="' + parts[0] + '" data-s="' + parts[1] + '" title="Galaksiye Git">🚀</button>' +
+                                '<span>' + safePlName + ' <span style="color:#888">[' + safeCoords + ']</span></span>' +
+                                '<button class="ls-btn-sm ls-nav-btn" data-g="' + parseInt(parts[0], 10) + '" data-s="' + parseInt(parts[1], 10) + '" title="Galaksiye Git">🚀</button>' +
                             '</div>';
                         });
                         html += '</div>';
@@ -839,13 +1042,16 @@
                         if (count > 50) break;
                         const owner = data.players[pl.player];
                         const ownerName = owner ? owner.name : '?';
-                        const parts = pl.coords.split(':');
+                        const parts = (pl.coords || '1:1:1').split(':');
+                        const safePlName = escapeHtml(pl.name);
+                        const safeCoords = escapeHtml(pl.coords);
+                        const safeOwner = escapeHtml(ownerName);
                         html += '<div class="ls-item" style="border-left:3px solid #2ecc71">' +
                             '<div style="flex:1">' +
-                                '<strong style="color:#2ecc71">' + pl.name + '</strong> <span style="color:#888">[' + pl.coords + ']</span><br>' +
-                                '<span style="font-size:10px;color:#aaa">Sahip: ' + ownerName + '</span>' +
+                                '<strong style="color:#2ecc71">' + safePlName + '</strong> <span style="color:#888">[' + safeCoords + ']</span><br>' +
+                                '<span style="font-size:10px;color:#aaa">Sahip: ' + safeOwner + '</span>' +
                             '</div>' +
-                            '<button class="ls-btn-sm ls-nav-btn" data-g="' + parts[0] + '" data-s="' + parts[1] + '" title="Galaksiye Git">🚀</button>' +
+                            '<button class="ls-btn-sm ls-nav-btn" data-g="' + parseInt(parts[0], 10) + '" data-s="' + parseInt(parts[1], 10) + '" title="Galaksiye Git">🚀</button>' +
                         '</div>';
                     }
                 }
@@ -853,6 +1059,15 @@
 
             statusEl.textContent = count === 0 ? 'Sonuç bulunamadı.' : count + ' sonuç bulundu.';
             resultsEl.innerHTML = html;
+
+            resultsEl.querySelectorAll('.ls-nav-btn').forEach(b => {
+                b.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const g = parseInt(b.getAttribute('data-g'), 10);
+                    const s = parseInt(b.getAttribute('data-s'), 10);
+                    if (g && s) navigateToGalaxy(g, s);
+                });
+            });
         } catch (e) {
             console.error(LS, e);
             statusEl.textContent = 'Hata: ' + e.message;
@@ -1171,8 +1386,27 @@
         }
     }
 
+    function triggerDesktopNotification(title, body) {
+        if (!alarmSettings.desktopNotification) return;
+        if (!('Notification' in window)) return;
+        if (Notification.permission === 'granted') {
+            try {
+                new Notification(title, { body: body, icon: 'icons/icon48.png' });
+            } catch (e) {}
+        } else if (Notification.permission !== 'denied') {
+            Notification.requestPermission().then(permission => {
+                if (permission === 'granted') {
+                    try {
+                        new Notification(title, { body: body, icon: 'icons/icon48.png' });
+                    } catch (e) {}
+                }
+            });
+        }
+    }
+
     let lastKnownEspionage = false;
     let lastKnownEspionageSig = '';
+    let lastKnownEspionageTime = 0;
 
     function handleThreatState(hasAttack, hasEspionage, threatSignature) {
         const now = Date.now();
@@ -1264,8 +1498,10 @@
             if (shouldPlay) {
                 if (isAttackThreat) {
                     playAttackAlertSound(alarmSettings.attackSound);
+                    triggerDesktopNotification('🚨 OGame Saldırı Alarmı!', 'Gezegeninize düşman saldırı filosu yaklaşıyor!');
                 } else if (isEspionageThreat) {
                     playEspionageAlertSound(alarmSettings.espionageSound);
+                    triggerDesktopNotification('📡 OGame Casusluk Uyarısı', 'Gezegeninize casus sondası yaklaşıyor!');
                 }
 
                 setStoredThreatState({
@@ -1340,14 +1576,16 @@
 
             lastKnownEspionage = hasEspionage;
             lastKnownEspionageSig = sig;
+            if (hasEspionage) lastKnownEspionageTime = Date.now();
             handleThreatState(hasAttack, hasEspionage, sig);
         } else {
             const hasAttack = isDOMAttackAlert();
             if (hasAttack) {
                 handleThreatState(true, false, 'DOM_ATTACK');
-            } else if (lastKnownEspionage) {
+            } else if (lastKnownEspionage && (Date.now() - lastKnownEspionageTime) < 15000) {
                 handleThreatState(false, true, lastKnownEspionageSig);
             } else {
+                lastKnownEspionage = false;
                 handleThreatState(false, false, '');
             }
         }
@@ -1372,6 +1610,7 @@
 
             lastKnownEspionage = hasEspionage;
             lastKnownEspionageSig = sig;
+            if (hasEspionage) lastKnownEspionageTime = Date.now();
 
             handleThreatState(hasAttack, hasEspionage, sig);
         } catch (e) {
@@ -1382,7 +1621,25 @@
     // ============================================================
     // DEBRIS HUNTER (HARABE AVCISI)
     // ============================================================
-    let debrisScanDebounceTimer = null;
+    let debrisScanTimers = [];
+
+    function clearDebrisScanTimers() {
+        debrisScanTimers.forEach(t => clearTimeout(t));
+        debrisScanTimers = [];
+    }
+
+    function triggerGalaxyScanSequence() {
+        if (!debrisSettings.enabled) return;
+        clearDebrisScanTimers();
+        // Hızlı geçişlerde ve sayfa yüklenirken hiçbir anı kaçırmamak için kademeli çoklu tarama:
+        const delays = [30, 100, 220, 400, 650, 1000];
+        delays.forEach(d => {
+            const timer = setTimeout(() => {
+                scanCurrentGalaxyPageForDebris();
+            }, d);
+            debrisScanTimers.push(timer);
+        });
+    }
 
     function saveDebrisSettings() {
         localStorage.setItem(KEYS.DEBRIS_SETTINGS, JSON.stringify(debrisSettings));
@@ -1425,16 +1682,23 @@
         if (!text) return null;
         let m = 0, c = 0, d = 0, rec = 0;
 
-        const mMatch = text.match(/Metal:\s*([0-9.,kKmMbBrd]+)/i);
+        // Metal (Standart: "Metal: 16.200" veya "Metal: 16,2K", alternatif: "16,2K Metal")
+        let mMatch = text.match(/Metal\s*:\s*([0-9.,]+[ \t]*(?:mrd|mn|[kKmMbBrd])?)/i);
+        if (!mMatch) mMatch = text.match(/([0-9.,]+[ \t]*(?:mrd|mn|[kKmMbBrd])?)\s*Metal/i);
         if (mMatch) m = parseOgNum(mMatch[1]);
 
-        const cMatch = text.match(/(?:Kristal|Crystal):\s*([0-9.,kKmMbBrd]+)/i);
+        // Kristal (Standart: "Kristal: 21.600" veya "Crystal: 21,6K", alternatif: "21,6K Kristal")
+        let cMatch = text.match(/(?:Kristal|Crystal)\s*:\s*([0-9.,]+[ \t]*(?:mrd|mn|[kKmMbBrd])?)/i);
+        if (!cMatch) cMatch = text.match(/([0-9.,]+[ \t]*(?:mrd|mn|[kKmMbBrd])?)\s*(?:Kristal|Crystal)/i);
         if (cMatch) c = parseOgNum(cMatch[1]);
 
-        const dMatch = text.match(/(?:Deuterium|Deut):\s*([0-9.,kKmMbBrd]+)/i);
+        // Deuterium
+        let dMatch = text.match(/(?:Deuterium|Deut)\s*:\s*([0-9.,]+[ \t]*(?:mrd|mn|[kKmMbBrd])?)/i);
+        if (!dMatch) dMatch = text.match(/([0-9.,]+[ \t]*(?:mrd|mn|[kKmMbBrd])?)\s*(?:Deuterium|Deut)/i);
         if (dMatch) d = parseOgNum(dMatch[1]);
 
-        const rMatch = text.match(/(?:Gereken geri d[öo]n[üu][şs][üu]mc[üu]ler|Recyclers needed|Recycler[s]?):\s*([0-9.,kKmMbBrd]+)/i);
+        // Geri Dönüşümcüler
+        const rMatch = text.match(/(?:Gereken geri d[öo]n[üu][şs][üu]mc[üu]ler|Recyclers needed|Recycler[s]?|Gerekli [Rr]ehberler)\s*:\s*([0-9.,kKmMbBrd]+)/i);
         if (rMatch) rec = parseOgNum(rMatch[1]);
 
         const total = m + c + d;
@@ -1448,41 +1712,23 @@
         if (!cell) return null;
 
         // 1. Tooltip içeriği kontrolü
-        const tipEl = cell.querySelector('[data-tooltip-content], [title]') || cell;
-        const tipAttr = tipEl.getAttribute('data-tooltip-content') || tipEl.getAttribute('title') || '';
+        const tipEl = cell.querySelector('[data-tooltip-content], [title], [data-tooltip-title], .tooltip') || cell;
+        const tipAttr = tipEl.getAttribute('data-tooltip-content') || tipEl.getAttribute('title') || tipEl.getAttribute('data-tooltip-title') || '';
         if (tipAttr.startsWith('#')) {
             const target = document.querySelector(tipAttr);
             if (target) {
                 const parsed = parseDebrisText(target.textContent);
-                if (parsed) return parsed;
+                if (parsed && parsed.total > 0) return parsed;
             }
         }
         if (tipAttr) {
             const parsedTip = parseDebrisText(tipAttr);
-            if (parsedTip) return parsedTip;
+            if (parsedTip && parsedTip.total > 0) return parsedTip;
         }
 
         // 2. Hücre içi doğrudan metin kontrolü
         const parsedText = parseDebrisText(cell.textContent);
-        if (parsedText) return parsedText;
-
-        // 3. Hücre içindeki sayı satırları kontrolü (örn: 0 / 36,4K / 0)
-        const tokens = cell.textContent.trim().split(/\s+/).filter(t => /[0-9]/.test(t));
-        if (tokens.length >= 2) {
-            const m = parseOgNum(tokens[0]);
-            const c = parseOgNum(tokens[1]);
-            const d = tokens.length >= 3 ? parseOgNum(tokens[2]) : 0;
-            const total = m + c + d;
-            if (total > 0) {
-                return {
-                    metal: m,
-                    crystal: c,
-                    deut: d,
-                    total: total,
-                    recyclers: Math.ceil(total / 20000)
-                };
-            }
-        }
+        if (parsedText && parsedText.total > 0) return parsedText;
 
         return null;
     }
@@ -1577,8 +1823,8 @@
                             '🚛 ' + fmt(item.recyclers) + ' GD' +
                         '</span>' +
                     '</div>' +
-                    '<div style="display:flex;align-items:center;gap:5px">' +
-                        '<button class="ls-btn-sm ls-debris-nav-btn" data-g="' + item.g + '" data-s="' + item.s + '" style="padding:2px 7px;cursor:pointer;display:inline-flex;align-items:center;gap:2px" title="Galakside [' + item.g + ':' + item.s + '] sistemine git">' +
+                    '<div style="display:flex;align-items:center;gap:4px">' +
+                        '<button class="ls-btn-sm ls-debris-nav-btn" data-g="' + item.g + '" data-s="' + item.s + '" style="padding:2px 6px;cursor:pointer;display:inline-flex;align-items:center;gap:2px" title="Galakside [' + item.g + ':' + item.s + '] sistemine git">' +
                             '🚀 Git' +
                         '</button>' +
                         '<button class="ls-x ls-debris-del" data-idx="' + index + '" title="Bu harabeyi listeden kaldır">✖</button>' +
@@ -1624,10 +1870,13 @@
         const content = document.getElementById('galaxyContent');
         if (!content) return;
 
-        // 1. AJAX yüklenme anında tarama yapma
+        // 1. AJAX yüklenme anında tam opaktaysa bekle (jQuery fadeOut sırasında yarı şeffafsa DOM hazırdır)
         const loader = document.getElementById('galaxyLoading') || content.querySelector('.galaxyLoading, .loading');
-        if (loader && window.getComputedStyle(loader).display !== 'none') {
-            return;
+        if (loader) {
+            const lStyle = window.getComputedStyle(loader);
+            if (lStyle.display !== 'none' && lStyle.visibility !== 'hidden' && parseFloat(lStyle.opacity || '1') > 0.6) {
+                return;
+            }
         }
 
         const inputCoords = getCurrentGalaxyCoords();
@@ -1636,25 +1885,32 @@
         let actualG = inputCoords.g;
         let actualS = inputCoords.s;
 
-        // 2. Tablodaki gerçek koordinatları doğrula (sayfa geçişlerinde eski tablonun okunmasını engeller)
-        const mCoord = content.innerHTML.match(/\[(\d+):(\d+):(\d+)\]/);
-        if (mCoord) {
-            const renderedG = parseInt(mCoord[1], 10);
-            const renderedS = parseInt(mCoord[2], 10);
-            if (renderedG !== inputCoords.g || renderedS !== inputCoords.s) {
-                // Tablo henüz yeni sisteme güncellenmemiş, bekle
-                return;
+        // 2. Tablodaki gerçek başlık koordinatlarını doğrula
+        const coordHeadEl = content.querySelector('#galaxyhead, .galaxy_head, .cellCoordinate, .coordinate');
+        let renderedG = null;
+        let renderedS = null;
+        if (coordHeadEl) {
+            const m = coordHeadEl.textContent.match(/(\d+)\s*[:/]\s*(\d+)/);
+            if (m) {
+                renderedG = parseInt(m[1], 10);
+                renderedS = parseInt(m[2], 10);
             }
-            actualG = renderedG;
-            actualS = renderedS;
+        }
+        // Eğer tablodaki koordinat başlığı henüz yeni input ile eşleşmiyorsa, eski sayfa kalıntısıdır; bu adımı atla
+        if (renderedG && renderedS && (renderedG !== actualG || renderedS !== actualS)) {
+            return;
         }
 
         let hasBrandNewDebris = false;
         let listChanged = false;
+        const scannedPositions = new Map(); // pos (1..16) -> data
 
         // 3. DOM'daki #debris1 .. #debris16 ipucu elementlerini tara
         for (let pos = 1; pos <= 16; pos++) {
-            const debEl = document.getElementById(`debris${pos}`) || document.getElementById(`debris_${pos}`);
+            const debEl = document.getElementById(`debris${pos}`) ||
+                          document.getElementById(`debris_${pos}`) ||
+                          content.querySelector(`#debris${pos}`) ||
+                          document.querySelector(`[id="debris${pos}"]`);
             if (debEl) {
                 let itemCoord = { g: actualG, s: actualS, p: pos };
                 const tipCoord = debEl.textContent.match(/\[(\d+):(\d+):(\d+)\]/);
@@ -1662,46 +1918,128 @@
                     itemCoord.g = parseInt(tipCoord[1], 10);
                     itemCoord.s = parseInt(tipCoord[2], 10);
                     itemCoord.p = parseInt(tipCoord[3], 10);
+                    // Başka sistemin kalıntısıysa geç
                     if (itemCoord.g !== actualG || itemCoord.s !== actualS) continue;
                 }
 
-                const data = parseDebrisText(debEl.textContent);
-                if (data && data.total >= (debrisSettings.minThreshold || 100000)) {
-                    const res = processFoundDebris(itemCoord.g, itemCoord.s, itemCoord.p, data);
-                    if (res.isNew) hasBrandNewDebris = true;
-                    if (res.changed) listChanged = true;
+                const debText = debEl.textContent;
+                const data = parseDebrisText(debText);
+                if (data && data.total > 0) {
+                    scannedPositions.set(itemCoord.p, data);
                 }
             }
         }
 
-        // 4. Galaksi tablosundaki satırları tara
-        const galaxyRows = content.querySelectorAll('.ct_row, .galaxyRow, #galaxytable tbody tr, tr[data-position]');
+        // 4. Galaksi tablosundaki normal hücreleri tara (SADECE 1..15, 16 ASLA SATIRDAN DÜZ METİN OLARAK OKUNMAZ)
+        const galaxyRows = content.querySelectorAll('#galaxytable tr, .ct_row, .galaxyRow, tr[data-position]');
         galaxyRows.forEach(row => {
             let pos = parseInt(row.getAttribute('data-position'), 10);
-            if (isNaN(pos) || pos < 1 || pos > 16) {
+            if (isNaN(pos) || pos < 1 || pos > 15) {
                 const firstCell = row.querySelector('td:first-child, .cellPosition, .position');
                 if (firstCell) {
                     const pNum = parseInt(firstCell.textContent.trim(), 10);
-                    if (!isNaN(pNum) && pNum >= 1 && pNum <= 16) pos = pNum;
+                    if (!isNaN(pNum) && pNum >= 1 && pNum <= 15) pos = pNum;
                 }
             }
-            if (!pos) return;
+            if (!pos || pos === 16) return;
 
-            const debCell = row.querySelector('.cellDebris, .debris, .ha, td:nth-child(4)');
+            const debCell = row.querySelector('.cellDebris, .debris, .ha');
             if (debCell) {
-                const hasDebrisContent = debCell.querySelector('.debris, [data-tooltip-content], [title], img, svg') ||
-                                         debCell.classList.contains('debris') ||
-                                         /[0-9]/.test(debCell.textContent);
-                if (hasDebrisContent) {
-                    const data = parseDebrisFromCell(debCell);
-                    if (data && data.total >= (debrisSettings.minThreshold || 100000)) {
-                        const res = processFoundDebris(actualG, actualS, pos, data);
-                        if (res.isNew) hasBrandNewDebris = true;
-                        if (res.changed) listChanged = true;
-                    }
+                const data = parseDebrisFromCell(debCell);
+                if (data && data.total > 0) {
+                    scannedPositions.set(pos, data);
                 }
             }
         });
+
+        // 5. 16. Slot (Sonsuz Uzaklar / Expedition) için çok katmanlı yakalama
+        if (!scannedPositions.has(16)) {
+            const expRow = content.querySelector('tr[data-position="16"], #expedition, tr.expedition, .expedition');
+            if (expRow) {
+                // Katman 1: Satırdaki enkaz ikonunun tooltip özniteliğini kontrol et
+                const debTarget = expRow.querySelector('[data-tooltip-content], [data-tooltip-title], [title], .debris, .ha, .icon_debris') || expRow;
+                const tipAttr = debTarget.getAttribute('data-tooltip-content') ||
+                                debTarget.getAttribute('data-tooltip-title') ||
+                                debTarget.getAttribute('title') || '';
+
+                if (tipAttr.startsWith('#')) {
+                    const target = document.querySelector(tipAttr);
+                    if (target) {
+                        const data = parseDebrisText(target.textContent);
+                        if (data && data.total > 0) scannedPositions.set(16, data);
+                    }
+                } else if (tipAttr) {
+                    const data = parseDebrisText(tipAttr);
+                    if (data && data.total > 0) scannedPositions.set(16, data);
+                }
+
+                // Katman 2: Eğer tooltip elementi henüz hazır değilse ama satırda enkaz ikonu varsa ve Infinity sayıları görünüyorsa
+                if (!scannedPositions.has(16)) {
+                    const hasDebrisIcon = expRow.querySelector('.debris, [class*="debris"], [data-tooltip-content*="debris"], img[src*="debris"], svg');
+                    if (hasDebrisIcon) {
+                        const numSpans = Array.from(expRow.querySelectorAll('span, div')).filter(el => {
+                            const t = el.textContent.trim();
+                            return /^[0-9.,]+[kKmMbBrd]?$/i.test(t);
+                        });
+                        if (numSpans.length >= 2) {
+                            const mVal = parseOgNum(numSpans[0].textContent);
+                            const cVal = parseOgNum(numSpans[1].textContent);
+                            const dVal = numSpans.length >= 3 ? parseOgNum(numSpans[2].textContent) : 0;
+                            const tot = mVal + cVal + dVal;
+                            if (tot > 0) {
+                                scannedPositions.set(16, {
+                                    metal: mVal,
+                                    crystal: cVal,
+                                    deut: dVal,
+                                    total: tot,
+                                    recyclers: Math.ceil(tot / 20000)
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 6. Mevcut sistemdeki kayıtları güncelle
+        const minThresh = debrisSettings.minThreshold || 100000;
+
+        scannedPositions.forEach((data, pos) => {
+            if (data && data.total >= minThresh) {
+                const res = processFoundDebris(actualG, actualS, pos, data);
+                if (res.isNew) hasBrandNewDebris = true;
+                if (res.changed) listChanged = true;
+            } else {
+                const existingIdx = debrisList.findIndex(item => item.g === actualG && item.s === actualS && item.p === pos);
+                if (existingIdx >= 0) {
+                    debrisList.splice(existingIdx, 1);
+                    listChanged = true;
+                }
+            }
+        });
+
+        // 7. Güvenli Temizlik: SADECE tablo eksiksiz ve stabil şekilde oturmuşsa harabeleri sil
+        // Hızlı geçiş anlarında yanlışlıkla silinmesini kesin olarak önler!
+        const totalRenderedRows = content.querySelectorAll('#galaxytable tr, .ct_row, .galaxyRow').length;
+        if (totalRenderedRows >= 10) {
+            const currentSystemItems = debrisList.filter(item => item.g === actualG && item.s === actualS);
+            currentSystemItems.forEach(item => {
+                if (!scannedPositions.has(item.p)) {
+                    // Pozisyon 16 için ek güvenlik: Enkaz ikonu varsa henüz tooltip bağlanmamış olabilir, silme!
+                    if (item.p === 16) {
+                        const expRow = content.querySelector('tr[data-position="16"], #expedition, tr.expedition, .expedition');
+                        if (expRow && expRow.querySelector('.debris, [class*="debris"], [data-tooltip-content*="debris"]')) {
+                            return;
+                        }
+                    }
+                    const idx = debrisList.findIndex(x => x.id === item.id);
+                    if (idx >= 0) {
+                        debrisList.splice(idx, 1);
+                        listChanged = true;
+                    }
+                }
+            });
+        }
 
         if (listChanged) {
             saveDebrisList();
@@ -1715,16 +2053,8 @@
         }
     }
 
-    function scanGalaxyForDebrisDebounced() {
-        if (!debrisSettings.enabled) return;
-        clearTimeout(debrisScanDebounceTimer);
-        debrisScanDebounceTimer = setTimeout(() => {
-            scanCurrentGalaxyPageForDebris();
-        }, 180);
-    }
-
     function setupDebrisObserver() {
-        const target = document.getElementById('galaxyContent') || document.body;
+        // 1. MutationObserver: Galaksi tablosu ve içerik değişikliklerini izle
         const obs = new MutationObserver((mutations) => {
             if (!debrisSettings.enabled) return;
             let relevant = false;
@@ -1732,6 +2062,7 @@
                 if (m.target && (
                     m.target.id === 'galaxyContent' ||
                     m.target.id === 'galaxytable' ||
+                    m.target.id === 'galaxyLoading' ||
                     (m.target.classList && (m.target.classList.contains('galaxyRow') || m.target.classList.contains('ct_row') || m.target.classList.contains('cellDebris'))) ||
                     m.target.closest?.('#galaxyContent')
                 )) {
@@ -1740,14 +2071,64 @@
                 }
             }
             if (relevant) {
-                scanGalaxyForDebrisDebounced();
+                triggerGalaxyScanSequence();
             }
         });
 
-        obs.observe(target, { childList: true, subtree: true });
+        obs.observe(document.body, { childList: true, subtree: true });
 
+        // 2. Klavye ile galaksi geçişleri (Sol/Sağ ok tuşları)
+        document.addEventListener('keydown', (e) => {
+            if (!debrisSettings.enabled) return;
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                triggerGalaxyScanSequence();
+            }
+        });
+
+        // 3. Tıklama ile galaksi geçişleri (Ok butonları, Haydi butonu, sekmeler)
+        document.addEventListener('click', (e) => {
+            if (!debrisSettings.enabled) return;
+            if (e.target.closest('#galaxyContent, .btn_blue, #showGalaxy, .galaxy_navigation, .btn_left, .btn_right, #galaxyHeader, #galaxy_form, [data-dir], .icon_galaxy')) {
+                triggerGalaxyScanSequence();
+            }
+        });
+
+        // 4. Koordinat input değişiklikleri
+        ['galaxy_input', 'system_input'].forEach(id => {
+            const inp = document.getElementById(id);
+            if (inp) {
+                inp.addEventListener('input', triggerGalaxyScanSequence);
+                inp.addEventListener('change', triggerGalaxyScanSequence);
+            }
+        });
+
+        // 5. OGame jQuery AJAX tamamlanma olayını yakala
+        try {
+            if (window.$ && typeof window.$.fn === 'object') {
+                window.$(document).ajaxComplete((event, xhr, settings) => {
+                    if (settings && settings.url && (settings.url.includes('component=galaxy') || settings.url.includes('page=galaxy'))) {
+                        triggerGalaxyScanSequence();
+                    }
+                });
+            }
+        } catch (e) {}
+
+        // 6. Native XMLHttpRequest dinle (AJAX arka planda tamamlandığı milisaniyede yakalar)
+        try {
+            const origOpen = XMLHttpRequest.prototype.open;
+            XMLHttpRequest.prototype.open = function(method, url) {
+                if (url && typeof url === 'string' && (url.includes('component=galaxy') || url.includes('page=galaxy'))) {
+                    this.addEventListener('load', () => {
+                        triggerGalaxyScanSequence();
+                    });
+                }
+                return origOpen.apply(this, arguments);
+            };
+        } catch (e) {}
+
+        // 7. Sayfa ilk açılışında galaksi sayfasıysa hemen tara
         if (window.location.href.includes('component=galaxy') || document.getElementById('galaxyContent')) {
-            scanGalaxyForDebrisDebounced();
+            triggerGalaxyScanSequence();
         }
     }
 
@@ -1786,12 +2167,24 @@
             '#ls-close{cursor:pointer;color:#e74c3c;font-size:16px}',
             '#ls-close:hover{color:#ff6b6b}',
 
-            '#ls-tabs{display:flex;border-bottom:1px solid #1a2c3f}',
-            '.ls-tab{flex:1;text-align:center;padding:7px 4px;cursor:pointer;font-size:10px;',
-            'background:rgba(26,44,63,0.4);transition:all .2s;color:#8899aa;user-select:none}',
+            '#ls-tabs{display:flex;border-bottom:1px solid #1a2c3f;container-type:inline-size;container-name:lstabs}',
+            '.ls-tab{flex:1;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:4px;',
+            'text-align:center;padding:7px 3px;cursor:pointer;font-size:10px;',
+            'background:rgba(26,44,63,0.4);transition:all .2s;color:#8899aa;user-select:none;white-space:nowrap}',
+            '.ls-tab *{pointer-events:none}',
             '.ls-tab:hover{background:rgba(0,188,255,0.15);color:#fff}',
             '.ls-tab.active{background:rgba(0,188,255,0.25);color:#00bcff;font-weight:bold;',
             'border-bottom:2px solid #00bcff}',
+            '.ls-tab-icon{font-size:12px;line-height:1;display:inline-flex;align-items:center;justify-content:center}',
+            '.ls-tab-label{font-size:10px;line-height:1;white-space:nowrap}',
+            '@container lstabs (max-width: 365px){',
+            '  .ls-tab{flex-direction:column;gap:2px;padding:5px 2px}',
+            '  .ls-tab-icon{font-size:13px}',
+            '  .ls-tab-label{font-size:9.5px}',
+            '}',
+            '.ls-tabs-stacked .ls-tab{flex-direction:column;gap:2px;padding:5px 2px}',
+            '.ls-tabs-stacked .ls-tab-icon{font-size:13px}',
+            '.ls-tabs-stacked .ls-tab-label{font-size:9.5px}',
 
             '#ls-body{padding:10px;overflow-y:auto;overflow-x:hidden !important;flex:1;min-height:0;display:flex;flex-direction:column}',
             '.ls-tc{display:none;width:100%;overflow-x:hidden}.ls-tc.active{display:flex;flex-direction:column;flex:1;min-height:0;width:100%}',
@@ -1894,11 +2287,11 @@
                 '</div>' +
             '</div>' +
             '<div id="ls-tabs">' +
-                '<div class="ls-tab" data-tab="cart">🏗️ Maliyet</div>' +
-                '<div class="ls-tab" data-tab="scanner">🌌 Scanner</div>' +
-                '<div class="ls-tab" data-tab="finder">🔍 Finder</div>' +
-                '<div class="ls-tab" data-tab="alarm">🚨 Alarm</div>' +
-                '<div class="ls-tab" data-tab="debris">🛰️ Harabe</div>' +
+                '<div class="ls-tab" data-tab="cart"><span class="ls-tab-icon">🏗️</span><span class="ls-tab-label">Maliyet</span></div>' +
+                '<div class="ls-tab" data-tab="scanner"><span class="ls-tab-icon">🌌</span><span class="ls-tab-label">Scanner</span></div>' +
+                '<div class="ls-tab" data-tab="finder"><span class="ls-tab-icon">🔍</span><span class="ls-tab-label">Finder</span></div>' +
+                '<div class="ls-tab" data-tab="alarm"><span class="ls-tab-icon">🚨</span><span class="ls-tab-label">Alarm</span></div>' +
+                '<div class="ls-tab" data-tab="debris"><span class="ls-tab-icon">🛰️</span><span class="ls-tab-label">Harabe</span></div>' +
             '</div>' +
             '<div id="ls-body">' +
 
@@ -1953,9 +2346,9 @@
                     '<button id="ls-scan-btn" class="ls-btn" style="width:100%;margin-top:4px">🔍 Taramayı Başlat</button>' +
                     '<div class="ls-prog" id="ls-scan-progress"><div class="ls-prog-bar" id="ls-scan-bar"></div></div>' +
                     '<div id="ls-scan-status" style="font-size:10px;text-align:center;color:#8899aa;margin-top:4px"></div>' +
-                    '<div id="ls-scan-results-box" style="display:none;margin-top:8px">' +
-                        '<button id="ls-scan-copy" class="ls-btn" style="width:100%;margin-bottom:6px">📋 Koordinatları Kopyala</button>' +
-                        '<div id="ls-scan-results" style="max-height:220px;overflow-y:auto;overflow-x:hidden;width:100%;box-sizing:border-box"></div>' +
+                    '<div id="ls-scan-results-box" style="display:none;margin-top:8px;flex:1;min-height:60px;flex-direction:column;overflow:hidden">' +
+                        '<button id="ls-scan-copy" class="ls-btn" style="width:100%;margin-bottom:6px;flex-shrink:0">📋 Koordinatları Kopyala</button>' +
+                        '<div id="ls-scan-results" style="flex:1;min-height:60px;overflow-y:auto;overflow-x:hidden;width:100%;box-sizing:border-box"></div>' +
                     '</div>' +
                 '</div>' +
 
@@ -1971,7 +2364,7 @@
                         '<button id="ls-find-btn" class="ls-btn" style="width:100%;padding:6px 12px;font-size:11px">🔍 Ara</button>' +
                         '<div id="ls-find-status" style="font-size:10px;text-align:center;color:#8899aa;margin-top:6px"></div>' +
                     '</div>' +
-                    '<div id="ls-find-results" style="max-height:220px;overflow-y:auto;overflow-x:hidden;margin-top:8px"></div>' +
+                    '<div id="ls-find-results" style="flex:1;min-height:60px;overflow-y:auto;overflow-x:hidden;margin-top:8px"></div>' +
                 '</div>' +
 
                 // ALARM TAB
@@ -2022,6 +2415,20 @@
                             '</select>' +
                         '</div>' +
                         '<button id="ls-alarm-esp-test" class="ls-btn-sm" style="background:#2980b9;color:#fff;border:none;padding:5px 10px;width:100%">🔊 Sonda Sesini Test Et</button>' +
+                    '</div>' +
+
+                    // Desktop notification card
+                    '<div style="background:#131d2a;border:1px solid #233446;border-radius:6px;padding:10px;margin-bottom:8px">' +
+                        '<div style="display:flex;justify-content:space-between;align-items:center">' +
+                            '<div>' +
+                                '<div style="font-weight:bold;color:#f39c12;font-size:12px">🖥️ Masaüstü Bildirimi</div>' +
+                                '<div style="font-size:10px;color:#8899aa;margin-top:2px">Sekme arka plandayken bildirim gönder</div>' +
+                            '</div>' +
+                            '<label class="ls-toggle-switch">' +
+                                '<input type="checkbox" id="ls-alarm-desktop-toggle">' +
+                                '<span class="ls-toggle-slider"></span>' +
+                            '</label>' +
+                        '</div>' +
                     '</div>' +
 
                     // Volume slider card
@@ -2282,6 +2689,22 @@
             if (first) { first.classList.add('active'); document.getElementById('tc-cart').classList.add('active'); }
         }
 
+        const tabsEl = document.getElementById('ls-tabs');
+        if (tabsEl) {
+            const updateTabsLayout = () => {
+                const w = tabsEl.offsetWidth;
+                if (w > 0 && w < 365) {
+                    tabsEl.classList.add('ls-tabs-stacked');
+                } else if (w >= 365) {
+                    tabsEl.classList.remove('ls-tabs-stacked');
+                }
+            };
+            if (typeof ResizeObserver !== 'undefined') {
+                new ResizeObserver(updateTabsLayout).observe(tabsEl);
+            }
+            updateTabsLayout();
+        }
+
         document.getElementById('ls-cart-clear').addEventListener('click', () => { cart = []; saveCart(); renderCart(); });
         document.getElementById('ls-cart-copy').addEventListener('click', copyCart);
         renderCart();
@@ -2340,6 +2763,37 @@
                 alarmSettings.espionageEnabled = espToggle.checked;
                 saveAlarmSettings();
                 checkThreatsInDOM();
+            });
+        }
+
+        const desktopToggle = document.getElementById('ls-alarm-desktop-toggle');
+        if (desktopToggle) {
+            desktopToggle.checked = !!alarmSettings.desktopNotification;
+            desktopToggle.addEventListener('change', async () => {
+                if (desktopToggle.checked) {
+                    if ('Notification' in window) {
+                        try {
+                            const perm = await Notification.requestPermission();
+                            if (perm === 'granted') {
+                                alarmSettings.desktopNotification = true;
+                            } else {
+                                alarmSettings.desktopNotification = false;
+                                desktopToggle.checked = false;
+                                alert('Masaüstü bildirimlerine tarayıcınızda izin verilmedi.');
+                            }
+                        } catch (err) {
+                            alarmSettings.desktopNotification = false;
+                            desktopToggle.checked = false;
+                        }
+                    } else {
+                        alarmSettings.desktopNotification = false;
+                        desktopToggle.checked = false;
+                        alert('Tarayıcınız Web Bildirimlerini desteklemiyor.');
+                    }
+                } else {
+                    alarmSettings.desktopNotification = false;
+                }
+                saveAlarmSettings();
             });
         }
 
@@ -2579,9 +3033,14 @@
         setTimeout(updateButtonLabel, 50);
     }
 
+    let injectObserverTimer = null;
     function setupObserver() {
         const observer = new MutationObserver(() => {
-            checkAndInjectButtons();
+            if (injectObserverTimer) return;
+            injectObserverTimer = setTimeout(() => {
+                injectObserverTimer = null;
+                checkAndInjectButtons();
+            }, 60);
         });
         observer.observe(document.body, { childList: true, subtree: true });
 
@@ -2594,6 +3053,6 @@
     buildUI();
     setupObserver();
     setupDebrisObserver();
-    console.log(LS, 'LuckyStrike OGame Helper v5.1 hazır!');
+    console.log(LS, 'LuckyStrike OGame Helper v6.0 hazır!');
 
 })();

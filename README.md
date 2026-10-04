@@ -1,6 +1,6 @@
-# ⚡ LuckyStrike OGame Helper (v5.1)
+# ⚡ LuckyStrike OGame Helper (v6.0)
 
-OGame için özel olarak geliştirilmiş; **Maliyet Sepeti (Resmi Formüllerle Çoklu Kademe Hesabı)**, **Galaxy Scanner (Slot 8 & Çoklu Işınlanma Arayıcı)**, **Player Finder (Oyuncu & Gezegen Bulucu)**, **Sesli Saldırı & Sonda Alarmı** ve **Harabe Avcısı (Debris Hunter)** modüllerini içeren gelişmiş tarayıcı eklentisidir (**Chrome / Edge Extension - Manifest V3** ve **Tampermonkey Userscript**).
+OGame için özel olarak geliştirilmiş; **Maliyet Sepeti (Resmi Formüllerle Çoklu Kademe & Nakliye Hesabı)**, **Galaxy Scanner (Slot 8 & Çoklu Işınlanma Arayıcı)**, **Player Finder (Oyuncu & Gezegen Bulucu)**, **Sesli & Masaüstü Tehdit Alarmı** ve **Gerçek Zamanlı Harabe Avcısı (Debris Hunter - Sonsuz Uzaklar & Hızlı Geçiş Desteği)** modüllerini içeren gelişmiş tarayıcı eklentisidir (**Chrome / Edge Extension - Manifest V3** ve **Tampermonkey Userscript**).
 
 Ban riski taşımayan resmi Gameforge XML API altyapısını ve yerel ses sentezleme (Web Audio API) teknolojisini kullanır, oyun içi arayüzle kusursuz entegre olur.
 
@@ -42,6 +42,7 @@ Ban riski taşımayan resmi Gameforge XML API altyapısını ve yerel ses sentez
   * **Klasik Binalar & Madenler:** Metal (`1.50`), Kristal (`1.60`), Deut (`1.50`), Füzyon (`1.80`), Astrofizik (`1.75`), Araştırmalar (`2.00`).
   * **Canlı Türleri (Resmi Gameforge LFMaster Tablosu):** Canlı türü binaları ve araştırmalarının exponansiyel formülü ($\text{Cost}(L) = \text{Cost}(L-1) \times \text{Katsayı} \times \frac{L}{L-1}$) birebir işletilir. Rün Teknoloji Kurumu (`1.30`), Meditasyon Sığınağı (`1.20`), Oriktoryum (`1.65`), Megalit (`1.50`) ve tüm 4 ırkın (Rock'tal, İnsan, Mecha, Kaelesh) 48 binası ile 72 teknolojisi kuruşu kuruşuna doğru hesaplanır.
 * **Tersane & Savunma Adet Desteği:** Girilen gemi/savunma üretim adediyle maliyeti otomatik çarpar.
+* **🚛 Otomatik Nakliye İhtiyacı:** Sepetteki net hammadde açığını karşılamak için kaç adet **Büyük Nakliye (BN - 25K)** ve **Küçük Nakliye (KN - 5K)** gerektiği toplamların hemen altında otomatik hesaplanır.
 * **📉 Mevcut Gezegen Kaynağını Sepetten Düş:** Tek tıkla o anki gezegeninizdeki Metal, Kristal ve Deuterium'u sepetten negatif kalem olarak düşer, net kalan hammadde açığını gösterir.
 * **📋 Tek Tıkla Sayı Kopyalama:** Kalan Metal, Kristal, Deuterium ve Net İhtiyaç tutarlarının yanındaki `📋` butonuna basarak sadece ilgili sayıyı panoya kopyalayabilirsiniz (nakliye/filo gönderirken çok pratiktir).
 * **Panoya Kopyala & Temizle:** İttifak arkadaşlarınıza göndermek için sepetin tam dökümünü tek tıkla kopyalayabilir veya sepeti sıfırlayabilirsiniz.
@@ -57,7 +58,7 @@ Ban riski taşımayan resmi Gameforge XML API altyapısını ve yerel ses sentez
 * **Saniyeler İçinde Tüm Evren Analizi:** Resmi `/api/universe.xml` verisini çekerek 9 galaksi ve 499 güneş sistemindeki tüm dolu gezegenleri anında eler.
 * **Hedef Slot Filtreleme:**
   * En büyük gezegenlerin çıktığı **8. slot** veya `7, 8, 9` kombinasyonları.
-  * Hızlı seçim çipleri: `[🎯 Sadece 8]`, `[⭐ 7, 8, 9]`, `[❄️ 12-15 (Deut)]`, `[☀️ 1-3 (Solar)]`, `[🌌 Tümü Boş]`.
+  * Hızlı seçim çipleri: `[🎯 Sadece 8]`, `[⭐ 7, 8, 9]`, `[❄️ 12-15 (Deut)]`, `[☀️ 1-3 (Solar)]`, `[🪐 Tamamen Boş (1-15)]`.
 * **👥 Min Eşzamanlı Boş Slot (Grupça Işınlanma):**
   * Seçtiğiniz slotlardan aynı güneş sisteminde aynı anda en az 2, 3, 4 veya 5 tanesinin boş olduğu sistemleri listeler. Arkadaşlarınızla aynı sisteme yan yana ışınlanmak (relocate) için idealdir.
 * **🚀 Tek Tıkla Galaksiye Git:** Çıkan her sonucun yanındaki `🚀` butonu oyunda doğrudan o galaksi ve sisteme yönlendirir.
@@ -70,7 +71,8 @@ Ban riski taşımayan resmi Gameforge XML API altyapısını ve yerel ses sentez
   <img src="screenshots/tab_finder.png" width="380" alt="LuckyStrike Player Finder">
 </p>
 
-* **Resmi API Tabanlı:** `/api/players.xml` ve `/api/universe.xml` verilerini 24 saatlik önbellekle kullanarak ban riski olmadan çalışır.
+* **Resmi API Tabanlı:** `/api/players.xml` ve `/api/universe.xml` verilerini oturum önbelleğiyle kullanarak kota aşımı veya ban riski olmadan çalışır.
+* **XSS Korumalı & Güvenli:** Evrendeki tüm oyuncu ve gezegen isimleri tam sanitizasyondan geçirilerek güvenle listelenir.
 * **Esnek Arama Modları:**
   * **Oyuncu Adıyla:** Oyuncunun aktiflik durumunu (`aktif`, `(i)`, `(v)`, vb.) ve sahip olduğu tüm gezegenlerin koordinatlarını listeler.
   * **Gezegen Adıyla:** Belirtilen addaki gezegenlerin koordinatlarını ve kime ait olduğunu bulur.
@@ -85,6 +87,7 @@ Ban riski taşımayan resmi Gameforge XML API altyapısını ve yerel ses sentez
 </p>
 
 * **İki Ayrı Tehdit Algılama:** Gelen gerçek filo saldırıları ile casus sondası taramaları bağımsız olarak izlenir.
+* **🖥️ Masaüstü Bildirimleri (Web Notifications API):** Sekmeniz arka plandayken veya simge durumundayken sistem anında masaüstü bildirimi göndererek uyarır.
 * **Özel Ses Sentezleme (Web Audio API):**
   * **🚨 Saldırı Sesleri:** Taktiksel Klakson, Kırmızı Alarm Sireni, Acil Durum Nabzı (Kaçırılmaması için 2 kez peş peşe çalar).
   * **📡 Sonda Sesleri:** Gerçekçi denizaltı sonar akustiği (Derin Deniz Sonarı, Aktif Avcı Sonarı, Taktik Yankı Sonarı).
@@ -99,7 +102,9 @@ Ban riski taşımayan resmi Gameforge XML API altyapısını ve yerel ses sentez
   <img src="screenshots/tab_debris.png" width="380" alt="LuckyStrike Harabe Avcısı">
 </p>
 
-* **🪐 Gezinirken Arka Planda Otomatik Tespit:** Galaksi sayfasında gezerken arka planda ekrana gelen harabeleri kural ihlali veya bot riski olmadan (pasif DOM izleme) anında okur.
+* **🪐 Gezinirken Arka Planda Otomatik Tespit:** Galaksi sayfasında gezerken arka planda ekrana gelen harabeleri kural ihlali veya bot riski olmadan anında okur.
+* **⚡ Kademeli Çoklu Tarama (Multi-Stage):** Hızlı ok geçişlerinde veya AJAX sayfa yüklemelerinde hiçbir veriyi kaçırmamak için (30ms, 100ms, 220ms, 400ms, 650ms, 1000ms) kademeli arka plan taraması çalışır.
+* **🌌 16. Pozisyon (Sonsuz Uzaklar / Keşif Harabesi):** 16. slottaki harabeler resmi `#debris16` tooltip ayrıştırıcısı ve çok katmanlı DOM okumasıyla hatasız tespit edilir.
 * **⚡ Eşik Belirleme & Hızlı Seçim:** İster minimum kaynak eşiğini kendiniz yazın, ister hızlı çiplerden (`50K`, `100K`, `250K`, `500K`, `1M`, `5M`) tek tıkla belirleyin.
 * **🎵 Akıllı Sesli Uyarı & Sonar Seçenekleri:**
   * Sadece belirlediğiniz eşiğin üzerindeki ve **listeye yeni eklenen** harabelerde ses çalar.
@@ -115,7 +120,20 @@ Ban riski taşımayan resmi Gameforge XML API altyapısını ve yerel ses sentez
 
 ### 6. 🎨 Modern & Kullanıcı Dostu UI
 * **⚡ Kayan Eylem Butonu (FAB):** Ekranın sağ alt köşesinde şık, kompakt `⚡` butonu.
+* **📱 Responsive Üst Menü (`@container`):** Panel daraltıldığında tüm sekmeler (Maliyet, Scanner, Finder, Alarm, Harabe) aynı anda senkronize olarak kompakt ikon-üstte yazı-altta moduna geçer.
 * **Sürüklenebilir & Boyutlandırılabilir:** Paneli hem üst başlığından hem de alt `⠿ O G A M E ⠿` çubuğundan taşıyabilir; köşelerinden tutarak dilediğiniz gibi büyütüp küçültebilirsiniz.
+* **Dinamik Esneyen Listeler (Flex):** Paneli aşağı doğru büyüttüğünüzde sonuç listeleri (Maliyet, Scanner, Finder, Harabe) otomatik olarak dikeyde esner ve tüm alanı verimli kullanır.
 * **Sekme & Durum Hafızası:** Sayfayı yenilediğinizde açık olan sekmeniz, boyutlar ve panel konumu korunur.
 * **Karanlık Tema:** OGame'in modern karanlık temasıyla %100 uyumlu renk paleti.
+
+---
+
+## 📝 Sürüm Geçmişi
+
+### v6.0
+* **Harabe Avcısı Güçlendirmesi:** Kademeli çok aşamalı tarama motoru (`triggerGalaxyScanSequence`), klavye ve ok butonları geçiş kancaları entegre edildi. Hızlı geçişlerde harabe kaçırma sorunu giderildi.
+* **Sonsuz Uzaklar (16. Slot):** Expedition harabesi hesaplaması resmi `#debris16` altyapısıyla güçlendirildi, yanlış satır okumaları ve yapışık sayı çakışmaları tamamen çözüldü.
+* **Responsive Menü:** Üst menü sekmeleri için `@container` sorguları eklenerek dar panel genişliklerinde senkronize ikon-yazı yerleşimi sağlandı.
+* **Temizlik:** Kararsız filo gönderme işlevleri tamamen kaldırılarak doğrudan galaksi koordinat yönlendirmesi sağlandı. Proje kodları ve userscript 1:1 UTF-8 BOM'suz eşitlendi.
+
 
