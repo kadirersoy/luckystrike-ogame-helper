@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         LuckyStrike OGame Helper
 // @namespace    http://tampermonkey.net/
-// @version      5.0
-// @description  LuckyStrike OGame Helper: Maliyet Sepeti, Galaxy Scanner, Player Finder, Sesli Alarm, Harabe Avcısı
+// @version      5.1
+// @description  LuckyStrike OGame Helper: Maliyet Sepeti, Galaxy Scanner, Player Finder, Sesli Alarm, Harabe AvcÄ±sÄ±
 // @author       LuckyStrike
 // @match        *://*.ogame.gameforge.com/game/index.php*
 // @grant        none
@@ -12,7 +12,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v5.0 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v5.1 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -155,88 +155,106 @@
     // ============================================================
     // OGAME RESMİ ARTIŞ FAKTÖRLERİ (Resmi Gameforge LFMaster Tablosu)
     // ============================================================
+    function checkIsLifeform(name) {
+        const n = (name || '').toLowerCase();
+        if (window.location.href.includes('lfbuildings') || 
+            window.location.href.includes('lfresearch') || 
+            window.location.href.includes('lifeform')) return true;
+
+        if (document.querySelector('.lfbuildings, .lfresearch, #technologies.lifeform, #lifeformresearch')) return true;
+
+        const lfKeywords = [
+            'üretim hattı', 'montaj hattı', 'füzyon hücresi', 'robotik araştırma', 'güncelleme ağı',
+            'kuantum bilgisayar', 'otomatik montaj', 'otomatize montaj', 'transformatör', 'mikroçip',
+            'montaj salonu', 'montaj holü', 'üretim montaj', 'sentezleyici', 'çip seri', 'nano onarım',
+            'yaşam alanı', 'konut alanı', 'biyosfer', 'bilim akademisi', 'nöro-kalibrasyon', 'noro-kalibrasyon',
+            'ergitme', 'gıda silosu', 'gökdelen', 'biyoteknoloji', 'metropol', 'gezegensel kalkan',
+            'meditasyon', 'kristal çiftliği', 'kristal rafinerisi', 'rün teknoloji', 'rün demirci',
+            'oriktor', 'magma demirci', 'ayrışma odası', 'megalit', 'mineral rafinerisi',
+            'volkanik batarya', 'maden araştırma', 'mineral araştırma', 'geri dönüşüm tesisi',
+            'barınak', 'antimadde yoğunlaştırıcı', 'vorteks', 'farkındalık salonu', 'aşkınlık forumu',
+            'antimadde konvektörü', 'klonlama', 'krizalit', 'biyo değiştirici', 'psişik modülatör',
+            'yerçekimi odası', 'dönüşüm alanı'
+        ];
+        return lfKeywords.some(kw => n.includes(kw));
+    }
+
     function getGrowthFactor(name) {
         const n = (name || '').toLowerCase().trim();
 
-        // --- ROCK'TAL BİNALARI ---
-        if (n.includes('rün teknoloji')) return 1.30;       // Rün Teknoloji Kurumu
-        if (n.includes('rün demirci')) return 1.70;         // Rün Demircisi
-        if (n.includes('oriktor')) return 1.65;             // Oriktoryum
-        if (n.includes('magma demirci')) return 1.40;       // Magma Demircisi
-        if (n.includes('ayrışma odası')) return 1.20;       // Ayrışma Odası
-        if (n.includes('megalit')) return 1.50;             // Megalit
-        if (n.includes('kristal rafinerisi')) return 1.40;  // Kristal Rafinerisi
-        if (n.includes('mineral araştırma')) return 1.80;   // Maden Araştırma Merkezi
-        if (n.includes('geri dönüşüm tesisi')) return 1.50; // Gelişmiş Geri Dönüşüm Tesisi
+        // --- MECHA BİNALARI (3001 - 3012) ---
+        if (n.includes('üretim hattı') || n.includes('montaj hattı') || n.includes('assembly line')) return 1.21;
+        if (n.includes('füzyon hücresi') || n.includes('fusion cell')) return 1.18;
+        if (n.includes('robotik araştırma') || n.includes('robotics research')) return 1.30;
+        if (n.includes('güncelleme ağı') || n.includes('update network')) return 1.80;
+        if (n.includes('kuantum bilgisayar') || n.includes('quantum computer')) return 1.80;
+        if (n.includes('otomatik montaj') || n.includes('otomatize montaj') || n.includes('automatised assembly')) return 1.30;
+        if (n.includes('transformatör') || n.includes('transformer')) return 1.50;
+        if (n.includes('mikroçip') || n.includes('microchip')) return 1.07;
+        if (n.includes('montaj holü') || n.includes('montaj salonu') || n.includes('üretim montaj') || n.includes('assembly hall')) return 1.14;
+        if (n.includes('sentezleyici') || n.includes('synthesiser') || n.includes('synthesizer')) return 1.50;
+        if (n.includes('çip seri') || n.includes('chip mass')) return 1.50;
+        if (n.includes('nano onarım') || n.includes('nano repair')) return 1.40;
 
-        // --- İNSAN (HUMAN) BİNALARI ---
-        if (n.includes('biyosfer')) return 1.23;            // Biyosfer Çiftliği
-        if (n.includes('bilim akademisi')) return 1.70;     // Bilim Akademisi
-        if (n.includes('nöro-kalibrasyon') || n.includes('noro')) return 1.70; // Nöro-Kalibrasyon Merkezi
-        if (n.includes('ergitme')) return 1.50;             // Yüksek Enerjili Ergitme
-        if (n.includes('gıda silosu')) return 1.09;         // Gıda Silosu
-        if (n.includes('gökdelen')) return 1.09;            // Gökdelen
-        if (n.includes('biyoteknoloji')) return 1.12;       // Biyoteknoloji Laboratuvarı
-        if (n.includes('metropol')) return 1.50;            // Metropol
-        if (n.includes('kalkan') && n.includes('gezegensel')) return 1.15; // Gezegensel Kalkan
+        // --- İNSAN (HUMAN) BİNALARI (1001 - 1012) ---
+        if (n.includes('yaşam alanı') || n.includes('konut alanı') || n.includes('residential sector') || (n.includes('konut') && !n.includes('çiftlik'))) return 1.20;
+        if (n.includes('biyosfer') || n.includes('biosphere')) return 1.23;
+        if ((n.includes('araştırma merkezi') || n.includes('research centre')) && !n.includes('robotik') && !n.includes('mineral') && !n.includes('maden')) return 1.30;
+        if (n.includes('bilim akademisi') || n.includes('academy of sciences')) return 1.70;
+        if (n.includes('nöro-kalibrasyon') || n.includes('noro') || n.includes('neuro-calibration')) return 1.70;
+        if (n.includes('ergitme') || n.includes('high energy smelting')) return 1.50;
+        if (n.includes('gıda silosu') || n.includes('food silo')) return 1.09;
+        if (n.includes('füzyon enerji santrali') || n.includes('fusion-powered') || (n.includes('füzyon') && n.includes('üretim'))) return 1.50;
+        if (n.includes('gökdelen') || n.includes('skyscraper')) return 1.09;
+        if (n.includes('biyoteknoloji') || n.includes('biotech')) return 1.12;
+        if (n.includes('metropol') || n.includes('metropolis')) return 1.50;
+        if ((n.includes('kalkan') || n.includes('shield')) && (n.includes('gezegensel') || n.includes('planetary'))) return 1.15;
 
-        // --- MECHA BİNALARI ---
-        if (n.includes('montaj hattı')) return 1.21;
-        if (n.includes('füzyon hücresi')) return 1.18;
-        if (n.includes('güncelleme ağı')) return 1.80;
-        if (n.includes('kuantum bilgisayar')) return 1.80;
-        if (n.includes('otomatik montaj')) return 1.30;
-        if (n.includes('transformatör')) return 1.50;
-        if (n.includes('mikroçip')) return 1.07;
-        if (n.includes('montaj holü')) return 1.14;
-        if (n.includes('nano onarım')) return 1.40;
+        // --- ROCK'TAL BİNALARI (2001 - 2012) ---
+        if (n.includes('meditasyon') || n.includes('meditation')) return 1.20;
+        if ((n.includes('kristal') && (n.includes('çiftlik') || n.includes('farm'))) || (n.includes('kristal rafinerisi') && !n.includes('maden'))) return 1.20;
+        if (n.includes('rün teknoloji') || n.includes('rune technol')) return 1.30;
+        if (n.includes('rün demirci') || n.includes('rune forge')) return 1.70;
+        if (n.includes('oriktor')) return 1.65;
+        if (n.includes('magma demirci') || n.includes('magma forge')) return 1.40;
+        if (n.includes('ayrışma odası') || n.includes('disruption chamber')) return 1.20;
+        if (n.includes('megalit') || n.includes('megalith')) return 1.50;
+        if (n.includes('mineral rafinerisi') || n.includes('mineral refinery')) return 1.40;
+        if (n.includes('volkanik batarya') || n.includes('volcanic batter')) return 1.40;
+        if (n.includes('mineral araştırma') || n.includes('maden araştırma') || n.includes('mineral research')) return 1.80;
+        if (n.includes('geri dönüşüm tesisi') || n.includes('advanced recycling')) return 1.50;
 
-        // --- KAELESH BİNALARI ---
-        if (n.includes('barınak')) return 1.21;
-        if (n.includes('antimadde yoğunlaştırıcı')) return 1.20;
-        if (n.includes('vorteks')) return 1.30;
-        if (n.includes('farkındalık salonu')) return 1.80;
-        if (n.includes('aşkınlık forumu')) return 1.80;
-        if (n.includes('antimadde konvektörü')) return 1.25;
-        if (n.includes('klonlama')) return 1.20;
-        if (n.includes('krizalit')) return 1.05;
-        if (n.includes('biyo değiştirici')) return 1.20;
-        if (n.includes('psişik modülatör')) return 1.40;
-        if (n.includes('yerçekimi odası')) return 1.20;
-        if (n.includes('dönüşüm alanı')) return 1.40;
+        // --- KAELESH BİNALARI (4001 - 4012) ---
+        if (n.includes('barınak') || n.includes('sanctuary') || (n.includes('sığınak') && !n.includes('meditasyon'))) return 1.21;
+        if (n.includes('antimadde yoğunlaştırıcı') || n.includes('antimatter condenser')) return 1.20;
+        if (n.includes('vorteks') || n.includes('vortex')) return 1.30;
+        if (n.includes('farkındalık salonu') || n.includes('hall of realisation') || n.includes('hall of realization')) return 1.80;
+        if (n.includes('aşkınlık forumu') || n.includes('forum of transcendence')) return 1.80;
+        if (n.includes('antimadde konvektörü') || n.includes('antimatter convector')) return 1.25;
+        if (n.includes('klonlama') || n.includes('cloning')) return 1.20;
+        if (n.includes('krizalit') || n.includes('chrysalite')) return 1.05;
+        if (n.includes('biyo değiştirici') || n.includes('bio modifier')) return 1.20;
+        if (n.includes('psişik modülatör') || n.includes('psionic modulator')) return 1.40;
+        if (n.includes('yerçekimi odası') || n.includes('gravity well')) return 1.20;
+        if (n.includes('dönüşüm alanı') || n.includes('distortion field')) return 1.40;
 
         // --- CANLI TÜRÜ GENEL NÜFUS / ÇİFTLİK / ARAŞTIRMA MERKEZİ ---
-        if (n.includes('sığınak') || n.includes('meditasyon') || n.includes('konut') || n.includes('habitat') || n.includes('çiftlik') || n.includes('sektör')) {
-            return 1.20;
-        }
-        if (n.includes('araştırma merkezi') || n.includes('robotik araştırma')) {
-            return 1.30;
-        }
+        if (n.includes('sığınak') || n.includes('habitat') || n.includes('çiftlik') || n.includes('sektör')) return 1.20;
+        if (n.includes('araştırma merkezi')) return 1.30;
 
         // --- CANLI TÜRÜ ARAŞTIRMALARI (LF Technologies) ---
-        if (n.includes('süper bilgisayar') || n.includes('sapan otopilot') || n.includes('iyon kristali modülleri')) {
-            return 1.20;
-        }
-        if (n.includes('elçi') || n.includes('yörünge') || n.includes('gizlilik') || n.includes('itici') || n.includes('terraformer') || n.includes('yapay zeka') || n.includes('süperiletken')) {
-            return 1.30;
-        }
-        if (n.includes('obsidyen')) {
-            return 1.40;
-        }
-        if (n.includes('güçlendirmesi') && (n.includes('toplayıcı') || n.includes('general') || n.includes('kaşif'))) {
-            return 1.70;
-        }
+        if (n.includes('süper bilgisayar') || n.includes('sapan otopilot') || n.includes('iyon kristali modülleri') || n.includes('psionic network') || n.includes('telekinetik')) return 1.20;
+        if (n.includes('elçi') || n.includes('yörünge') || n.includes('gizlilik') || n.includes('itici') || n.includes('terraformer') || n.includes('yapay zeka') || n.includes('süperiletken')) return 1.30;
+        if (n.includes('obsidyen') || n.includes('plazma tahrik') || n.includes('verimli tozlaştırma')) return 1.40;
+        if (n.includes('güçlendirmesi') && (n.includes('toplayıcı') || n.includes('general') || n.includes('kaşif'))) return 1.70;
+        if (window.location.href.includes('lfresearch')) return 1.50;
+        if (window.location.href.includes('lfbuildings')) return 1.30;
 
         // --- KLASİK OGAME (Madenler & Standart Yapılar) ---
         if (n.includes('kristal madeni')) return 1.60;
         if (n.includes('metal madeni') || n.includes('deuterium sentezleyicisi') || n.includes('döteryum sentezleyicisi') || n.includes('güneş enerji')) return 1.50;
         if (n.includes('füzyon')) return 1.80;
         if (n.includes('astrofizik')) return 1.75;
-
-        // Canlı türü araştırmaları genel varsayılanı
-        if (window.location.href.includes('lfresearch')) {
-            return 1.50;
-        }
 
         // Klasik OGame araştırmaları ve tesisler
         return 2.00;
@@ -325,44 +343,60 @@
         }
 
         const baseCost = parseNextLevelBaseCost(popup);
-        const nLow = result.name.toLowerCase();
-        const isLifeform = window.location.href.includes('lfbuildings') || 
-                           window.location.href.includes('lfresearch') ||
-                           nLow.includes('meditasyon') || nLow.includes('sığınak') ||
-                           nLow.includes('rün') || nLow.includes('konut') ||
-                           nLow.includes('çiftlik') || nLow.includes('oriktor') ||
-                           nLow.includes('magma') || nLow.includes('megalit') ||
-                           nLow.includes('rafineri');
-
+        const isLifeform = checkIsLifeform(result.name);
         const factor = getGrowthFactor(result.name);
 
         let totM = 0, totC = 0, totD = 0;
-        let curM = baseCost.metal, curC = baseCost.crystal, curD = baseCost.deuterium;
+        let directParsed = false;
 
-        for (let step = 0; step < selectedLevelsToAdd; step++) {
-            if (step === 0) {
-                totM += curM;
-                totC += curC;
-                totD += curD;
-            } else {
-                const thisLvl = nextLvl + step;
-                const prevLvl = thisLvl - 1;
-
-                if (isLifeform && prevLvl > 0) {
-                    // Resmi Gameforge formülü: Cost(L) = Cost(L-1) * Factor * (L / (L-1))
-                    curM = Math.round(curM * factor * (thisLvl / prevLvl));
-                    curC = Math.round(curC * factor * (thisLvl / prevLvl));
-                    curD = Math.round(curD * factor * (thisLvl / prevLvl));
-                } else {
-                    // Klasik OGame formülü: Cost(L) = Cost(L-1) * Factor
-                    curM = Math.round(curM * factor);
-                    curC = Math.round(curC * factor);
-                    curD = Math.round(curD * factor);
+        // 1. ÖNCELİK: Eğer sayfada (Infinity / OGame arayüzünde) doğrudan hedef kademe aralığı metni varsa onu oku
+        // Örn: "48-57 68,7m 22,9m" veya "48 - 57 68,7m 22,9m"
+        if (selectedLevelsToAdd > 1) {
+            const popupText = popup.innerText || popup.textContent || '';
+            const rangePattern = new RegExp(`(?:^|\\s)${nextLvl}\\s*-\\s*${targetLvl}\\s+([0-9.,]+[kKmMnNrRdD]?)(?:\\s+([0-9.,]+[kKmMnNrRdD]?))?(?:\\s+([0-9.,]+[kKmMnNrRdD]?))?`, 'im');
+            const rangeMatch = popupText.match(rangePattern);
+            if (rangeMatch) {
+                const parsedM = parseOgNum(rangeMatch[1]);
+                const parsedC = rangeMatch[2] ? parseOgNum(rangeMatch[2]) : 0;
+                const parsedD = rangeMatch[3] ? parseOgNum(rangeMatch[3]) : 0;
+                if (parsedM > 0 || parsedC > 0) {
+                    totM = parsedM;
+                    totC = parsedC;
+                    totD = parsedD;
+                    directParsed = true;
                 }
+            }
+        }
 
-                totM += curM;
-                totC += curC;
-                totD += curD;
+        // 2. YÖNTEM: Matematiksel formül ile hesaplama
+        if (!directParsed) {
+            let curM = baseCost.metal, curC = baseCost.crystal, curD = baseCost.deuterium;
+
+            for (let step = 0; step < selectedLevelsToAdd; step++) {
+                if (step === 0) {
+                    totM += curM;
+                    totC += curC;
+                    totD += curD;
+                } else {
+                    const thisLvl = nextLvl + step;
+                    const prevLvl = thisLvl - 1;
+
+                    if (isLifeform && prevLvl > 0) {
+                        // Resmi Gameforge formülü: Cost(L) = Cost(L-1) * Factor * (L / (L-1))
+                        curM = Math.round(curM * factor * (thisLvl / prevLvl));
+                        curC = Math.round(curC * factor * (thisLvl / prevLvl));
+                        curD = Math.round(curD * factor * (thisLvl / prevLvl));
+                    } else {
+                        // Klasik OGame formülü: Cost(L) = Cost(L-1) * Factor
+                        curM = Math.round(curM * factor);
+                        curC = Math.round(curC * factor);
+                        curD = Math.round(curD * factor);
+                    }
+
+                    totM += curM;
+                    totC += curC;
+                    totD += curD;
+                }
             }
         }
 
@@ -1759,8 +1793,8 @@
             '.ls-tab.active{background:rgba(0,188,255,0.25);color:#00bcff;font-weight:bold;',
             'border-bottom:2px solid #00bcff}',
 
-            '#ls-body{padding:10px;overflow-y:auto;overflow-x:hidden !important;flex:1;min-height:0}',
-            '.ls-tc{display:none;width:100%;overflow-x:hidden}.ls-tc.active{display:block}',
+            '#ls-body{padding:10px;overflow-y:auto;overflow-x:hidden !important;flex:1;min-height:0;display:flex;flex-direction:column}',
+            '.ls-tc{display:none;width:100%;overflow-x:hidden}.ls-tc.active{display:flex;flex-direction:column;flex:1;min-height:0;width:100%}',
 
             '.ls-item{background:rgba(255,255,255,0.04);padding:6px 8px;margin-bottom:4px;border-radius:4px;',
             'display:flex;justify-content:space-between;align-items:center;gap:6px}',
@@ -1832,9 +1866,9 @@
             '.ls-toggle-switch input:checked + .ls-toggle-slider{background-color:#2ecc71}',
             '.ls-toggle-switch input:checked + .ls-toggle-slider:before{transform:translateX(16px)}',
 
-            '#ls-body::-webkit-scrollbar{width:5px}',
-            '#ls-body::-webkit-scrollbar-track{background:#0a0e17}',
-            '#ls-body::-webkit-scrollbar-thumb{background:#00bcff;border-radius:3px}',
+            '#ls-body::-webkit-scrollbar, #ls-cart-list::-webkit-scrollbar, #ls-debris-list::-webkit-scrollbar, #ls-scan-results::-webkit-scrollbar, #ls-find-results::-webkit-scrollbar{width:5px}',
+            '#ls-body::-webkit-scrollbar-track, #ls-cart-list::-webkit-scrollbar-track, #ls-debris-list::-webkit-scrollbar-track, #ls-scan-results::-webkit-scrollbar-track, #ls-find-results::-webkit-scrollbar-track{background:#0a0e17}',
+            '#ls-body::-webkit-scrollbar-thumb, #ls-cart-list::-webkit-scrollbar-thumb, #ls-debris-list::-webkit-scrollbar-thumb, #ls-scan-results::-webkit-scrollbar-thumb, #ls-find-results::-webkit-scrollbar-thumb{background:#00bcff;border-radius:3px}',
         ].join('\n');
         document.head.appendChild(style);
 
@@ -1870,12 +1904,12 @@
 
                 // CART TAB
                 '<div id="tc-cart" class="ls-tc">' +
-                    '<div style="display:flex;gap:6px;margin-bottom:8px">' +
+                    '<div style="display:flex;gap:6px;margin-bottom:8px;flex-shrink:0">' +
                         '<button id="ls-cart-copy" class="ls-btn" style="flex:1">📋 Panoya Kopyala</button>' +
                         '<button id="ls-cart-clear" class="ls-btn ls-btn-d" style="flex:1">🗑️ Temizle</button>' +
                     '</div>' +
-                    '<div id="ls-cart-list" style="max-height:160px;overflow-y:auto;margin-bottom:8px"></div>' +
-                    '<div id="ls-cart-totals"></div>' +
+                    '<div id="ls-cart-list" style="flex:1;min-height:60px;overflow-y:auto;overflow-x:hidden;margin-bottom:8px"></div>' +
+                    '<div id="ls-cart-totals" style="flex-shrink:0;margin-top:auto"></div>' +
                 '</div>' +
 
                 // SCANNER TAB
@@ -2017,7 +2051,7 @@
 
                 // DEBRIS TAB (HARABE AVCISI)
                 '<div id="tc-debris" class="ls-tc">' +
-                    '<div id="ls-debris-status-banner" style="background:#162436;border:1px solid #1a3a5c;border-radius:6px;padding:8px 10px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">' +
+                    '<div id="ls-debris-status-banner" style="flex-shrink:0;background:#162436;border:1px solid #1a3a5c;border-radius:6px;padding:8px 10px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">' +
                         '<div style="display:flex;align-items:center;gap:8px">' +
                             '<span id="ls-debris-dot" style="width:10px;height:10px;border-radius:50%;background:#2ecc71;display:inline-block;box-shadow:0 0 6px #2ecc71"></span>' +
                             '<span id="ls-debris-status-text" style="font-size:11px;font-weight:bold;color:#2ecc71">Harabe Avcısı Aktif · Galaksi İzleniyor</span>' +
@@ -2029,7 +2063,7 @@
                     '</div>' +
 
                     // Debris settings card
-                    '<div style="background:#131d2a;border:1px solid #233446;border-radius:6px;padding:10px;margin-bottom:8px">' +
+                    '<div style="flex-shrink:0;background:#131d2a;border:1px solid #233446;border-radius:6px;padding:10px;margin-bottom:8px">' +
                         '<div style="margin-bottom:6px">' +
                             '<span class="ls-label" style="color:#d1d8e0">⚡ Min. Harabe Eşiği (Toplam Kaynak):</span>' +
                             '<input type="text" id="ls-debris-min" class="ls-inp" style="width:100%;font-weight:bold;color:#00bcff;font-family:monospace;margin-top:2px" placeholder="100.000">' +
@@ -2054,13 +2088,13 @@
                     '</div>' +
 
                     // Debris list header with clear button
-                    '<div style="display:flex;justify-content:space-between;align-items:center;margin:10px 0 6px 0;padding-bottom:4px;border-bottom:1px solid #1a2c3f">' +
+                    '<div style="flex-shrink:0;display:flex;justify-content:space-between;align-items:center;margin:10px 0 6px 0;padding-bottom:4px;border-bottom:1px solid #1a2c3f">' +
                         '<span style="font-size:11px;font-weight:bold;color:#00bcff" id="ls-debris-count-title">🛰️ Bulunan Harabeler (0)</span>' +
                         '<button id="ls-debris-clear-all" class="ls-btn ls-btn-d ls-btn-sm" style="padding:2px 7px;font-size:10px" title="Tüm harabeleri listeden temizle">🗑️ Listeyi Temizle</button>' +
                     '</div>' +
 
                     // Debris items list
-                    '<div id="ls-debris-list" style="max-height:220px;overflow-y:auto;overflow-x:hidden;width:100%;box-sizing:border-box"></div>' +
+                    '<div id="ls-debris-list" style="flex:1;min-height:60px;overflow-y:auto;overflow-x:hidden;width:100%;box-sizing:border-box"></div>' +
                 '</div>' +
 
             '</div>' +
@@ -2560,6 +2594,6 @@
     buildUI();
     setupObserver();
     setupDebrisObserver();
-    console.log(LS, 'LuckyStrike OGame Helper v5.0 hazır!');
+    console.log(LS, 'LuckyStrike OGame Helper v5.1 hazır!');
 
 })();
