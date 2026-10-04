@@ -2,7 +2,7 @@
 // @name         LuckyStrike OGame Helper
 // @namespace    http://tampermonkey.net/
 // @version      5.1
-// @description  LuckyStrike OGame Helper: Maliyet Sepeti, Galaxy Scanner, Player Finder, Sesli Alarm, Harabe AvcÄ±sÄ±
+// @description  LuckyStrike OGame Helper: Maliyet Sepeti, Galaxy Scanner, Player Finder, Sesli Alarm, Harabe Avcısı
 // @author       LuckyStrike
 // @match        *://*.ogame.gameforge.com/game/index.php*
 // @grant        none
