@@ -1,4 +1,4 @@
-# ⚡ LuckyStrike OGame Helper (v6.0)
+# ⚡ LuckyStrike OGame Helper (v6.1)
 
 OGame için özel olarak geliştirilmiş; **Maliyet Sepeti (Resmi Formüllerle Çoklu Kademe & Nakliye Hesabı)**, **Galaxy Scanner (Slot 8 & Çoklu Işınlanma Arayıcı)**, **Player Finder (Oyuncu & Gezegen Bulucu)**, **Sesli & Masaüstü Tehdit Alarmı** ve **Gerçek Zamanlı Harabe Avcısı (Debris Hunter - Sonsuz Uzaklar & Hızlı Geçiş Desteği)** modüllerini içeren gelişmiş tarayıcı eklentisidir (**Chrome / Edge Extension - Manifest V3** ve **Tampermonkey Userscript**).
 
@@ -129,6 +129,16 @@ Ban riski taşımayan resmi Gameforge XML API altyapısını ve yerel ses sentez
 ---
 
 ## 📝 Sürüm Geçmişi
+
+### v6.1
+* **Dinamik Gemi Kapasiteleri & Teknoloji Senkronizasyonu:** Hiperuzay Teknolojisi (Teknoloji ID 114) ve canlı türü bonusları arka planda otomatik çekilerek Küçük Nakliye (KN) ve Büyük Nakliye (BN) gerçek kargo kapasiteleri tam doğrulukla hesaplandı.
+* **Akıllı 3'lü Filo Yükleme Butonu:** Filo gönderiminde kargo kapasitesi kilidini aşmak için önce gemi sayısını otomatik seçen ardından kaynakları dolduran buton grubu eklendi:
+  * `⚡ Gemiye Yükle (Otomatik)`: Önce eldeki KN yetiyorsa KN'yi, yetmiyorsa BN'yi seçer.
+  * `📦 [X] KN`: Sadece Küçük Nakliye seçip kaynakları doldurur.
+  * `🚛 [X] BN`: Sadece Büyük Nakliye seçip kaynakları doldurur.
+* **Ayrılmış Pozitif (+) ve Negatif (-) Nakliye Analizi:** Sepetteki toplam maliyet gereksinimi (➕), mevcut gezegen kaynağı (➖) ve net kalan açık (📊) ayrı ayrı listelenerek her durum için gereken BN ve KN adetleri netleştirildi.
+* **Akıllı Net Açık Dengeleme:** Gezegendeki kaynak düşüldüğünde fazlası olan kaynaklar için filoya gereksiz sıfır/tam yükleme yapılması önlendi; yalnızca açığı bulunan kaynaklar filoya yüklenecek şekilde optimize edildi.
+* **Hata Düzeltmeleri & Kararlılık:** Harabe avcısı açma/kapama fonksiyonundaki `ReferenceError` ve oyuncu arama panelindeki event listener ID uyumsuzlukları giderildi.
 
 ### v6.0
 * **Harabe Avcısı Güçlendirmesi:** Kademeli çok aşamalı tarama motoru (`triggerGalaxyScanSequence`), klavye ve ok butonları geçiş kancaları entegre edildi. Hızlı geçişlerde harabe kaçırma sorunu giderildi.
