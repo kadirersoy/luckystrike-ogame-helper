@@ -2,7 +2,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v6.1 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v7.0 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -3503,6 +3503,6 @@
     setupObserver();
     setupDebrisObserver();
     checkAndApplyFleetAutoLoad();
-    console.log(LS, 'LuckyStrike OGame Helper v6.1 hazır!');
+    console.log(LS, 'LuckyStrike OGame Helper v7.0 hazır!');
 
 })();
