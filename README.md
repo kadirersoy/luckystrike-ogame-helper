@@ -20,22 +20,50 @@ LuckyStrike OGame Helper, **Gameforge Kullanım Şartları ve Oyun Kuralları (K
 ### 🌟 Öne Çıkan Özellikler
 
 #### 1. 🏗️ Maliyet Sepeti & Çoklu Kademe Hesabı
+
+<p align="center">
+  <img src="screenshots/tab_cart.png" width="380" alt="LuckyStrike Maliyet Sepeti">
+</p>
+
 - Herhangi bir bina veya araştırma detayına tıklandığında `[ − ] [ +N ] [ + ]` seçimi ve tek tıkla sepete ekleme.
 - **Resmi Gameforge LFMaster Tablosu:** 4 ırkın (Rock'tal, İnsan, Mecha, Kaelesh) 48 binası ve 72 araştırması dahil tüm binaların çoklu kademe maliyetlerini tam doğrulukla hesaplar.
 - **Mevcut Kaynağı Düş:** Gezegendeki Metal, Kristal ve Deuterium'u sepetten düşerek net açığı gösterir.
 - **Nakliye Filosu İhtiyacı:** Kalan açık için gereken Küçük Nakliye (KN) ve Büyük Nakliye (BN) sayısını anında hesaplar.
 - **Filoya Otomatik Doldurma:** Filo gönderme ekranında tek tıkla gerekli gemi sayısını seçer ve kaynak kutularını doldurur.
 
+---
+
 #### 2. 🛰️ Gerçek Zamanlı Harabe Avcısı (Debris Hunter)
+
+<p align="center">
+  <img src="screenshots/tab_debris.png" width="380" alt="LuckyStrike Harabe Avcısı">
+</p>
+
 - Galakside gezinirken ekrandaki harabeleri anında yakalar ve listeler.
 - 16. Slot (Sonsuz Uzaklar / Keşif Harabesi) tam desteği.
 - Belirlenen eşik (örn: 100K, 500K, 1M) üzerindeki harabeler için sesli sonar uyarısı.
 - Gerekli Geri Dönüşümcü (GD) miktarını otomatik hesaplar.
 
+---
+
 #### 3. 🌌 Galaxy Scanner & 🔍 Player Finder
+
+<p align="center">
+  <img src="screenshots/tab_scanner.png" width="380" alt="LuckyStrike Galaxy Scanner">
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="screenshots/tab_finder.png" width="380" alt="LuckyStrike Player Finder">
+</p>
+
 - Boş slotları, grupça ışınlanma yapılabilecek sistemleri ve oyuncu/gezegen koordinatlarını saniyeler içinde listeler.
 
-#### 4. 🚨 Saldırı & Sonda Sesli Alarmı
+---
+
+#### 4. 🚨 Saldırı & Sonda Sesli Alarmı (Threat Alarm)
+
+<p align="center">
+  <img src="screenshots/tab_alarm.png" width="380" alt="LuckyStrike Sesli Alarm">
+</p>
+
 - Gelen saldırı veya casusluk hareketlerini OGame'in kendi arayüzü üzerinden anlık yakalar.
 - Web Audio API ile dahili siren/sonar sesleri ve masaüstü bildirimleri üretir.
 
@@ -97,7 +125,7 @@ LuckyStrike OGame Helper is developed in full accordance with **Gameforge Terms 
 ## 📝 Sürüm Geçmişi / Changelog
 
 ### v7.1
-- **🛡️ 100% Pasif Dinleme & Sıfır Ban Riski:** Periyodik arka plan ağ sorguları tamamen kaldırılarak OGame'in kendi DOM ve AJAX olaylarına bağlandı.
+- **🛡️ 100% Pasif Dinleme:** Periyodik arka plan ağ sorguları kaldırılarak OGame'in kendi DOM ve AJAX olaylarına bağlandı.
 - **🎨 Yeni Metalik OGame Logosu:** Karanlık uzay teması ve metalik gümüş OGame tipografisi.
 - **🌐 Çift Dil (TR/EN) & Kural Uyumluluğu Rehberi:** Detaylı fair-play ve kural uygunluğu dökümantasyonu eklendi.
 
