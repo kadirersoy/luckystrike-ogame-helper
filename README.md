@@ -133,7 +133,7 @@ LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Term
 
 ### Tampermonkey Userscript
 1. Tampermonkey panelinde yeni betik oluşturun.
-2. [`luckystrike_ogame_helper.js`](luckystrike_ogame_helper.js) içeriğini yapıştırıp kaydedin.
+2. [`luckystrike_ogame_helper.user.js`](luckystrike_ogame_helper.user.js) içeriğini yapıştırıp kaydedin.
 
 ---
 

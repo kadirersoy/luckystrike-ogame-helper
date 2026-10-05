@@ -1,4 +1,13 @@
+# System files
 .DS_Store
 Thumbs.db
 *.tmp
 *.log
+
+# Build & Archives (Zips are attached to GitHub Releases, not kept in repo root)
+*.zip
+
+# Private / Internal Store Management Metadata
+EDGE_STORE_INFO.md
+*SECRET*
+*.env
