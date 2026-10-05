@@ -6,14 +6,14 @@
 
 ## 🇹🇷 Türkçe Açıklama
 
-**LuckyStrike OGame Helper**, OGame oyuncuları için günlük imparatorluk yönetimini, hammadde planlamasını, filo nakliye hesaplamalarını ve harabe avcılığını kolaylaştırmak üzere tasarlanmış, **Gameforge oyun kurallarına %100 uyumlu** ve **ban riski taşımayan** gelişmiş bir tarayıcı eklentisidir (**Chrome / Edge Extension - Manifest V3** ve **Tampermonkey Userscript**).
+**LuckyStrike OGame Helper**, OGame oyuncuları için günlük imparatorluk yönetimini, hammadde planlamasını, filo nakliye hesaplamalarını ve harabe takibini kolaylaştırmak üzere tasarlanmış, **Gameforge oyun kurallarına tam uyumlu** gelişmiş bir kullanıcı arayüzü asistanıdır (**Chrome / Edge Extension - Manifest V3** ve **Tampermonkey Userscript**).
 
-### 🛡️ Gameforge & OGame Oyun Kurallarına Uyumluluk (Fair-Play & Sıfır Ban Riski)
-LuckyStrike OGame Helper, **Gameforge Şartlar ve Koşulları (Kural 5: Otomasyon ve Bot Yasağı)** titizlikle dikkate alınarak geliştirilmiştir:
-- **100% Pasif Dinleme (Sıfır Sunucu Yükü):** Eklenti, arka planda sunucuya otomatik veya periyodik (örneğin 5-10 saniyede bir) sorgu göndermez. Sizin adınıza hiçbir gizli ağ trafiği üretmez.
-- **Bot / Otomasyon İçermez:** Filoları kendi kendine göndermez, otomatik bina/araştırma basmaz. Form doldurma işlemleri (örneğin filoya kaynak yükleme) yalnızca **oyuncu butona bizzat tıkladığında** form kutucuklarını doldurur; son onay ve gönderim kararı her zaman oyuncuya aittir.
-- **Resmi Gameforge API Kullanımı:** Evren taraması ve oyuncu bulucu özellikleri, Gameforge'un eklenti ve araç geliştiricileri için resmi olarak sağladığı kamuya açık XML API altyapısını (`/api/universe.xml`, `/api/players.xml`) kullanır.
-- **Sadece İstemci Taraflı (Client-Side):** Hiçbir kullanıcı verisi, şifresi veya oyun bilgisi harici sunuculara iletilmez, tamamen tarayıcınızın yerel belleğinde (`chrome.storage.local`) saklanır.
+### 🛡️ Gameforge & OGame Oyun Kurallarına Uyumluluk
+LuckyStrike OGame Helper, **Gameforge Kullanım Şartları ve Oyun Kuralları (Kural 5: Otomasyon ve Bot Politikası)** gözetilerek geliştirilmiştir:
+- **Pasif Dinleme Mimarisi:** Eklenti sunucuya arka planda otomatik veya periyodik istekler göndermez, sunucu trafiği oluşturmaz.
+- **Otomasyon / Bot İçermez:** Filoları otomatik göndermez, bina veya araştırma emri vermez. Kaynak doldurma gibi kolaylaştırıcı işlemler yalnızca **oyuncunun doğrudan tıklamasıyla** form alanlarına yazılır; son onay ve gönderim kontrolü tamamen oyuncuya aittir.
+- **Resmi Gameforge API Kullanımı:** Evren taraması ve oyuncu arama modülleri, Gameforge tarafından kamuya açık olarak sağlanan resmi XML API altyapısını (`/api/universe.xml`, `/api/players.xml`) kullanır.
+- **İstemci Taraflı ve Gizlilik Odaklı:** Hiçbir kullanıcı verisi veya oyun bilgisi harici sunuculara aktarılmaz, tüm tercihler sadece yerel tarayıcı belleğinizde saklanır.
 
 ---
 
@@ -43,14 +43,14 @@ LuckyStrike OGame Helper, **Gameforge Şartlar ve Koşulları (Kural 5: Otomasyo
 
 ## 🇬🇧 English Description
 
-**LuckyStrike OGame Helper** is an advanced, lightweight browser assistant (**Chrome / Edge Extension - Manifest V3** & **Tampermonkey Userscript**) designed for OGame players to streamline daily empire management, resource planning, cargo calculation, and debris hunting while strictly adhering to **Gameforge Fair-Play Rules**.
+**LuckyStrike OGame Helper** is an advanced, lightweight browser assistant (**Chrome / Edge Extension - Manifest V3** & **Tampermonkey Userscript**) designed for OGame players to streamline daily empire management, resource planning, cargo calculation, and debris tracking while strictly following **Gameforge Fair-Play Rules**.
 
-### 🛡️ OGame Rules & Fair-Play Compliance (Zero Ban Risk)
-LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Terms & Conditions (Rule 5: Automation & Bot Policy)**:
-- **100% Passive Interception (Zero Extra Server Traffic):** The extension never polls or makes periodic automated requests in the background. It generates zero artificial network traffic.
-- **Strictly Non-Automated:** No auto-dispatching fleets, auto-building, or script loops. Autofill actions (such as setting cargo resources) only trigger upon **direct user click**; the final dispatch confirmation always remains in the player's hands.
-- **Official Gameforge Public APIs:** Galaxy scanning and player lookups utilize the official public XML APIs (`/api/universe.xml`, `/api/players.xml`) provided by Gameforge for tool authors.
-- **100% Client-Side & Privacy-First:** No personal data, credentials, or telemetry are ever collected or sent to external servers. All preferences stay in your local browser storage.
+### 🛡️ Gameforge & OGame Rules Compliance
+LuckyStrike OGame Helper is developed in full accordance with **Gameforge Terms & Conditions (Rule 5: Automation & Bot Policy)**:
+- **Passive Architecture:** The extension never generates automated or periodic background requests to the game servers.
+- **Strictly Non-Automated:** No automated fleet dispatches, building queues, or script loops. Autofill actions only execute upon **explicit player click**; the final command confirmation always remains with the player.
+- **Official Gameforge Public APIs:** Galaxy scanning and player searches strictly utilize official public XML APIs (`/api/universe.xml`, `/api/players.xml`) provided for tool developers.
+- **Client-Side & Privacy-First:** No personal data or credentials are ever collected or sent to external servers. All settings remain strictly in local browser storage.
 
 ---
 
