@@ -2037,17 +2037,13 @@
         }
     }
 
-    async function checkThreatsAsync() {
+    // Pasif Etkinlik Dinleyicisi (Sıfır Sunucu İsteği, Sıfır Ban Riski):
+    // OGame'in kendi yaptığı eventList veya mini-etkinlik çağrılarının yanıtlarını havada yakalar
+    function parseThreatsFromHTML(html) {
         if (!alarmSettings.attackEnabled && !alarmSettings.espionageEnabled) return;
-
         try {
-            const resp = await fetch('/game/index.php?page=componentOnly&component=eventList');
-            if (!resp.ok) return;
-            const html = await resp.text();
-
             const doc = new DOMParser().parseFromString(html, 'text/html');
             const parsed = parseHostileFleets(doc);
-
             let hasAttack = parsed.hasAttack || isDOMAttackAlert();
             let hasEspionage = parsed.hasEspionage;
             let sig = '';
@@ -2059,9 +2055,7 @@
             if (hasEspionage) lastKnownEspionageTime = Date.now();
 
             handleThreatState(hasAttack, hasEspionage, sig);
-        } catch (e) {
-            // Ignore
-        }
+        } catch (e) {}
     }
 
     // ============================================================
@@ -3363,7 +3357,8 @@
         updateDebrisStatusBanner();
         renderDebrisList();
 
-        // Initialize Threat Monitoring
+        // 100% Pasif Tehdit İzleme (Sıfır Sunucu Yükü, Sıfır Ban Riski)
+        // OGame'in kendi DOM değişiklikleri ve kendi dahili eventList AJAX çağrıları dinlenir
         const attEl = document.getElementById('attack_alert');
         if (attEl) {
             const obs = new MutationObserver(() => checkThreatsInDOM());
@@ -3375,12 +3370,34 @@
             obsHdr.observe(eventHdr, { attributes: true, childList: true, subtree: true });
         }
 
+        // Oyuncunun açık olan sekmesinde DOM'daki tehdit durumunu hafifçe tara (sadece yerel DOM)
         setInterval(checkThreatsInDOM, 2500);
-        setInterval(checkThreatsAsync, 10000);
+
+        // OGame'in kendi yaptığı AJAX çağrılarından eventList içeriğini pasif olarak yakala
+        try {
+            if (window.$ && typeof window.$.fn === 'object') {
+                window.$(document).ajaxComplete((event, xhr, settings) => {
+                    if (settings && settings.url && (settings.url.includes('eventList') || settings.url.includes('component=eventList'))) {
+                        if (xhr && xhr.responseText) parseThreatsFromHTML(xhr.responseText);
+                    }
+                });
+            }
+        } catch (e) {}
+
+        try {
+            const origXhrOpen = XMLHttpRequest.prototype.open;
+            XMLHttpRequest.prototype.open = function(method, url) {
+                if (url && typeof url === 'string' && (url.includes('eventList') || url.includes('component=eventList'))) {
+                    this.addEventListener('load', () => {
+                        if (this.responseText) parseThreatsFromHTML(this.responseText);
+                    });
+                }
+                return origXhrOpen.apply(this, arguments);
+            };
+        } catch (e) {}
 
         setTimeout(() => {
             checkThreatsInDOM();
-            checkThreatsAsync();
         }, 1000);
     }
 
