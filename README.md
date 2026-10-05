@@ -6,18 +6,18 @@
 
 ## 🇹🇷 Türkçe Açıklama
 
-**LuckyStrike OGame Helper**, OGame oyuncuları için günlük imparatorluk yönetimini, hammadde planlamasını, filo nakliye hesaplamalarını ve harabe takibini kolaylaştırmak üzere tasarlanmış, **Gameforge oyun kurallarına tam uyumlu** gelişmiş bir kullanıcı arayüzü asistanıdır (**Chrome / Edge Extension - Manifest V3** ve **Tampermonkey Userscript**).
+**LuckyStrike OGame Helper**, OGame oyuncuları için günlük imparatorluk yönetimini, hammadde planlamasını, filo nakliye hesaplamalarını ve bilgi takibini kolaylaştırmak üzere tasarlanmış, **Gameforge oyun kurallarına tam uyumlu** bir kullanıcı arayüzü asistanıdır (**Chrome / Edge Extension - Manifest V3** ve **Tampermonkey Userscript**).
 
 ### 🛡️ Gameforge & OGame Oyun Kurallarına Uyumluluk
-LuckyStrike OGame Helper, **Gameforge Kullanım Şartları ve Oyun Kuralları (Kural 5: Otomasyon ve Bot Politikası)** gözetilerek geliştirilmiştir:
-- **Pasif Dinleme Mimarisi:** Eklenti sunucuya arka planda otomatik veya periyodik istekler göndermez, sunucu trafiği oluşturmaz.
-- **Otomasyon / Bot İçermez:** Filoları otomatik göndermez, bina veya araştırma emri vermez. Kaynak doldurma gibi kolaylaştırıcı işlemler yalnızca **oyuncunun doğrudan tıklamasıyla** form alanlarına yazılır; son onay ve gönderim kontrolü tamamen oyuncuya aittir.
-- **Resmi Gameforge API Kullanımı:** Evren taraması ve oyuncu arama modülleri, Gameforge tarafından kamuya açık olarak sağlanan resmi XML API altyapısını (`/api/universe.xml`, `/api/players.xml`) kullanır.
+LuckyStrike OGame Helper, **Gameforge Kullanım Şartları ve Oyun Kuralları (Kural 5: Otomasyon ve Bot Politikası)** titizlikle gözetilerek geliştirilmiştir:
+- **Sadece Oyuncu Başındayken ve Pasif Çalışır:** Eklenti arka planda kendi kendine sunucuya istek atmaz. Bilgi takibi ve güncellemeler, yalnızca **oyuncu bilgisayar başındayken**, sayfalar arasında gezinirken veya tarayıcı sekmesi güncellendiğinde ekrana gelen verileri okur.
+- **Otomasyon / Bot İçermez:** Filoları otomatik göndermez, bina/araştırma emri vermez. Kaynak doldurma gibi kolaylaştırıcı işlemler yalnızca **oyuncunun bizzat butona tıklamasıyla** form alanlarına yazılır; son onay, gönderme ve karar kontrolü tamamen oyuncuya aittir.
+- **Resmi Gameforge API Altyapısı:** Evren analizi ve oyuncu arama modülleri, Gameforge'un eklenti ve araç geliştiricileri için kamuya açık olarak sağladığı resmi XML API altyapısını (`/api/universe.xml`, `/api/players.xml`) kullanır.
 - **İstemci Taraflı ve Gizlilik Odaklı:** Hiçbir kullanıcı verisi veya oyun bilgisi harici sunuculara aktarılmaz, tüm tercihler sadece yerel tarayıcı belleğinizde saklanır.
 
 ---
 
-### 🌟 Öne Çıkan Özellikler
+### 🌟 Oynanışı Kolaylaştıran Özellikler
 
 #### 1. 🏗️ Maliyet Sepeti & Çoklu Kademe Hesabı
 
@@ -25,84 +25,99 @@ LuckyStrike OGame Helper, **Gameforge Kullanım Şartları ve Oyun Kuralları (K
   <img src="screenshots/tab_cart.png" width="380" alt="LuckyStrike Maliyet Sepeti">
 </p>
 
-- Herhangi bir bina veya araştırma detayına tıklandığında `[ − ] [ +N ] [ + ]` seçimi ve tek tıkla sepete ekleme.
+- Bina veya araştırma detayına tıklandığında `[ − ] [ +N ] [ + ]` seçimi ve tek tıkla sepete ekleme.
 - **Resmi Gameforge LFMaster Tablosu:** 4 ırkın (Rock'tal, İnsan, Mecha, Kaelesh) 48 binası ve 72 araştırması dahil tüm binaların çoklu kademe maliyetlerini tam doğrulukla hesaplar.
-- **Mevcut Kaynağı Düş:** Gezegendeki Metal, Kristal ve Deuterium'u sepetten düşerek net açığı gösterir.
+- **Mevcut Kaynağı Düş:** Gezegendeki kaynakları sepetten düşerek net açığı gösterir.
 - **Nakliye Filosu İhtiyacı:** Kalan açık için gereken Küçük Nakliye (KN) ve Büyük Nakliye (BN) sayısını anında hesaplar.
-- **Filoya Otomatik Doldurma:** Filo gönderme ekranında tek tıkla gerekli gemi sayısını seçer ve kaynak kutularını doldurur.
+- **Filoya Kaynak Aktarma Kolaylığı:** Filo gönderme ekranında tek tıkla gerekli gemi sayısını ve kaynak kutularını doldurur.
 
 ---
 
-#### 2. 🛰️ Gerçek Zamanlı Harabe Avcısı (Debris Hunter)
-
-<p align="center">
-  <img src="screenshots/tab_debris.png" width="380" alt="LuckyStrike Harabe Avcısı">
-</p>
-
-- Galakside gezinirken ekrandaki harabeleri anında yakalar ve listeler.
-- 16. Slot (Sonsuz Uzaklar / Keşif Harabesi) tam desteği.
-- Belirlenen eşik (örn: 100K, 500K, 1M) üzerindeki harabeler için sesli sonar uyarısı.
-- Gerekli Geri Dönüşümcü (GD) miktarını otomatik hesaplar.
-
----
-
-#### 3. 🌌 Galaxy Scanner & 🔍 Player Finder
+#### 2. 🌌 Galaxy Scanner (Boş Slot & Sistem Arayıcı)
 
 <p align="center">
   <img src="screenshots/tab_scanner.png" width="380" alt="LuckyStrike Galaxy Scanner">
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="screenshots/tab_finder.png" width="380" alt="LuckyStrike Player Finder">
 </p>
 
-- Boş slotları, grupça ışınlanma yapılabilecek sistemleri ve oyuncu/gezegen koordinatlarını saniyeler içinde listeler.
+- Resmi Gameforge evren verisini kullanarak boş slotları ve grupça ışınlanma yapılabilecek uygun güneş sistemlerini listeler.
+- Hedef slot filtreleme (Slot 8, 7-8-9, Deut slotları vb.) ile arama kolaylığı sağlar.
+- Sonuçların yanındaki buton ile doğrudan galaksi sayfasına pratik yönlendirme sunar.
 
 ---
 
-#### 4. 🚨 Saldırı & Sonda Sesli Alarmı (Threat Alarm)
+#### 3. 🔍 Player Finder (Oyuncu & Gezegen Arama)
 
 <p align="center">
-  <img src="screenshots/tab_alarm.png" width="380" alt="LuckyStrike Sesli Alarm">
+  <img src="screenshots/tab_finder.png" width="380" alt="LuckyStrike Player Finder">
 </p>
 
-- Gelen saldırı veya casusluk hareketlerini OGame'in kendi arayüzü üzerinden anlık yakalar.
-- Web Audio API ile dahili siren/sonar sesleri ve masaüstü bildirimleri üretir.
+- Resmi API üzerinden oyuncuların kolonilerini veya aradığınız gezegen adlarının koordinatlarını listeler.
+- İttifak ve oyuncu koordinatlarını harita üzerinde kolayca takip etmeye yardımcı olur.
+
+---
+
+#### 4. 🛰️ Harabe Alanı Takipçisi (Debris Tracker)
+
+<p align="center">
+  <img src="screenshots/tab_debris.png" width="380" alt="LuckyStrike Harabe Takipçisi">
+</p>
+
+- **Sadece Galakside Gezinirken Okur:** Oyuncu galaksi sayfasında gezinirken, ekranda o an görüntülenen harabeleri listeye derler ve gözden kaçmasını önler.
+- 16. Slot (Sonsuz Uzaklar / Keşif Harabesi) bilgilerini listeye dahil eder.
+- Oyuncunun belirlediği eşiğin üzerindeki harabeler için sesli uyarı imkanı sunar.
+- Toplam kaynağa göre gereken Geri Dönüşümcü (GD) sayısını ekranda hesaplayarak gösterir.
+
+---
+
+#### 5. 🚨 Saldırı & Sonda Bildirim Desteği (Threat Alert)
+
+<p align="center">
+  <img src="screenshots/tab_alarm.png" width="380" alt="LuckyStrike Tehdit Bildirimi">
+</p>
+
+- **Yalnızca Oyun Açıkken ve Ekran Güncellendiğinde:** Sayfa yenilendiğinde veya OGame'in kendi üst barındaki etkinlik kutusu güncellendiğinde ekrandaki durumu okur.
+- Oyuncunun açık olan sekmesinde gözden kaçırmaması için dahili sesli ve masaüstü bildirim kolaylığı sunar.
 
 ---
 
 ## 🇬🇧 English Description
 
-**LuckyStrike OGame Helper** is an advanced, lightweight browser assistant (**Chrome / Edge Extension - Manifest V3** & **Tampermonkey Userscript**) designed for OGame players to streamline daily empire management, resource planning, cargo calculation, and debris tracking while strictly following **Gameforge Fair-Play Rules**.
+**LuckyStrike OGame Helper** is an advanced browser assistant (**Chrome / Edge Extension - Manifest V3** & **Tampermonkey Userscript**) designed for OGame players to assist with daily empire management, resource planning, cargo calculation, and information tracking while strictly following **Gameforge Fair-Play Rules**.
 
 ### 🛡️ Gameforge & OGame Rules Compliance
-LuckyStrike OGame Helper is developed in full accordance with **Gameforge Terms & Conditions (Rule 5: Automation & Bot Policy)**:
-- **Passive Architecture:** The extension never generates automated or periodic background requests to the game servers.
-- **Strictly Non-Automated:** No automated fleet dispatches, building queues, or script loops. Autofill actions only execute upon **explicit player click**; the final command confirmation always remains with the player.
-- **Official Gameforge Public APIs:** Galaxy scanning and player searches strictly utilize official public XML APIs (`/api/universe.xml`, `/api/players.xml`) provided for tool developers.
-- **Client-Side & Privacy-First:** No personal data or credentials are ever collected or sent to external servers. All settings remain strictly in local browser storage.
+LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Terms & Conditions (Rule 5: Automation & Bot Policy)**:
+- **Active Player Only & Passive Reading:** The extension never sends automated background requests. It only reads screen data when the player is actively playing, navigating pages, or when browser tabs update.
+- **Strictly Non-Automated:** No automated fleet dispatches, building orders, or bot cycles. Autofill helpers only populate inputs upon **explicit player click**; the final command, confirmation, and launch decisions always remain in the player's hands.
+- **Official Gameforge Public APIs:** Galaxy and player analysis modules utilize official public XML APIs (`/api/universe.xml`, `/api/players.xml`) provided for tool developers.
+- **Client-Side & Privacy-First:** No personal data or credentials are ever collected or transmitted. All preferences remain strictly in your local browser storage.
 
 ---
 
-### 🌟 Key Features
+### 🌟 Gameplay Convenience Features
 
 #### 1. 🏗️ Resource Cost Cart & Multi-Level Calculation
-- Multi-level selector `[ − ] [ +N ] [ + ]` directly in technology detail popups.
-- Full support for all standard buildings, researches, and Lifeform structures across all 4 races (Human, Rock'tal, Mecha, Kaelesh).
-- **Deduct Live Resources:** Subtract currently stored resources with a single click to see exact deficit/surplus.
-- **Cargo Fleet Calculator:** Automatically computes exact Small Cargo (KN) and Large Cargo (BN) ships needed based on current Hyperspace Technology.
-- **Fleet Auto-Fill:** Populate ship counts and cargo inputs on fleet dispatch screens with one click.
+- Multi-level selector directly in technology detail popups.
+- Full support for all buildings, researches, and Lifeform structures across all 4 races.
+- Deduct currently stored resources to calculate exact deficits.
+- Computes Small Cargo (KN) and Large Cargo (BN) requirements dynamically.
+- One-click ship and resource form fill on fleet dispatch screens.
 
-#### 2. 🛰️ Real-Time Debris Field Scanner
-- Highlights and logs debris fields in real-time as you browse the galaxy view.
-- 16th slot (Expedition / Endless Expanse) debris detection.
-- Configurable resource threshold alerts with realistic submarine sonar sounds.
-- Automatically calculates required Recyclers.
+#### 2. 🌌 Galaxy Scanner (Empty Slot Locator)
+- Analyzes official universe data to find empty slots or suitable systems for colonization/relocation.
+- Target slot filters (Slot 8, 7-8-9, etc.) for streamlined search.
 
-#### 3. 🌌 Galaxy Scanner & 🔍 Player Finder
-- Instantly scan 9 galaxies for empty slots (e.g. slot 8) or find player colonies via official APIs.
+#### 3. 🔍 Player Finder (Colony Locator)
+- Displays player colony lists and coordinates via official public APIs.
 
-#### 4. 🚨 Threat Alarm & Tactical Audio
-- In-game tactical sirens and sonar alerts when hostile attacks or spy probes are incoming.
-- Web Notifications API desktop alerts even when the game tab is minimized.
+#### 4. 🛰️ Debris Field Tracker
+- **Active Navigation Only:** Organizes and lists debris fields visible on screen as the player browses galaxy pages.
+- Includes Slot 16 (Expedition / Endless Expanse) debris info.
+- Optional audio notification for debris fields above user-selected thresholds.
+- Calculates required Recyclers on screen.
+
+#### 5. 🚨 In-Game Threat Alert Assistant
+- **Active Screen Updates Only:** Reads threat status when pages are loaded or when the game's native event header updates.
+- Provides optional audio and desktop notifications to prevent missing incoming activity while playing.
 
 ---
 
@@ -125,11 +140,11 @@ LuckyStrike OGame Helper is developed in full accordance with **Gameforge Terms 
 ## 📝 Sürüm Geçmişi / Changelog
 
 ### v7.1
-- **🛡️ 100% Pasif Dinleme:** Periyodik arka plan ağ sorguları kaldırılarak OGame'in kendi DOM ve AJAX olaylarına bağlandı.
+- **🛡️ Oyun Kurallarına Tam Uyum:** Arka plan ağ istekleri kaldırılarak yalnızca oyuncunun sekme ve sayfa yenileme anlarında çalışan pasif mimariye geçildi.
 - **🎨 Yeni Metalik OGame Logosu:** Karanlık uzay teması ve metalik gümüş OGame tipografisi.
-- **🌐 Çift Dil (TR/EN) & Kural Uyumluluğu Rehberi:** Detaylı fair-play ve kural uygunluğu dökümantasyonu eklendi.
+- **🌐 Çift Dil (TR/EN) & Oynanış Kolaylığı Rehberi:** Modüller ayrıştırıldı, oynanış kolaylaştırıcı amaçlar netleştirildi.
 
 ### v7.0
-- **Dinamik Gemi Kapasiteleri:** Hiperuzay Tekniği (ID 114) bonusları otomatik hesaba katıldı.
-- **Akıllı 3'lü Filo Yükleme Butonu:** Otomatik, KN ve BN seçimli tek tıkla yükleme entegrasyonu.
+- **Dinamik Gemi Kapasiteleri:** Hiperuzay Tekniği bonusları otomatik hesaba katıldı.
+- **Akıllı 3'lü Filo Yükleme Butonu:** Otomatik, KN ve BN seçimli form doldurma desteği.
 - **Net Kaynak Dengeleme:** Pozitif maliyetler ve negatif mevcut kaynaklar ayrı ayrı analiz edildi.
