@@ -36,6 +36,7 @@
         targetCoord: '',
         targetType: 1,
         targetName: '',
+        mission: 3,
         selectedShips: { bn: true, kn: true, rehber: false },
         selectedRes: { deu: true, cri: true, met: true },
         reserves: {},
@@ -290,28 +291,31 @@
     };
 
     function getTechnologyId(popup) {
-        if (!popup) popup = document.getElementById('technologydetails');
-        if (!popup) return null;
+        try {
+            if (!popup) popup = document.getElementById('technologydetails');
+            if (!popup) return null;
 
-        let tid = popup.getAttribute('data-technology-id') || popup.getAttribute('data-technology');
-        if (tid && parseInt(tid, 10) > 0) return parseInt(tid, 10);
-
-        const elWithTech = popup.querySelector('[data-technology-id], [data-technology], .upgrade[data-technology], .action a[data-technology]');
-        if (elWithTech) {
-            tid = elWithTech.getAttribute('data-technology-id') || elWithTech.getAttribute('data-technology');
+            let tid = popup.getAttribute('data-technology-id') || popup.getAttribute('data-technology');
             if (tid && parseInt(tid, 10) > 0) return parseInt(tid, 10);
-        }
 
-        const activeTech = document.querySelector('.technology.showsDetails, .technology.active, .hasDetails.showsDetails');
-        if (activeTech) {
-            tid = activeTech.getAttribute('data-technology') || activeTech.getAttribute('data-technology-id');
-            if (tid && parseInt(tid, 10) > 0) return parseInt(tid, 10);
-        }
+            const elWithTech = popup.querySelector('[data-technology-id], [data-technology], .upgrade[data-technology], .action a[data-technology]');
+            if (elWithTech) {
+                tid = elWithTech.getAttribute('data-technology-id') || elWithTech.getAttribute('data-technology');
+                if (tid && parseInt(tid, 10) > 0) return parseInt(tid, 10);
+            }
 
-        const classMatch = (popup.className + ' ' + (popup.querySelector('.lifeformsprite, .sprite')?.className || '')).match(/(?:tech|technologydetails_|technology-)(\d+)/i);
-        if (classMatch && parseInt(classMatch[1], 10) > 0) {
-            return parseInt(classMatch[1], 10);
-        }
+            const activeTech = document.querySelector('.technology.showsDetails, .technology.active, .hasDetails.showsDetails');
+            if (activeTech) {
+                tid = activeTech.getAttribute('data-technology') || activeTech.getAttribute('data-technology-id');
+                if (tid && parseInt(tid, 10) > 0) return parseInt(tid, 10);
+            }
+
+            const rawClass = String(popup.className || '') + ' ' + String(popup.querySelector('.lifeformsprite, .sprite')?.className || '');
+            const classMatch = rawClass.match(/(?:tech|technologydetails_|technology-)(\d+)/i);
+            if (classMatch && parseInt(classMatch[1], 10) > 0) {
+                return parseInt(classMatch[1], 10);
+            }
+        } catch (e) {}
 
         return null;
     }
@@ -896,11 +900,12 @@
         const galInp = document.getElementById('galaxy') || document.querySelector('input[name="galaxy"]');
         const sysInp = document.getElementById('system') || document.querySelector('input[name="system"]');
         const posInp = document.getElementById('position') || document.querySelector('input[name="position"]');
+        const typeInp = document.getElementById('type') || document.querySelector('input[name="type"]');
 
         const setVal = (el, val) => {
             if (!el) return;
             const targetVal = String(val);
-            if (el.value === targetVal) return; // ZATEN DOĞRUYSA DOKUNMA
+            if (el.value === targetVal) return;
             try {
                 const proto = window.HTMLInputElement.prototype;
                 const nativeSetter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
@@ -920,24 +925,58 @@
         setVal(galInp, g);
         setVal(sysInp, s);
         setVal(posInp, p);
+        if (typeInp) setVal(typeInp, type);
 
-        if (type === 3) {
-            const moonBtn = document.getElementById('mbutton') || document.querySelector('[data-type="3"]') || document.querySelector('#fleet2 .moon') || document.querySelector('.planet_type_moon');
-            if (moonBtn && !moonBtn.classList.contains('active') && !moonBtn.classList.contains('selected')) moonBtn.click();
+        const targetType = parseInt(type, 10) || 1;
+        if (targetType === 3) {
+            const moonBtns = document.querySelectorAll('#mbutton, [data-type="3"], [data-planet-type="3"], #fleet2 .moon, #fleet1 .moon, .planet_type_moon, a.moon, #fleetdispatchcomponent .moon');
+            moonBtns.forEach(btn => {
+                try { btn.click(); } catch (e) {}
+            });
         } else {
-            const planetBtn = document.getElementById('pbutton') || document.querySelector('[data-type="1"]') || document.querySelector('#fleet2 .planet') || document.querySelector('.planet_type_planet');
-            if (planetBtn && !planetBtn.classList.contains('active') && !planetBtn.classList.contains('selected')) planetBtn.click();
+            const planetBtns = document.querySelectorAll('#pbutton, [data-type="1"], [data-planet-type="1"], #fleet2 .planet, #fleet1 .planet, .planet_type_planet, a.planet, #fleetdispatchcomponent .planet');
+            planetBtns.forEach(btn => {
+                try { btn.click(); } catch (e) {}
+            });
         }
 
         execPageContext(`
             try {
+                var targetType = ${targetType};
+                if (window.fleetDispatcher) {
+                    if (typeof window.fleetDispatcher.setTargetPlanetType === 'function') {
+                        window.fleetDispatcher.setTargetPlanetType(targetType);
+                    }
+                    if (typeof window.fleetDispatcher.setTargetType === 'function') {
+                        window.fleetDispatcher.setTargetType(targetType);
+                    }
+                    if (typeof window.fleetDispatcher.updateTargetPlanetType === 'function') {
+                        window.fleetDispatcher.updateTargetPlanetType(targetType);
+                    }
+                    if (typeof window.fleetDispatcher.targetType !== 'undefined') {
+                        window.fleetDispatcher.targetType = targetType;
+                    }
+                    if (typeof window.fleetDispatcher.updateTarget === 'function') {
+                        window.fleetDispatcher.updateTarget();
+                    }
+                    if (typeof window.fleetDispatcher.refresh === 'function') {
+                        window.fleetDispatcher.refresh();
+                    }
+                }
                 if (window.$) {
                     var $g = $('#galaxy, input[name="galaxy"]');
                     var $s = $('#system, input[name="system"]');
                     var $p = $('#position, input[name="position"]');
+                    var $t = $('#type, input[name="type"]');
                     if ($g.length && $g.val() != '${g}') $g.val('${g}').trigger('change');
                     if ($s.length && $s.val() != '${s}') $s.val('${s}').trigger('change');
                     if ($p.length && $p.val() != '${p}') $p.val('${p}').trigger('change');
+                    if ($t.length && $t.val() != '' + targetType) $t.val('' + targetType).trigger('change');
+                    if (targetType === 3) {
+                        $('#mbutton, #fleet2 #mbutton, [data-type="3"], [data-planet-type="3"], a.moon, .planet_type_moon').trigger('click');
+                    } else {
+                        $('#pbutton, #fleet2 #pbutton, [data-type="1"], [data-planet-type="1"], a.planet, .planet_type_planet').trigger('click');
+                    }
                 }
             } catch(e) {}
         `);
@@ -2833,7 +2872,7 @@
 
                     moonObj = {
                         id: mId,
-                        name: '🌕 Ay',
+                        name: 'Ay',
                         coords: coords,
                         isMoon: true,
                         type: 3,
@@ -2959,11 +2998,12 @@
 
         // 1. Hedef Buton Başlığı
         let targetIcon = '🪐';
-        let targetTitle = collectorSettings.targetName || 'Hedef Gezegen';
+        let rawTargetTitle = collectorSettings.targetName || 'Hedef Gezegen';
+        let targetTitle = rawTargetTitle.replace(/^[🌕🪐🎯]\s*/, '').trim();
         if (collectorSettings.targetType === 3) targetIcon = '🌕';
         if (collectorSettings.targetId === 'manual') targetIcon = '🎯';
 
-        targetLabelEl.innerHTML = `<span><b>${targetIcon} ${escapeHtml(targetTitle)}</b><span class="crd">${collectorSettings.targetCoord || ''}</span></span>`;
+        targetLabelEl.innerHTML = `<span><b>${targetIcon} ${escapeHtml(targetTitle || 'Hedef')}</b><span class="crd">${collectorSettings.targetCoord || ''}</span></span>`;
 
         // 2. Dropdown Listesi Doldur
         let ddHtml = '';
@@ -2973,11 +3013,12 @@
                 `<span>🪐 ${escapeHtml(p.name)}</span><span class="crd">${p.coords}</span></div>`;
             if (p.moon) {
                 const isMActive = (collectorSettings.targetId === p.moon.id);
-                ddHtml += `<div class="ls-coll-dd-item moon ${isMActive ? 'active' : ''}" data-id="${p.moon.id}" data-coord="${p.coords}" data-type="3" data-name="🌕 Ay">` +
+                ddHtml += `<div class="ls-coll-dd-item moon ${isMActive ? 'active' : ''}" data-id="${p.moon.id}" data-coord="${p.coords}" data-type="3" data-name="Ay">` +
                     `<span>🌕 Ay</span><span class="crd">${p.coords}</span></div>`;
             }
         });
-        ddHtml += `<div class="ls-coll-dd-item ls-coll-dd-manual" data-manual="1"><span>✏️ Manuel koordinat...</span><span></span></div>`;
+        ddHtml += `<div class="ls-coll-dd-item ls-coll-dd-manual" data-manual="1" data-type="1"><span>🪐 Manuel Gezegen...</span><span></span></div>`;
+        ddHtml += `<div class="ls-coll-dd-item ls-coll-dd-manual" data-manual="1" data-type="3"><span>🌕 Manuel Ay...</span><span></span></div>`;
         ddEl.innerHTML = ddHtml;
 
         // 3. Gemi & Kaynak Checkbox'ları Eşitle
@@ -3131,12 +3172,14 @@
                 if (!item) return;
 
                 if (item.getAttribute('data-manual') === '1') {
-                    const entered = prompt('Toplama noktası koordinatı girin (örn: 1:234:8):', collectorSettings.targetCoord || '1:1:1');
+                    const mType = parseInt(item.getAttribute('data-type'), 10) || 1;
+                    const typeLabel = mType === 3 ? 'Manuel Ay' : 'Manuel Gezegen';
+                    const entered = prompt(`${typeLabel} koordinatı girin (örn: 1:234:8):`, collectorSettings.targetCoord || '1:1:1');
                     if (entered && /^\d+:\d+:\d+$/.test(entered.trim())) {
                         collectorSettings.targetId = 'manual';
                         collectorSettings.targetCoord = entered.trim();
-                        collectorSettings.targetType = 1;
-                        collectorSettings.targetName = 'Manuel Hedef';
+                        collectorSettings.targetType = mType;
+                        collectorSettings.targetName = typeLabel;
                         saveCollectorSettings();
                         renderCollector();
                     }
@@ -3151,6 +3194,26 @@
                 ddEl.style.display = 'none';
             });
         }
+
+        // Görev Butonları (Nakliye / Konuşlandır)
+        const updateMissionUi = () => {
+            const m3 = document.getElementById('ls-coll-mission-3');
+            const m4 = document.getElementById('ls-coll-mission-4');
+            if (m3) m3.classList.toggle('active', collectorSettings.mission === 3);
+            if (m4) m4.classList.toggle('active', collectorSettings.mission === 4);
+        };
+
+        document.getElementById('ls-coll-mission-3')?.addEventListener('click', () => {
+            collectorSettings.mission = 3;
+            saveCollectorSettings();
+            updateMissionUi();
+        });
+
+        document.getElementById('ls-coll-mission-4')?.addEventListener('click', () => {
+            collectorSettings.mission = 4;
+            saveCollectorSettings();
+            updateMissionUi();
+        });
 
         // Gemi Seçimleri
         const bindShip = (id, key) => {
@@ -3315,6 +3378,7 @@
             targetCoord: collectorSettings.targetCoord,
             targetType: collectorSettings.targetType || 1,
             targetName: collectorSettings.targetName || 'Hedef',
+            mission: collectorSettings.mission || 3,
             ships: collectorSettings.selectedShips,
             resources: collectorSettings.selectedRes,
             queue: queue,
@@ -3326,7 +3390,7 @@
 
         const firstItem = queue[0];
         const [g, s, p] = session.targetCoord.split(':');
-        const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${firstItem.id}&galaxy=${g}&system=${s}&position=${p}&type=${session.targetType}&mission=3`;
+        const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${firstItem.id}&galaxy=${g}&system=${s}&position=${p}&type=${session.targetType}&mission=${session.mission || 3}`;
 
         const metaId = document.querySelector('meta[name="ogame-planet-id"]')?.getAttribute('content');
         if (metaId === String(firstItem.id) && window.location.href.includes('component=fleetdispatch')) {
@@ -3371,7 +3435,7 @@
 
         if (!isFleetPage) {
             const [g, s, p] = session.targetCoord.split(':');
-            const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${currentItem.id}&galaxy=${g}&system=${s}&position=${p}&type=${session.targetType}&mission=3`;
+            const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${currentItem.id}&galaxy=${g}&system=${s}&position=${p}&type=${session.targetType}&mission=${session.mission || 3}`;
             window.location.href = url;
             return;
         }
@@ -3467,19 +3531,23 @@
 
         // Step 2 (Görev ve Kaynaklar) Hazırlık Fonksiyonu
         const prepareStep2 = () => {
+            const missionId = session.mission || 3;
             // Step 2'de de hedef koordinatları kontrol et (boş veya mevcut gezegense hedefle eşitle)
             setFleetTargetCoords(g, s, p, session.targetType);
-            setFleetMission(3); // Nakliye / Taşıma
+            setFleetMission(missionId);
             fillFleetResources(metLoad, criLoad, deuLoad);
             execPageContext(`
                 try {
                     if (window.fleetDispatcher) {
-                        if (typeof window.fleetDispatcher.selectMission === 'function') window.fleetDispatcher.selectMission(3);
+                        if (typeof window.fleetDispatcher.selectMission === 'function') window.fleetDispatcher.selectMission(${missionId});
                         if (typeof window.fleetDispatcher.cargoCalculation === 'function') window.fleetDispatcher.cargoCalculation();
                         if (typeof window.fleetDispatcher.refresh === 'function') window.fleetDispatcher.refresh();
                     }
                 } catch (e) {}
             `);
+            setTimeout(() => {
+                setFleetMission(missionId);
+            }, 100);
         };
 
         // Devam butonuna tıklayıp Step 2'ye geç (OGame'e koordinatları ve gemileri sindirmesi için 600ms ver)
@@ -3496,17 +3564,19 @@
                 } catch (e) {}
             `);
 
-            // Step 2'nin açılmasını izle ve Nakliye + Kaynakları yükle
+            // Step 2'nin açılmasını izle ve Görev + Kaynakları yükle
             let step2Tries = 0;
             const step2Interval = setInterval(() => {
                 step2Tries++;
-                const isStep2 = document.getElementById('missionButton3') ||
-                                document.querySelector('[data-mission="3"]') ||
-                                document.getElementById('sendFleet') ||
-                                document.getElementById('metal');
-                if (isStep2 || step2Tries > 30) {
+                const devamBtn = document.getElementById('continueToFleet2') || document.querySelector('button.continue') || document.querySelector('a.continue');
+                const isStep1StillActive = devamBtn && (devamBtn.offsetWidth > 0 || window.getComputedStyle(devamBtn).display !== 'none');
+                const sendBtn = findSendFleetButton();
+                const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
+                const isStep2Active = (!isStep1StillActive && isSendBtnVisible) || document.getElementById('fleet2');
+
+                if (isStep2Active || step2Tries > 30) {
                     clearInterval(step2Interval);
-                    setTimeout(prepareStep2, 150);
+                    setTimeout(prepareStep2, 180);
                 }
             }, 100);
         }, 600);
@@ -3531,6 +3601,7 @@
         const totalItems = session.queue.length;
         const currentStep = session.currentIndex + 1;
         const hasShips = details.totalCap > 0;
+        const missionName = (session.mission === 4 ? '🛡️ Konuşlandır' : '🚚 Nakliye');
 
         let shipDesc = [];
         if (details.bn > 0) shipDesc.push(details.bn + ' BN');
@@ -3545,8 +3616,9 @@
                 '<span style="font-size:12px;font-weight:bold;color:#00bcff">📦 Toplayıcı Asistanı [' + currentStep + ' / ' + totalItems + ']</span>' +
                 '<span style="font-size:11px;color:#fff">' + (currentItem.isMoon ? '🌕' : '🪐') + ' ' + escapeHtml(currentItem.name) + ' ➔ ' + escapeHtml(session.targetName) + ' <span style="color:#ffbe3b;font-family:monospace">[' + session.targetCoord + ']</span></span>' +
             '</div>' +
-            '<div style="font-size:11px;margin-bottom:6px">' +
-                '<b style="color:#8899aa">Seçilen Filo:</b> <span style="font-weight:bold">' + shipText + '</span>' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;margin-bottom:6px">' +
+                '<div><b style="color:#8899aa">Seçilen Filo:</b> <span style="font-weight:bold">' + shipText + '</span></div>' +
+                '<div style="font-size:10.5px;color:#00bcff;font-weight:bold">' + missionName + '</div>' +
             '</div>' +
             '<div style="font-size:11.5px;font-family:monospace;margin-bottom:10px">' +
                 '<b style="color:#8899aa">Taşınan:</b> ' +
@@ -3554,15 +3626,17 @@
                 '<span style="color:#5dade2">' + formatShort(details.cri) + ' Kristal</span> · ' +
                 '<span style="color:#ffbe3b">' + formatShort(details.met) + ' Metal</span>' +
             '</div>' +
-            '<div style="display:flex;gap:8px;justify-content:center;align-items:center">' +
+            '<div style="display:flex;gap:6px;justify-content:center;align-items:center">' +
                 (hasShips ?
-                    '<button id="ls-banner-send-btn" style="background:#27ae60;color:#fff;border:none;padding:7px 16px;border-radius:4px;font-weight:bold;font-size:11.5px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.5)">🚀 Filoyu Gönder (Boşluk / Space)</button>'
-                    : '<button id="ls-banner-skip-btn" style="background:#f39c12;color:#000;border:none;padding:7px 16px;border-radius:4px;font-weight:bold;font-size:11.5px;cursor:pointer">⏭️ Bu Gezegeni Atla (Boşluk)</button>') +
-                (hasShips ? '<button id="ls-banner-skip-btn" style="background:#34495e;color:#fff;border:none;padding:7px 12px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏭️ Atla</button>' : '') +
-                '<button id="ls-banner-cancel-btn" style="background:#e74c3c;color:#fff;border:none;padding:7px 12px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏹️ İptal</button>' +
+                    '<button id="ls-banner-send-btn" style="background:#27ae60;color:#fff;border:none;padding:6px 13px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.5)">🚀 Filoyu Gönder (Space)</button>'
+                    : '<button id="ls-banner-skip-btn" style="background:#f39c12;color:#000;border:none;padding:6px 13px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏭️ Bu Gezegeni Atla (Space)</button>') +
+                '<button id="ls-banner-retry-btn" style="background:#e67e22;color:#fff;border:none;padding:6px 12px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer" title="Bu adımı ve hedef ayarlarını sıfırdan tekrarla">🔄 Tekrarla</button>' +
+                (hasShips ? '<button id="ls-banner-skip-btn" style="background:#34495e;color:#fff;border:none;padding:6px 12px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏭️ Atla</button>' : '') +
+                '<button id="ls-banner-cancel-btn" style="background:#e74c3c;color:#fff;border:none;padding:6px 12px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏹️ İptal</button>' +
             '</div>';
 
         const sendFleet = () => {
+            const missionId = session.mission || 3;
             const devamBtn = document.getElementById('continueToFleet2') || document.querySelector('button.continue') || document.querySelector('a.continue');
             const isDevamVisible = devamBtn && (devamBtn.offsetWidth > 0 || window.getComputedStyle(devamBtn).display !== 'none');
 
@@ -3581,21 +3655,31 @@
                 `);
                 setTimeout(() => {
                     setFleetTargetCoords(details.g, details.s, details.p, session.targetType);
-                    setFleetMission(3);
+                    setFleetMission(missionId);
                     fillFleetResources(details.met, details.cri, details.deu);
                     setTimeout(() => {
                         dispatchSendFleetButton();
                     }, 250);
-                }, 400);
+                }, 500);
             } else {
                 // Zaten Step 2'deyse: Koordinatları, görevi ve kaynakları son kez garantiye alıp gönder
                 setFleetTargetCoords(details.g, details.s, details.p, session.targetType);
-                setFleetMission(3);
+                setFleetMission(missionId);
                 fillFleetResources(details.met, details.cri, details.deu);
                 setTimeout(() => {
                     dispatchSendFleetButton();
-                }, 100);
+                }, 120);
             }
+        };
+
+        const retryCurrentStep = () => {
+            window.removeEventListener('keydown', keyListener);
+            if (banner) {
+                banner.innerHTML = '<div style="font-size:12px;color:#e67e22;padding:6px;font-weight:bold">🔄 Adım yeniden deneniyor...</div>';
+            }
+            setTimeout(() => {
+                executeFleetDispatchStep(session, currentItem);
+            }, 150);
         };
 
         const dispatchSendFleetButton = () => {
@@ -3652,7 +3736,7 @@
                 if (session.currentIndex < session.queue.length) {
                     const nextItem = session.queue[session.currentIndex];
                     const [g, s, p] = session.targetCoord.split(':');
-                    const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${nextItem.id}&galaxy=${g}&system=${s}&position=${p}&type=${session.targetType}&mission=3`;
+                    const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${nextItem.id}&galaxy=${g}&system=${s}&position=${p}&type=${session.targetType}&mission=${session.mission || 3}`;
                     window.location.href = url;
                 } else {
                     sessionStorage.removeItem(KEYS.COLLECTOR_RUN);
@@ -3685,6 +3769,7 @@
         window.addEventListener('keydown', keyListener);
 
         document.getElementById('ls-banner-send-btn')?.addEventListener('click', sendFleet);
+        document.getElementById('ls-banner-retry-btn')?.addEventListener('click', retryCurrentStep);
         document.getElementById('ls-banner-skip-btn')?.addEventListener('click', proceedToNext);
         document.getElementById('ls-banner-cancel-btn')?.addEventListener('click', cancel);
     }
@@ -3837,6 +3922,9 @@
             '.ls-coll-dd-item .crd{font-family:monospace;color:#00bcff;font-size:10px}',
             '.ls-coll-dd-item.moon{padding-left:18px;color:#c9d6e3}',
             '.ls-coll-dd-manual{color:#8899aa;font-style:italic;border-bottom:none}',
+            '.ls-coll-mbtn{background:#1a2c3f;color:#8899aa;border:1px solid #2c3e50;padding:2px 8px;border-radius:3px;cursor:pointer;font-size:10px;font-weight:bold;transition:all .15s}',
+            '.ls-coll-mbtn.active{background:#00bcff;color:#000;border-color:#00bcff}',
+            '.ls-coll-mbtn:hover:not(.active){background:#243a52;color:#fff}',
             '.ls-coll-selbar{display:flex;gap:4px;margin-bottom:6px;flex-shrink:0}',
             '.ls-coll-selbar .ls-btn-sm{flex:1;text-align:center;padding:3px 2px}',
             '.ls-coll-head{display:flex;justify-content:space-between;align-items:center;padding:0 2px 4px 2px;border-bottom:1px solid #1a2c3f;margin-bottom:6px;flex-shrink:0}',
@@ -4111,7 +4199,13 @@
                 // COLLECTOR TAB
                 '<div id="tc-collector" class="ls-tc">' +
                     '<div id="ls-coll-card-target" class="ls-coll-card">' +
-                        '<div class="ls-label" style="margin-bottom:4px">🎯 Collect To</div>' +
+                        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">' +
+                            '<span class="ls-label">🎯 Collect To</span>' +
+                            '<div style="display:flex;gap:4px">' +
+                                '<button type="button" id="ls-coll-mission-3" class="ls-coll-mbtn ' + (collectorSettings.mission === 3 ? 'active' : '') + '">Nakliye</button>' +
+                                '<button type="button" id="ls-coll-mission-4" class="ls-coll-mbtn ' + (collectorSettings.mission === 4 ? 'active' : '') + '">Konuşlandır</button>' +
+                            '</div>' +
+                        '</div>' +
                         '<div class="ls-coll-row">' +
                             '<div class="ls-coll-combo">' +
                                 '<div id="ls-coll-target-btn" class="ls-coll-sel">' +
