@@ -6,7 +6,7 @@
 
 ## 🇹🇷 Türkçe Açıklama
 
-**LuckyStrike OGame Helper**, OGame oyuncuları için günlük imparatorluk yönetimini, hammadde planlamasını, filo nakliye hesaplamalarını ve bilgi takibini kolaylaştırmak üzere tasarlanmış, **Gameforge oyun kurallarına tam uyumlu** bir kullanıcı arayüzü asistanıdır (**Chrome / Edge Extension - Manifest V3** ve **Tampermonkey Userscript**).
+**LuckyStrike OGame Helper**, OGame oyuncuları için günlük imparatorluk yönetimini, hammadde planlamasını, filo nakliye hesaplamalarını ve bilgi takibini kolaylaştırmak üzere tasarlanmış, **Gameforge oyun kurallarına tam uyumlu** bir kullanıcı arayüzü asistanıdır (**Chrome / Edge Extension - Manifest V3**).
 
 ### 🛡️ Gameforge & OGame Oyun Kurallarına Uyumluluk
 LuckyStrike OGame Helper, **Gameforge Kullanım Şartları ve Oyun Kuralları (Kural 5: Otomasyon ve Bot Politikası)** titizlikle gözetilerek geliştirilmiştir:
@@ -82,7 +82,7 @@ LuckyStrike OGame Helper, **Gameforge Kullanım Şartları ve Oyun Kuralları (K
 
 ## 🇬🇧 English Description
 
-**LuckyStrike OGame Helper** is an advanced browser assistant (**Chrome / Edge Extension - Manifest V3** & **Tampermonkey Userscript**) designed for OGame players to assist with daily empire management, resource planning, cargo calculation, and information tracking while strictly following **Gameforge Fair-Play Rules**.
+**LuckyStrike OGame Helper** is an advanced browser assistant (**Chrome / Edge Extension - Manifest V3**) designed for OGame players to assist with daily empire management, resource planning, cargo calculation, and information tracking while strictly following **Gameforge Fair-Play Rules**.
 
 ### 🛡️ Gameforge & OGame Rules Compliance
 LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Terms & Conditions (Rule 5: Automation & Bot Policy)**:
@@ -123,17 +123,13 @@ LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Term
 
 ## 🚀 Kurulum / Installation
 
-### Chrome & Microsoft Edge (Recommended 🌟)
+### Chrome & Microsoft Edge
 1. İndirin / Download: [`luckystrike-ogame-helper-v7.1.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
 2. Tarayıcıda eklentiler sayfasına gidin / Open extensions page:
    - **Chrome:** `chrome://extensions`
    - **Edge:** `edge://extensions`
 3. **"Geliştirici Modu" (Developer Mode)** seçeneğini açın.
 4. ZIP'ten çıkardığınız klasörü **"Paketlenmemiş öğe yükle" (Load unpacked)** butonuyla seçin.
-
-### Tampermonkey Userscript
-1. Tampermonkey panelinde yeni betik oluşturun.
-2. [`luckystrike_ogame_helper.user.js`](luckystrike_ogame_helper.user.js) içeriğini yapıştırıp kaydedin.
 
 ---
 
