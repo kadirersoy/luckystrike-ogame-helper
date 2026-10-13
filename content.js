@@ -2,7 +2,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v7.2 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v8.0 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -5114,6 +5114,6 @@
     checkAndApplyFleetAutoLoad();
     updateActivePlanetCache();
     checkAndRunCollectorAssistant();
-    console.log(LS, 'LuckyStrike OGame Helper v7.2 hazır!');
+    console.log(LS, 'LuckyStrike OGame Helper v8.0 hazır!');
 
 })();
