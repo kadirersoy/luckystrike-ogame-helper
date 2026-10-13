@@ -751,14 +751,18 @@
     }
 
     function findSendFleetButton() {
-        return document.getElementById('sendFleet') ||
-               document.querySelector('button.send_fleet') ||
-               document.querySelector('button#sendFleet') ||
-               document.querySelector('a#sendFleet') ||
-               document.querySelector('#sendFleet') ||
-               document.querySelector('#fleetdispatchcomponent .btn_blue') ||
-               document.querySelector('button[data-mission="3"]') ||
-               document.querySelector('.send_fleet');
+        const el = document.getElementById('sendFleet') ||
+                   document.querySelector('#sendFleet, a#sendFleet, button#sendFleet, .send_fleet');
+        if (el && !el.getAttribute('data-mission')) return el;
+
+        const allCandidates = document.querySelectorAll('button, a.btn_blue, a, div[role="button"]');
+        for (const b of allCandidates) {
+            const txt = (b.textContent || '').trim().toLowerCase();
+            if (txt.includes('filo gönder') || txt === 'send fleet' || txt.includes('flotte versenden')) {
+                return b;
+            }
+        }
+        return el;
     }
 
     function calculateShipCapacities() {
@@ -2948,12 +2952,17 @@
 
         // 1. Hedef Buton Başlığı
         let targetIcon = '🪐';
-        let rawTargetTitle = collectorSettings.targetName || 'Hedef Gezegen';
-        let targetTitle = rawTargetTitle.replace(/^[🌕🪐🎯]\s*/, '').trim();
         if (collectorSettings.targetType === 3) targetIcon = '🌕';
-        if (collectorSettings.targetId === 'manual') targetIcon = '🎯';
+        let rawTargetTitle = collectorSettings.targetName || 'Hedef Gezegen';
+        let cleanTargetTitle = rawTargetTitle.replace(/^[\s\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]+/u, '').trim();
+        if (!cleanTargetTitle) {
+            cleanTargetTitle = collectorSettings.targetType === 3 ? 'Ay' : 'Gezegen';
+        }
+        if (collectorSettings.targetId === 'manual') {
+            cleanTargetTitle = (collectorSettings.targetType === 3 ? 'Manuel Ay' : 'Manuel Gezegen');
+        }
 
-        targetLabelEl.innerHTML = `<span><b>${targetIcon} ${escapeHtml(targetTitle || 'Hedef')}</b><span class="crd">${collectorSettings.targetCoord || ''}</span></span>`;
+        targetLabelEl.innerHTML = `<span><b>${targetIcon} ${escapeHtml(cleanTargetTitle)}</b><span class="crd">${collectorSettings.targetCoord || ''}</span></span>`;
 
         // 2. Dropdown Listesi Doldur
         let ddHtml = '';
@@ -3025,7 +3034,7 @@
                     const isTargetMoon = (collectorSettings.targetCoord === p.coords && collectorSettings.targetType === 3);
                     const mRes = getPlanetCachedResources(p.moon.id);
                     const mReserve = collectorSettings.reserves[p.moon.id] !== undefined ? collectorSettings.reserves[p.moon.id] : 250000;
-                    const mChecked = collectorSettings.selectedItems[p.moon.id] !== false;
+                    const mChecked = collectorSettings.selectedItems[p.moon.id] === true;
 
                     if (isTargetMoon) {
                         listHtml += `<div class="ls-coll-mrow ls-coll-dest">` +
@@ -3080,7 +3089,7 @@
 
             if (p.moon) {
                 const isTargetM = (collectorSettings.targetCoord === p.coords && collectorSettings.targetType === 3);
-                if (!isTargetM && collectorSettings.selectedItems[p.moon.id] !== false) {
+                if (!isTargetM && collectorSettings.selectedItems[p.moon.id] === true) {
                     checkedMCount++;
                     const res = getPlanetCachedResources(p.moon.id);
                     const rez = collectorSettings.reserves[p.moon.id] !== undefined ? collectorSettings.reserves[p.moon.id] : 250000;
@@ -3320,7 +3329,7 @@
             }
             if (p.moon) {
                 const isTargetMoon = (collectorSettings.targetCoord === p.coords && collectorSettings.targetType === 3);
-                if (!isTargetMoon && collectorSettings.selectedItems[p.moon.id] !== false) {
+                if (!isTargetMoon && collectorSettings.selectedItems[p.moon.id] === true) {
                     queue.push({ id: p.moon.id, name: 'Ay', coords: p.coords, isMoon: true });
                 }
             }
@@ -3562,7 +3571,8 @@
             bn: bnCount, kn: knCount, rehber: rehberCount,
             deu: deuLoad, cri: criLoad, met: metLoad,
             totalCap: totalCap,
-            g: g, s: s, p: p
+            g: g, s: s, p: p,
+            prepareStep2: prepareStep2
         });
     }
 
@@ -3585,12 +3595,16 @@
         if (details.rehber > 0) shipDesc.push(details.rehber + ' Rehber');
         const shipText = shipDesc.length > 0 ? shipDesc.join(', ') : '<span style="color:#e74c3c">Nakliye gemisi yok!</span>';
 
+        const cleanTName = (session.targetName || '').replace(/^[\s\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]+/u, '').trim();
+        const displayTargetTitle = cleanTName || (session.targetType === 3 ? 'Ay' : 'Hedef');
+        const displayTargetIcon = session.targetType === 3 ? '🌕' : '🪐';
+
         banner.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);background:rgba(13,27,42,0.96);border:2px solid #00bcff;box-shadow:0 10px 32px rgba(0,0,0,0.85);border-radius:8px;padding:12px 18px;min-width:400px;max-width:90vw;z-index:9999999;font-family:sans-serif;color:#d1d8e0;text-align:center;box-sizing:border-box';
 
         banner.innerHTML =
             '<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1a2c3f;padding-bottom:6px;margin-bottom:8px">' +
                 '<span style="font-size:12px;font-weight:bold;color:#00bcff">📦 Toplayıcı Asistanı [' + currentStep + ' / ' + totalItems + ']</span>' +
-                '<span style="font-size:11px;color:#fff">' + (currentItem.isMoon ? '🌕' : '🪐') + ' ' + escapeHtml(currentItem.name) + ' ➔ ' + escapeHtml(session.targetName) + ' <span style="color:#ffbe3b;font-family:monospace">[' + session.targetCoord + ']</span></span>' +
+                '<span style="font-size:11px;color:#fff">' + (currentItem.isMoon ? '🌕' : '🪐') + ' ' + escapeHtml(currentItem.name) + ' ➔ ' + displayTargetIcon + ' ' + escapeHtml(displayTargetTitle) + ' <span style="color:#ffbe3b;font-family:monospace">[' + session.targetCoord + ']</span></span>' +
             '</div>' +
             '<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;margin-bottom:6px">' +
                 '<div><b style="color:#8899aa">Seçilen Filo:</b> <span style="font-weight:bold">' + shipText + '</span></div>' +
@@ -3604,36 +3618,34 @@
             '</div>' +
             '<div style="display:flex;gap:6px;justify-content:center;align-items:center">' +
                 (hasShips ?
-                    '<button id="ls-banner-send-btn" style="background:#27ae60;color:#fff;border:none;padding:6px 11px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.5)">🚀 Gönder (Space)</button>'
-                    : '<button class="ls-banner-skip-btn" style="background:#f39c12;color:#000;border:none;padding:6px 11px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏭️ Atla (Space)</button>') +
-                '<button id="ls-banner-retry-btn" style="background:#e67e22;color:#fff;border:none;padding:6px 11px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer" title="Bu adımı ve hedef ayarlarını sıfırdan tekrarla">🔄 Tekrarla</button>' +
-                (hasShips ? '<button class="ls-banner-skip-btn" style="background:#34495e;color:#fff;border:none;padding:6px 11px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏭️ Atla</button>' : '') +
-                '<button id="ls-banner-cancel-btn" style="background:#e74c3c;color:#fff;border:none;padding:6px 11px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏹️ İptal</button>' +
+                    '<button id="ls-banner-send-btn" style="background:#27ae60;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.5)">🚀 Gönder (Space)</button>'
+                    : '<button class="ls-banner-skip-btn" style="background:#f39c12;color:#000;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏭️ Atla (Space)</button>') +
+                '<button id="ls-banner-retry-btn" style="background:#e67e22;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer" title="Bu adımı ve hedef ayarlarını sıfırdan tekrarla">🔄 Tekrarla</button>' +
+                (hasShips ? '<button class="ls-banner-skip-btn" style="background:#34495e;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏭️ Atla</button>' : '') +
+                '<button id="ls-banner-cancel-btn" style="background:#e74c3c;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏹️ İptal</button>' +
             '</div>';
 
         const sendFleet = () => {
-            const missionId = session.mission || 3;
-            const devamBtn = document.getElementById('continueToFleet2') || document.querySelector('button.continue') || document.querySelector('a.continue');
-            const isDevamVisible = devamBtn && (devamBtn.offsetWidth > 0 || window.getComputedStyle(devamBtn).display !== 'none');
+            if (document.activeElement && document.activeElement.blur) {
+                document.activeElement.blur();
+            }
 
-            if (isDevamVisible) {
+            const sendBtn = findSendFleetButton();
+            const isSendBtnReady = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
+
+            if (isSendBtnReady) {
+                dispatchSendFleetButton();
+            } else {
                 clickDevamButton();
                 window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
                     detail: { type: 'SUBMIT_FLEET1' }
                 }));
-                setTimeout(() => {
-                    prepareStep2();
-                    setTimeout(() => {
-                        dispatchSendFleetButton();
-                    }, 250);
-                }, 400);
-            } else {
-                // Zaten Step 2'deyse: Görevi ve kaynakları son kez garantiye alıp gönder
-                setFleetMission(missionId);
-                fillFleetResources(details.met, details.cri, details.deu);
+                if (typeof details.prepareStep2 === 'function') {
+                    details.prepareStep2();
+                }
                 setTimeout(() => {
                     dispatchSendFleetButton();
-                }, 100);
+                }, 350);
             }
         };
 
@@ -3670,7 +3682,10 @@
 
             // DOM butonuna da tıkla
             if (sendBtn) {
-                try { sendBtn.click(); } catch (e) {}
+                try {
+                    sendBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+                    sendBtn.click();
+                } catch (e) {}
             }
 
             // Bir sonraki gezegene yönlendir
@@ -3721,7 +3736,11 @@
         const keyListener = (e) => {
             if (e.code === 'Space' || e.key === ' ') {
                 const tag = document.activeElement ? document.activeElement.tagName : '';
-                if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+                if (tag === 'TEXTAREA' || tag === 'SELECT') return;
+                if (tag === 'INPUT') {
+                    if (document.activeElement.id && document.activeElement.id.includes('search')) return;
+                    document.activeElement.blur();
+                }
                 e.preventDefault();
                 if (hasShips) {
                     sendFleet();
