@@ -4257,11 +4257,11 @@
             '</div>' +
             '<div id="ls-tabs">' +
                 '<div class="ls-tab" data-tab="cart"><span class="ls-tab-icon">🏗️</span><span class="ls-tab-label">Maliyet</span></div>' +
+                '<div class="ls-tab" data-tab="collector"><span class="ls-tab-icon">📦</span><span class="ls-tab-label">Collector</span></div>' +
+                '<div class="ls-tab" data-tab="debris"><span class="ls-tab-icon">🛰️</span><span class="ls-tab-label">Harabe</span></div>' +
                 '<div class="ls-tab" data-tab="scanner"><span class="ls-tab-icon">🌌</span><span class="ls-tab-label">Scanner</span></div>' +
                 '<div class="ls-tab" data-tab="finder"><span class="ls-tab-icon">🔍</span><span class="ls-tab-label">Finder</span></div>' +
                 '<div class="ls-tab" data-tab="alarm"><span class="ls-tab-icon">🚨</span><span class="ls-tab-label">Alarm</span></div>' +
-                '<div class="ls-tab" data-tab="debris"><span class="ls-tab-icon">🛰️</span><span class="ls-tab-label">Harabe</span></div>' +
-                '<div class="ls-tab" data-tab="collector"><span class="ls-tab-icon">📦</span><span class="ls-tab-label">Collector</span></div>' +
             '</div>' +
             '<div id="ls-body">' +
 
