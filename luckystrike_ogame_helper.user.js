@@ -1,7 +1,7 @@
-﻿// ==UserScript==
+// ==UserScript==
 // @name         LuckyStrike OGame Helper
 // @namespace    http://tampermonkey.net/
-// @version      7.2
+// @version      7.2.1
 // @description  LuckyStrike OGame Helper: Maliyet Sepeti, Galaxy Scanner, Player Finder, Sesli Alarm, Harabe Takipçisi, Maden Toplayıcı
 // @author       LuckyStrike
 // @match        *://*.ogame.gameforge.com/game/index.php*
@@ -749,6 +749,28 @@
         return techCache;
     }
 
+    function execPageContext(fnOrCode) {
+        try {
+            const script = document.createElement('script');
+            script.textContent = typeof fnOrCode === 'function' ? `(${fnOrCode})();` : fnOrCode;
+            (document.head || document.documentElement).appendChild(script);
+            script.remove();
+        } catch (e) {
+            console.error(LS, 'execPageContext error:', e);
+        }
+    }
+
+    function findSendFleetButton() {
+        return document.getElementById('sendFleet') ||
+               document.querySelector('button.send_fleet') ||
+               document.querySelector('button#sendFleet') ||
+               document.querySelector('a#sendFleet') ||
+               document.querySelector('#sendFleet') ||
+               document.querySelector('#fleetdispatchcomponent .btn_blue') ||
+               document.querySelector('button[data-mission="3"]') ||
+               document.querySelector('.send_fleet');
+    }
+
     function calculateShipCapacities() {
         // OGame Formülü: Taban Kapasite * (1 + 0.05 * Hiperuzay Tekniği Seviyesi)
         const hyperLvl = techCache.hyperspace || 0;
@@ -780,41 +802,84 @@
         };
     }
 
+    const getShipTechName = (shipId) => {
+        if (shipId === 202) return 'transporterSmall';
+        if (shipId === 203) return 'transporterLarge';
+        if (shipId === 219) return 'explorer';
+        if (shipId === 209) return 'recycler';
+        return '';
+    };
+
     const getShipEl = (shipId) => {
-        return document.querySelector(`input[name="am${shipId}"]`) ||
-               document.querySelector(`#ship_${shipId}`) ||
-               document.querySelector(`input[name="ship_${shipId}"]`) ||
+        const techName = getShipTechName(shipId);
+        return document.querySelector(`[data-technology="${shipId}"] input`) ||
                document.querySelector(`li.technology${shipId} input`) ||
-               document.querySelector(`[data-technology="${shipId}"] input`);
+               document.querySelector(`input[name="am${shipId}"]`) ||
+               (techName ? document.querySelector(`input[name="${techName}"]`) : null) ||
+               document.querySelector(`#ship_${shipId}`) ||
+               document.querySelector(`input[name="ship_${shipId}"]`);
     };
 
     const getAvailableCount = (shipId) => {
-        const input = getShipEl(shipId);
-        if (!input) return 0;
-        const parent = input.closest('li') || input.parentElement;
-        if (parent) {
-            const amountEl = parent.querySelector('.amount') || parent.querySelector('.amount_current') || parent.querySelector('.stock');
-            if (amountEl) {
-                const parsed = parseOgNum(amountEl.textContent);
-                if (parsed > 0) return parsed;
+        const shipContainer = document.querySelector(`[data-technology="${shipId}"], li.technology${shipId}`);
+        if (shipContainer) {
+            const stockEl = shipContainer.querySelector('.stock, .amount, .amount_current');
+            if (stockEl) {
+                const parsed = parseOgNum(stockEl.textContent);
+                if (parsed >= 0) return parsed;
             }
         }
-        const maxAttr = input.getAttribute('data-max') || input.getAttribute('max');
-        if (maxAttr) return parseInt(maxAttr, 10) || 0;
-        return 999999;
+        const input = getShipEl(shipId);
+        if (input) {
+            const maxAttr = input.getAttribute('data-max') || input.getAttribute('max');
+            if (maxAttr) return parseInt(maxAttr, 10) || 0;
+            const parent = input.closest('li') || input.parentElement;
+            if (parent) {
+                const amountEl = parent.querySelector('.amount, .amount_current, .stock');
+                if (amountEl) {
+                    const parsed = parseOgNum(amountEl.textContent);
+                    if (parsed >= 0) return parsed;
+                }
+            }
+        }
+        return 0;
     };
 
     const setShipAmount = (shipId, amount) => {
-        const inp = getShipEl(shipId);
-        if (!inp) return false;
         const targetVal = String(Math.max(0, parseInt(amount, 10) || 0));
-        inp.value = targetVal;
-        ['focus', 'input', 'change', 'keydown', 'keyup', 'blur'].forEach(evt => {
-            inp.dispatchEvent(new Event(evt, { bubbles: true }));
-        });
-        try {
-            if (window.$) window.$(inp).val(targetVal).trigger('input').trigger('change').trigger('keyup');
-        } catch (e) {}
+        const inp = getShipEl(shipId);
+        if (inp) {
+            try {
+                const proto = window.HTMLInputElement.prototype;
+                const nativeSetter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+                if (nativeSetter) {
+                    nativeSetter.call(inp, targetVal);
+                } else {
+                    inp.value = targetVal;
+                }
+            } catch (e) {
+                inp.value = targetVal;
+            }
+
+            ['focus', 'input', 'change', 'keydown', 'keyup', 'blur'].forEach(evt => {
+                inp.dispatchEvent(new Event(evt, { bubbles: true, cancelable: true }));
+            });
+        }
+
+        execPageContext(`
+            try {
+                if (window.fleetDispatcher && typeof window.fleetDispatcher.selectShip === 'function') {
+                    window.fleetDispatcher.selectShip(${shipId}, ${parseInt(targetVal, 10)});
+                    if (typeof window.fleetDispatcher.refresh === 'function') window.fleetDispatcher.refresh();
+                }
+                if (window.$) {
+                    var $el = $('[data-technology="${shipId}"] input, input[name="am${shipId}"]');
+                    if ($el.length) {
+                        $el.val('${targetVal}').trigger('input').trigger('change').trigger('keyup');
+                    }
+                }
+            } catch (e) {}
+        `);
         return true;
     };
 
@@ -822,25 +887,44 @@
         const setVal = (el, val) => {
             if (!el) return;
             const targetVal = String(val);
-            el.value = targetVal;
-            ['focus', 'input', 'change', 'keydown', 'keyup', 'blur'].forEach(evt => {
-                el.dispatchEvent(new Event(evt, { bubbles: true }));
-            });
             try {
-                if (window.$) window.$(el).val(targetVal).trigger('input').trigger('change').trigger('keyup');
-            } catch (e) {}
+                const proto = window.HTMLInputElement.prototype;
+                const nativeSetter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+                if (nativeSetter) {
+                    nativeSetter.call(el, targetVal);
+                } else {
+                    el.value = targetVal;
+                }
+            } catch (e) {
+                el.value = targetVal;
+            }
+            ['focus', 'input', 'change', 'keydown', 'keyup', 'blur'].forEach(evt => {
+                el.dispatchEvent(new Event(evt, { bubbles: true, cancelable: true }));
+            });
         };
         setVal(document.getElementById('galaxy') || document.querySelector('input[name="galaxy"]'), g);
         setVal(document.getElementById('system') || document.querySelector('input[name="system"]'), s);
         setVal(document.getElementById('position') || document.querySelector('input[name="position"]'), p);
 
         if (type === 3) {
-            const moonBtn = document.getElementById('mbutton') || document.querySelector('[data-type="3"]') || document.querySelector('#fleet2 .moon');
+            const moonBtn = document.getElementById('mbutton') || document.querySelector('[data-type="3"]') || document.querySelector('#fleet2 .moon') || document.querySelector('.planet_type_moon');
             if (moonBtn) moonBtn.click();
         } else {
-            const planetBtn = document.getElementById('pbutton') || document.querySelector('[data-type="1"]') || document.querySelector('#fleet2 .planet');
+            const planetBtn = document.getElementById('pbutton') || document.querySelector('[data-type="1"]') || document.querySelector('#fleet2 .planet') || document.querySelector('.planet_type_planet');
             if (planetBtn) planetBtn.click();
         }
+
+        execPageContext(`
+            try {
+                if (window.fleetDispatcher) {
+                    if (typeof window.fleetDispatcher.setTarget === 'function') {
+                        window.fleetDispatcher.setTarget(${g}, ${s}, ${p}, ${type});
+                    } else if (typeof window.fleetDispatcher.updateTarget === 'function') {
+                        window.fleetDispatcher.updateTarget();
+                    }
+                }
+            } catch (e) {}
+        `);
     }
 
     function setFleetMission(missionId) {
@@ -850,6 +934,17 @@
                     document.querySelector(`li#missionButton${missionId}`) ||
                     document.querySelector(`input[name="mission"][value="${missionId}"]`);
         if (btn) btn.click();
+
+        execPageContext(`
+            try {
+                if (window.fleetDispatcher && typeof window.fleetDispatcher.selectMission === 'function') {
+                    window.fleetDispatcher.selectMission(${missionId});
+                }
+                if (window.$) {
+                    $('#missionButton${missionId}, [data-mission="${missionId}"]').trigger('click');
+                }
+            } catch (e) {}
+        `);
     }
 
     function advanceFleetStep(stepNum) {
@@ -938,12 +1033,6 @@
             ['focus', 'input', 'change', 'keydown', 'keyup', 'blur'].forEach(evt => {
                 el.dispatchEvent(new Event(evt, { bubbles: true, cancelable: true }));
             });
-
-            try {
-                if (window.$) {
-                    window.$(el).val(targetVal).trigger('input').trigger('change').trigger('keyup');
-                }
-            } catch (e) {}
             return true;
         };
 
@@ -972,13 +1061,22 @@
         if (cInp && setVal(cInp, c)) filled = true;
         if (dInp && setVal(dInp, d)) filled = true;
 
-        try {
-            if (typeof window.calculateCargo === 'function') window.calculateCargo();
-            if (typeof window.checkCargo === 'function') window.checkCargo();
-            if (window.$ && typeof window.$.fn.cargoCalculation === 'function') {
-                window.$('#fleet3').cargoCalculation();
-            }
-        } catch (e) {}
+        execPageContext(`
+            try {
+                if (window.$) {
+                    var mEl = $('#metal, input[name="metal"]');
+                    var cEl = $('#crystal, input[name="crystal"]');
+                    var dEl = $('#deuterium, input[name="deuterium"]');
+                    if (mEl.length) mEl.val(${Math.max(0, parseInt(m, 10) || 0)}).trigger('input').trigger('change').trigger('keyup');
+                    if (cEl.length) cEl.val(${Math.max(0, parseInt(c, 10) || 0)}).trigger('input').trigger('change').trigger('keyup');
+                    if (dEl.length) dEl.val(${Math.max(0, parseInt(d, 10) || 0)}).trigger('input').trigger('change').trigger('keyup');
+                }
+                if (window.fleetDispatcher) {
+                    if (typeof window.fleetDispatcher.cargoCalculation === 'function') window.fleetDispatcher.cargoCalculation();
+                    if (typeof window.fleetDispatcher.refresh === 'function') window.fleetDispatcher.refresh();
+                }
+            } catch (e) {}
+        `);
 
         return filled;
     }
@@ -3265,7 +3363,11 @@
         let tries = 0;
         const pollInterval = setInterval(() => {
             tries++;
-            const fleetReady = document.getElementById('fleet1') || document.querySelector('input[name="am202"]') || document.querySelector('input[name="am203"]');
+            const fleetReady = document.getElementById('fleetdispatchcomponent') ||
+                               document.querySelector('[data-technology="203"], [data-technology="202"]') ||
+                               document.getElementById('sendFleet') ||
+                               document.querySelector('input[name="transporterLarge"], input[name="am203"]') ||
+                               document.getElementById('fleet1');
             if (fleetReady || tries > 25) {
                 clearInterval(pollInterval);
                 executeFleetDispatchStep(session, currentItem);
@@ -3339,20 +3441,25 @@
         setShipAmount(202, knCount);
         setShipAmount(219, rehberCount);
 
-        // 2. ve 3. Adımları doldur
+        // Hedef koordinatlarını ayarla
         const [g, s, p] = session.targetCoord.split(':');
+        setFleetTargetCoords(g, s, p, session.targetType);
+
+        // Görev ve Kaynakları doldur
         setTimeout(() => {
-            advanceFleetStep(2);
+            setFleetMission(3); // Nakliye / Taşıma
             setTimeout(() => {
-                setFleetTargetCoords(g, s, p, session.targetType);
-                setTimeout(() => {
-                    advanceFleetStep(3);
-                    setTimeout(() => {
-                        setFleetMission(3); // Nakit Taşıma
-                        fillFleetResources(metLoad, criLoad, deuLoad);
-                    }, 200);
-                }, 200);
-            }, 200);
+                fillFleetResources(metLoad, criLoad, deuLoad);
+                execPageContext(`
+                    try {
+                        if (window.fleetDispatcher) {
+                            if (typeof window.fleetDispatcher.updateTarget === 'function') window.fleetDispatcher.updateTarget();
+                            if (typeof window.fleetDispatcher.cargoCalculation === 'function') window.fleetDispatcher.cargoCalculation();
+                            if (typeof window.fleetDispatcher.refresh === 'function') window.fleetDispatcher.refresh();
+                        }
+                    } catch (e) {}
+                `);
+            }, 150);
         }, 150);
 
         // Asistan Banner'ını Çiz
@@ -3406,11 +3513,44 @@
             '</div>';
 
         const sendFleet = () => {
-            const sendBtn = document.getElementById('sendFleet') || document.querySelector('button.send_fleet') || document.querySelector('#fleet3 .send_fleet');
+            const sendBtn = findSendFleetButton();
+
+            if (banner) {
+                banner.innerHTML =
+                    '<div style="font-size:12px;color:#00bcff;padding:8px;font-weight:bold">' +
+                        '🚀 Filo gönderiliyor... Lütfen bekleyin.' +
+                    '</div>';
+            }
+
+            // Sayfa bağlamında (Main World) OGame'in native submit fonksiyonunu çalıştır
+            execPageContext(`
+                try {
+                    if (window.fleetDispatcher) {
+                        if (typeof window.fleetDispatcher.trySubmitFleet2 === 'function') {
+                            window.fleetDispatcher.trySubmitFleet2();
+                        } else if (typeof window.fleetDispatcher.submitFleet2 === 'function') {
+                            window.fleetDispatcher.submitFleet2();
+                        } else if (typeof window.fleetDispatcher.sendFleet === 'function') {
+                            window.fleetDispatcher.sendFleet();
+                        }
+                    }
+                    if (window.$ && $('#sendFleet').length) {
+                        $('#sendFleet').trigger('click');
+                    }
+                } catch(e) {
+                    console.error('fleetDispatcher submit error:', e);
+                }
+            `);
+
+            // DOM butonuna da tıkla
             if (sendBtn) {
                 sendBtn.click();
             }
-            proceedToNext();
+
+            // OGame sunucusuna isteğin ulaşması için 1200ms bekle, ardından sonraki hedefe geç
+            setTimeout(() => {
+                proceedToNext();
+            }, 1200);
         };
 
         const proceedToNext = () => {
@@ -3595,18 +3735,19 @@
             '#ls-body::-webkit-scrollbar-thumb, #ls-cart-list::-webkit-scrollbar-thumb, #ls-debris-list::-webkit-scrollbar-thumb, #ls-scan-results::-webkit-scrollbar-thumb, #ls-find-results::-webkit-scrollbar-thumb, #ls-coll-list::-webkit-scrollbar-thumb, #ls-coll-dd::-webkit-scrollbar-thumb{background:#00bcff;border-radius:3px}',
 
             /* Collector Tab Styles */
-            '.ls-coll-card{background:#131d2a;border:1px solid #233446;border-radius:6px;padding:8px 10px;margin-bottom:8px;flex-shrink:0}',
+            '#ls-coll-card-target{position:relative !important;z-index:1000 !important;overflow:visible !important}',
+            '.ls-coll-card{background:#131d2a;border:1px solid #233446;border-radius:6px;padding:8px 10px;margin-bottom:8px;flex-shrink:0;position:relative;z-index:1}',
             '.ls-coll-row{display:flex;align-items:center;gap:8px}',
             '.ls-coll-chk{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#d1d8e0;cursor:pointer}',
             '.ls-coll-chk input{accent-color:#00bcff;margin:0;width:12px;height:12px;cursor:pointer}',
-            '.ls-coll-combo{position:relative;flex:1}',
+            '.ls-coll-combo{position:relative;flex:1;z-index:1001}',
             '.ls-coll-sel{display:flex;align-items:center;justify-content:space-between;background:#0a0e17;border:1px solid #00bcff;border-radius:3px;padding:5px 7px;font-size:11px;cursor:pointer;user-select:none}',
             '.ls-coll-sel b{color:#fff}',
             '.ls-coll-sel .crd{color:#ffbe3b;font-family:monospace;margin-left:6px}',
-            '.ls-coll-dd{position:absolute;left:0;right:0;top:28px;background:#0d1520;border:1px solid #00bcff;border-radius:3px;z-index:99;box-shadow:0 6px 18px rgba(0,0,0,0.85);max-height:220px;overflow-y:auto;display:none}',
-            '.ls-coll-dd-item{padding:5px 8px;font-size:11px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #16222f;cursor:pointer;transition:background .15s}',
-            '.ls-coll-dd-item:hover{background:rgba(0,188,255,0.18)}',
-            '.ls-coll-dd-item.active{background:rgba(0,188,255,0.28)}',
+            '.ls-coll-dd{position:absolute;left:0;right:0;top:30px;background:#0d1520 !important;border:1px solid #00bcff !important;border-radius:4px;z-index:1002 !important;box-shadow:0 10px 30px rgba(0,0,0,0.95) !important;max-height:220px;overflow-y:auto;display:none}',
+            '.ls-coll-dd-item{padding:6px 8px;font-size:11px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #16222f;cursor:pointer;transition:background .15s;background:#0d1520}',
+            '.ls-coll-dd-item:hover{background:rgba(0,188,255,0.22) !important}',
+            '.ls-coll-dd-item.active{background:rgba(0,188,255,0.32) !important}',
             '.ls-coll-dd-item .crd{font-family:monospace;color:#00bcff;font-size:10px}',
             '.ls-coll-dd-item.moon{padding-left:18px;color:#c9d6e3}',
             '.ls-coll-dd-manual{color:#8899aa;font-style:italic;border-bottom:none}',
@@ -3883,7 +4024,7 @@
 
                 // COLLECTOR TAB
                 '<div id="tc-collector" class="ls-tc">' +
-                    '<div class="ls-coll-card">' +
+                    '<div id="ls-coll-card-target" class="ls-coll-card">' +
                         '<div class="ls-label" style="margin-bottom:4px">🎯 Collect To</div>' +
                         '<div class="ls-coll-row">' +
                             '<div class="ls-coll-combo">' +
