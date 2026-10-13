@@ -2826,6 +2826,10 @@
                     let mId = '';
                     const mHrefMatch = (mLink.getAttribute('href') || '').match(/cp=(\d+)/);
                     if (mHrefMatch) mId = mHrefMatch[1];
+                    if (!mId) {
+                        const dataId = mLink.getAttribute('data-moon-id') || mLink.getAttribute('data-cp');
+                        if (dataId) mId = dataId;
+                    }
                     if (!mId) mId = 'm-' + pId;
 
                     moonObj = {
@@ -3357,10 +3361,16 @@
 
         const firstItem = queue[0];
         const [g, s, p] = session.targetCoord.split(':');
-        const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${firstItem.id}&galaxy=${g}&system=${s}&position=${p}&type=${session.targetType}&mission=${session.mission || 3}`;
+        const firstType = firstItem.isMoon ? 3 : 1;
+        const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${firstItem.id}&type=${firstType}&galaxy=${g}&system=${s}&position=${p}&mission=${session.mission || 3}`;
 
         const metaId = document.querySelector('meta[name="ogame-planet-id"]')?.getAttribute('content');
-        if (metaId === String(firstItem.id) && window.location.href.includes('component=fleetdispatch')) {
+        const metaType = document.querySelector('meta[name="ogame-planet-type"]')?.getAttribute('content');
+        const isCurrentOnMoon = (metaType === 'moon');
+        const shouldBeOnMoon = !!firstItem.isMoon;
+        const typeMismatch = (isCurrentOnMoon !== shouldBeOnMoon);
+
+        if (metaId === String(firstItem.id) && !typeMismatch && window.location.href.includes('component=fleetdispatch')) {
             checkAndRunCollectorAssistant();
         } else {
             window.location.href = url;
@@ -3401,11 +3411,16 @@
                             document.getElementById('fleet1');
 
         const metaId = document.querySelector('meta[name="ogame-planet-id"]')?.getAttribute('content');
+        const metaType = document.querySelector('meta[name="ogame-planet-type"]')?.getAttribute('content');
+        const isCurrentOnMoon = (metaType === 'moon');
+        const shouldBeOnMoon = !!currentItem.isMoon;
+        const typeMismatch = (isCurrentOnMoon !== shouldBeOnMoon);
 
         // Filo sayfasında değilsek veya sayfa sıradaki gezegenle eşleşmiyorsa yönlendir
-        if (!isFleetPage || (metaId && metaId !== String(currentItem.id))) {
+        if (!isFleetPage || (metaId && metaId !== String(currentItem.id)) || typeMismatch) {
             const [g, s, p] = session.targetCoord.split(':');
-            const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${currentItem.id}&galaxy=${g}&system=${s}&position=${p}&type=${session.targetType}&mission=${session.mission || 3}`;
+            const itemType = currentItem.isMoon ? 3 : 1;
+            const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${currentItem.id}&type=${itemType}&galaxy=${g}&system=${s}&position=${p}&mission=${session.mission || 3}`;
             window.location.href = url;
             return;
         }
@@ -3415,11 +3430,16 @@
             tries++;
 
             const currentMeta = document.querySelector('meta[name="ogame-planet-id"]')?.getAttribute('content');
-            if (currentMeta && currentMeta !== String(currentItem.id)) {
+            const currentType = document.querySelector('meta[name="ogame-planet-type"]')?.getAttribute('content');
+            const isPollOnMoon = (currentType === 'moon');
+            const pollMismatch = (isPollOnMoon !== !!currentItem.isMoon);
+
+            if ((currentMeta && currentMeta !== String(currentItem.id)) || pollMismatch) {
                 // Eğer sayfa eski gezegende kaldıysa doğru gezegene yönlendir
                 clearInterval(pollInterval);
                 const [g, s, p] = session.targetCoord.split(':');
-                const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${currentItem.id}&galaxy=${g}&system=${s}&position=${p}&type=${session.targetType}&mission=${session.mission || 3}`;
+                const itemType = currentItem.isMoon ? 3 : 1;
+                const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${currentItem.id}&type=${itemType}&galaxy=${g}&system=${s}&position=${p}&mission=${session.mission || 3}`;
                 window.location.href = url;
                 return;
             }
@@ -3693,7 +3713,8 @@
                 if (session.currentIndex < session.queue.length) {
                     const nextItem = session.queue[session.currentIndex];
                     const [g, s, p] = session.targetCoord.split(':');
-                    const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${nextItem.id}&galaxy=${g}&system=${s}&position=${p}&type=${session.targetType}&mission=${session.mission || 3}`;
+                    const nextType = nextItem.isMoon ? 3 : 1;
+                    const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${nextItem.id}&type=${nextType}&galaxy=${g}&system=${s}&position=${p}&mission=${session.mission || 3}`;
                     window.location.href = url;
                 } else {
                     sessionStorage.removeItem(KEYS.COLLECTOR_RUN);
@@ -3716,7 +3737,8 @@
                 if (session.currentIndex < session.queue.length) {
                     const nextItem = session.queue[session.currentIndex];
                     const [g, s, p] = session.targetCoord.split(':');
-                    const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${nextItem.id}&galaxy=${g}&system=${s}&position=${p}&type=${session.targetType}&mission=${session.mission || 3}`;
+                    const nextType = nextItem.isMoon ? 3 : 1;
+                    const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${nextItem.id}&type=${nextType}&galaxy=${g}&system=${s}&position=${p}&mission=${session.mission || 3}`;
                     window.location.href = url;
                 } else {
                     sessionStorage.removeItem(KEYS.COLLECTOR_RUN);
