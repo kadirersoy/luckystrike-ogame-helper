@@ -1,12 +1,12 @@
 {
   "manifest_version": 3,
   "name": "LuckyStrike OGame Helper",
-  "version": "7.1.0",
+  "version": "7.2.0",
   "permissions": [
     "notifications",
     "storage"
   ],
-  "description": "OGame helper: Maliyet Sepeti, Galaxy Scanner, Player Finder, Sesli Alarm, Harabe Avcısı",
+  "description": "OGame helper: Maliyet Sepeti, Galaxy Scanner, Player Finder, Sesli Alarm, Harabe Avcısı, Maden Toplayıcı",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
