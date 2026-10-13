@@ -36,7 +36,7 @@ LuckyStrike OGame Helper, **Gameforge Kullanım Şartları ve Oyun Kuralları (K
 #### 2. 📦 Maden Toplayıcı Asistanı (Resource Collector)
 
 <p align="center">
-  <img src="screenshots/tab_collector.png" width="380" alt="LuckyStrike Maden Toplayıcı">
+  <img src="screenshots/tab_collector_v8.png" width="380" alt="LuckyStrike Maden Toplayıcı">
 </p>
 
 - **İmparatorluk Çapında Pratik Toplama:** Seçilen tüm gezegen ve aylardan belirlenen merkez noktaya (gezegen, ay veya manuel koordinat) madenleri sıra sıra toplar.
