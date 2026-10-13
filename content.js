@@ -900,7 +900,7 @@
         const setVal = (el, val) => {
             if (!el) return;
             const targetVal = String(val);
-            if (el.value === targetVal) return; // ZATEN DOĞRUYSA DOKUNMA (Ünlem uyarısını önler)
+            if (el.value === targetVal) return; // ZATEN DOĞRUYSA DOKUNMA
             try {
                 const proto = window.HTMLInputElement.prototype;
                 const nativeSetter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
@@ -928,6 +928,19 @@
             const planetBtn = document.getElementById('pbutton') || document.querySelector('[data-type="1"]') || document.querySelector('#fleet2 .planet') || document.querySelector('.planet_type_planet');
             if (planetBtn && !planetBtn.classList.contains('active') && !planetBtn.classList.contains('selected')) planetBtn.click();
         }
+
+        execPageContext(`
+            try {
+                if (window.$) {
+                    var $g = $('#galaxy, input[name="galaxy"]');
+                    var $s = $('#system, input[name="system"]');
+                    var $p = $('#position, input[name="position"]');
+                    if ($g.length && $g.val() != '${g}') $g.val('${g}').trigger('change');
+                    if ($s.length && $s.val() != '${s}') $s.val('${s}').trigger('change');
+                    if ($p.length && $p.val() != '${p}') $p.val('${p}').trigger('change');
+                }
+            } catch(e) {}
+        `);
     }
 
     function setFleetMission(missionId) {
@@ -3366,16 +3379,20 @@
         let tries = 0;
         const pollInterval = setInterval(() => {
             tries++;
-            const fleetReady = document.getElementById('fleetdispatchcomponent') ||
-                               document.querySelector('[data-technology="203"], [data-technology="202"]') ||
-                               document.getElementById('sendFleet') ||
-                               document.querySelector('input[name="transporterLarge"], input[name="am203"]') ||
-                               document.getElementById('fleet1');
-            if (fleetReady || tries > 25) {
+            const hasShipInput = document.querySelector('[data-technology="203"], [data-technology="202"]') ||
+                                 document.querySelector('input[name="transporterLarge"], input[name="am203"], input[name="am202"]') ||
+                                 document.getElementById('fleet1');
+            const hasCoords = document.getElementById('galaxy') || document.querySelector('input[name="galaxy"]');
+            const fleetReady = hasShipInput && hasCoords;
+
+            if (fleetReady || tries > 30) {
                 clearInterval(pollInterval);
-                executeFleetDispatchStep(session, currentItem);
+                // OGame motorunun tam yerleşmesi için 400ms bekle
+                setTimeout(() => {
+                    executeFleetDispatchStep(session, currentItem);
+                }, 400);
             }
-        }, 200);
+        }, 150);
     }
 
     function executeFleetDispatchStep(session, currentItem) {
@@ -3450,6 +3467,8 @@
 
         // Step 2 (Görev ve Kaynaklar) Hazırlık Fonksiyonu
         const prepareStep2 = () => {
+            // Step 2'de de hedef koordinatları kontrol et (boş veya mevcut gezegense hedefle eşitle)
+            setFleetTargetCoords(g, s, p, session.targetType);
             setFleetMission(3); // Nakliye / Taşıma
             fillFleetResources(metLoad, criLoad, deuLoad);
             execPageContext(`
@@ -3463,8 +3482,9 @@
             `);
         };
 
-        // Otomatik olarak Devam butonuna tıklayıp Step 2'ye geç
+        // Devam butonuna tıklayıp Step 2'ye geç (OGame'e koordinatları ve gemileri sindirmesi için 600ms ver)
         setTimeout(() => {
+            setFleetTargetCoords(g, s, p, session.targetType);
             clickDevamButton();
             execPageContext(`
                 try {
@@ -3484,18 +3504,19 @@
                                 document.querySelector('[data-mission="3"]') ||
                                 document.getElementById('sendFleet') ||
                                 document.getElementById('metal');
-                if (isStep2 || step2Tries > 25) {
+                if (isStep2 || step2Tries > 30) {
                     clearInterval(step2Interval);
-                    prepareStep2();
+                    setTimeout(prepareStep2, 150);
                 }
             }, 100);
-        }, 200);
+        }, 600);
 
         // Asistan Banner'ını Çiz
         renderCollectorAssistantBanner(session, currentItem, {
             bn: bnCount, kn: knCount, rehber: rehberCount,
             deu: deuLoad, cri: criLoad, met: metLoad,
-            totalCap: totalCap
+            totalCap: totalCap,
+            g: g, s: s, p: p
         });
     }
 
@@ -3547,6 +3568,7 @@
 
             if (isDevamVisible) {
                 // Eğer kullanıcı hızlıca basıp henüz Step 1'deyse Devam'a tıkla, Step 2'ye geçince gönder
+                setFleetTargetCoords(details.g, details.s, details.p, session.targetType);
                 clickDevamButton();
                 execPageContext(`
                     try {
@@ -3558,17 +3580,21 @@
                     } catch (e) {}
                 `);
                 setTimeout(() => {
+                    setFleetTargetCoords(details.g, details.s, details.p, session.targetType);
                     setFleetMission(3);
                     fillFleetResources(details.met, details.cri, details.deu);
                     setTimeout(() => {
                         dispatchSendFleetButton();
-                    }, 200);
-                }, 300);
+                    }, 250);
+                }, 400);
             } else {
-                // Zaten Step 2'deyse görevi ve kaynakları son kez garantiye alıp gönder
+                // Zaten Step 2'deyse: Koordinatları, görevi ve kaynakları son kez garantiye alıp gönder
+                setFleetTargetCoords(details.g, details.s, details.p, session.targetType);
                 setFleetMission(3);
                 fillFleetResources(details.met, details.cri, details.deu);
-                dispatchSendFleetButton();
+                setTimeout(() => {
+                    dispatchSendFleetButton();
+                }, 100);
             }
         };
 
