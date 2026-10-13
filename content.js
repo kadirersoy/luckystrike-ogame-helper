@@ -744,14 +744,10 @@
     }
 
     function execPageContext(fnOrCode) {
+        // Main world actions are dispatched via bridge.js without CSP violations.
         try {
-            const script = document.createElement('script');
-            script.textContent = typeof fnOrCode === 'function' ? `(${fnOrCode})();` : fnOrCode;
-            (document.head || document.documentElement).appendChild(script);
-            script.remove();
-        } catch (e) {
-            console.error(LS, 'execPageContext error:', e);
-        }
+            if (typeof fnOrCode === 'function') fnOrCode();
+        } catch (e) {}
     }
 
     function findSendFleetButton() {
@@ -860,20 +856,9 @@
             });
         }
 
-        execPageContext(`
-            try {
-                if (window.fleetDispatcher && typeof window.fleetDispatcher.selectShip === 'function') {
-                    window.fleetDispatcher.selectShip(${shipId}, ${parseInt(targetVal, 10)});
-                    if (typeof window.fleetDispatcher.refresh === 'function') window.fleetDispatcher.refresh();
-                }
-                if (window.$) {
-                    var $el = $('[data-technology="${shipId}"] input, input[name="am${shipId}"]');
-                    if ($el.length) {
-                        $el.val('${targetVal}').trigger('input').trigger('change').trigger('keyup');
-                    }
-                }
-            } catch (e) {}
-        `);
+        window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+            detail: { type: 'SELECT_SHIP', shipId: shipId, amount: parseInt(targetVal, 10) }
+        }));
         return true;
     };
 
@@ -940,46 +925,9 @@
             });
         }
 
-        execPageContext(`
-            try {
-                var targetType = ${targetType};
-                if (window.fleetDispatcher) {
-                    if (typeof window.fleetDispatcher.setTargetPlanetType === 'function') {
-                        window.fleetDispatcher.setTargetPlanetType(targetType);
-                    }
-                    if (typeof window.fleetDispatcher.setTargetType === 'function') {
-                        window.fleetDispatcher.setTargetType(targetType);
-                    }
-                    if (typeof window.fleetDispatcher.updateTargetPlanetType === 'function') {
-                        window.fleetDispatcher.updateTargetPlanetType(targetType);
-                    }
-                    if (typeof window.fleetDispatcher.targetType !== 'undefined') {
-                        window.fleetDispatcher.targetType = targetType;
-                    }
-                    if (typeof window.fleetDispatcher.updateTarget === 'function') {
-                        window.fleetDispatcher.updateTarget();
-                    }
-                    if (typeof window.fleetDispatcher.refresh === 'function') {
-                        window.fleetDispatcher.refresh();
-                    }
-                }
-                if (window.$) {
-                    var $g = $('#galaxy, input[name="galaxy"]');
-                    var $s = $('#system, input[name="system"]');
-                    var $p = $('#position, input[name="position"]');
-                    var $t = $('#type, input[name="type"]');
-                    if ($g.length && $g.val() != '${g}') $g.val('${g}').trigger('change');
-                    if ($s.length && $s.val() != '${s}') $s.val('${s}').trigger('change');
-                    if ($p.length && $p.val() != '${p}') $p.val('${p}').trigger('change');
-                    if ($t.length && $t.val() != '' + targetType) $t.val('' + targetType).trigger('change');
-                    if (targetType === 3) {
-                        $('#mbutton, #fleet2 #mbutton, [data-type="3"], [data-planet-type="3"], a.moon, .planet_type_moon').trigger('click');
-                    } else {
-                        $('#pbutton, #fleet2 #pbutton, [data-type="1"], [data-planet-type="1"], a.planet, .planet_type_planet').trigger('click');
-                    }
-                }
-            } catch(e) {}
-        `);
+        window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+            detail: { type: 'SET_TARGET', targetType: targetType, g: g, s: s, p: p }
+        }));
     }
 
     function setFleetMission(missionId) {
@@ -990,16 +938,9 @@
                     document.querySelector(`input[name="mission"][value="${missionId}"]`);
         if (btn) btn.click();
 
-        execPageContext(`
-            try {
-                if (window.fleetDispatcher && typeof window.fleetDispatcher.selectMission === 'function') {
-                    window.fleetDispatcher.selectMission(${missionId});
-                }
-                if (window.$) {
-                    $('#missionButton${missionId}, [data-mission="${missionId}"]').trigger('click');
-                }
-            } catch (e) {}
-        `);
+        window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+            detail: { type: 'SELECT_MISSION', missionId: missionId }
+        }));
     }
 
     function advanceFleetStep(stepNum) {
@@ -1116,22 +1057,14 @@
         if (cInp && setVal(cInp, c)) filled = true;
         if (dInp && setVal(dInp, d)) filled = true;
 
-        execPageContext(`
-            try {
-                if (window.$) {
-                    var mEl = $('#metal, input[name="metal"]');
-                    var cEl = $('#crystal, input[name="crystal"]');
-                    var dEl = $('#deuterium, input[name="deuterium"]');
-                    if (mEl.length) mEl.val(${Math.max(0, parseInt(m, 10) || 0)}).trigger('input').trigger('change').trigger('keyup');
-                    if (cEl.length) cEl.val(${Math.max(0, parseInt(c, 10) || 0)}).trigger('input').trigger('change').trigger('keyup');
-                    if (dEl.length) dEl.val(${Math.max(0, parseInt(d, 10) || 0)}).trigger('input').trigger('change').trigger('keyup');
-                }
-                if (window.fleetDispatcher) {
-                    if (typeof window.fleetDispatcher.cargoCalculation === 'function') window.fleetDispatcher.cargoCalculation();
-                    if (typeof window.fleetDispatcher.refresh === 'function') window.fleetDispatcher.refresh();
-                }
-            } catch (e) {}
-        `);
+        window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+            detail: {
+                type: 'FILL_RESOURCES',
+                m: Math.max(0, parseInt(m, 10) || 0),
+                c: Math.max(0, parseInt(c, 10) || 0),
+                d: Math.max(0, parseInt(d, 10) || 0)
+            }
+        }));
 
         return filled;
     }
@@ -3433,7 +3366,10 @@
                             document.getElementById('fleetdispatchcomponent') ||
                             document.getElementById('fleet1');
 
-        if (!isFleetPage) {
+        const metaId = document.querySelector('meta[name="ogame-planet-id"]')?.getAttribute('content');
+
+        // Filo sayfasında değilsek veya sayfa sıradaki gezegenle eşleşmiyorsa yönlendir
+        if (!isFleetPage || (metaId && metaId !== String(currentItem.id))) {
             const [g, s, p] = session.targetCoord.split(':');
             const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${currentItem.id}&galaxy=${g}&system=${s}&position=${p}&type=${session.targetType}&mission=${session.mission || 3}`;
             window.location.href = url;
@@ -3443,18 +3379,33 @@
         let tries = 0;
         const pollInterval = setInterval(() => {
             tries++;
+
+            const currentMeta = document.querySelector('meta[name="ogame-planet-id"]')?.getAttribute('content');
+            if (currentMeta && currentMeta !== String(currentItem.id)) {
+                // Eğer sayfa eski gezegende kaldıysa doğru gezegene yönlendir
+                clearInterval(pollInterval);
+                const [g, s, p] = session.targetCoord.split(':');
+                const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${currentItem.id}&galaxy=${g}&system=${s}&position=${p}&type=${session.targetType}&mission=${session.mission || 3}`;
+                window.location.href = url;
+                return;
+            }
+
             const hasShipInput = document.querySelector('[data-technology="203"], [data-technology="202"]') ||
                                  document.querySelector('input[name="transporterLarge"], input[name="am203"], input[name="am202"]') ||
                                  document.getElementById('fleet1');
             const hasCoords = document.getElementById('galaxy') || document.querySelector('input[name="galaxy"]');
-            const fleetReady = hasShipInput && hasCoords;
+            const hasRes = document.getElementById('resources_metal') || document.getElementById('resources_crystal');
 
-            if (fleetReady || tries > 30) {
+            // Hem sayfa DOM hazır olsun hem de gemi/koordinat/kaynak elementleri DOM'da oluşmuş olsun
+            const domReady = document.readyState === 'complete' || document.readyState === 'interactive';
+            const fleetReady = domReady && hasShipInput && hasCoords && hasRes;
+
+            if (fleetReady || tries > 40) {
                 clearInterval(pollInterval);
-                // OGame motorunun tam yerleşmesi için 400ms bekle
+                // OGame motorunun ve scriptlerinin tam init olması için 500ms tampon bekle
                 setTimeout(() => {
                     executeFleetDispatchStep(session, currentItem);
-                }, 400);
+                }, 500);
             }
         }, 150);
     }
@@ -3536,15 +3487,12 @@
             setFleetTargetCoords(g, s, p, session.targetType);
             setFleetMission(missionId);
             fillFleetResources(metLoad, criLoad, deuLoad);
-            execPageContext(`
-                try {
-                    if (window.fleetDispatcher) {
-                        if (typeof window.fleetDispatcher.selectMission === 'function') window.fleetDispatcher.selectMission(${missionId});
-                        if (typeof window.fleetDispatcher.cargoCalculation === 'function') window.fleetDispatcher.cargoCalculation();
-                        if (typeof window.fleetDispatcher.refresh === 'function') window.fleetDispatcher.refresh();
-                    }
-                } catch (e) {}
-            `);
+            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                detail: { type: 'SELECT_MISSION', missionId: missionId }
+            }));
+            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                detail: { type: 'CARGO_REFRESH' }
+            }));
             setTimeout(() => {
                 setFleetMission(missionId);
             }, 100);
@@ -3554,15 +3502,9 @@
         setTimeout(() => {
             setFleetTargetCoords(g, s, p, session.targetType);
             clickDevamButton();
-            execPageContext(`
-                try {
-                    if (window.fleetDispatcher && typeof window.fleetDispatcher.trySubmitFleet1 === 'function') {
-                        window.fleetDispatcher.trySubmitFleet1();
-                    } else if (window.$) {
-                        $('#continueToFleet2, button.continue, a.continue').trigger('click');
-                    }
-                } catch (e) {}
-            `);
+            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                detail: { type: 'SUBMIT_FLEET1' }
+            }));
 
             // Step 2'nin açılmasını izle ve Görev + Kaynakları yükle
             let step2Tries = 0;
@@ -3628,11 +3570,11 @@
             '</div>' +
             '<div style="display:flex;gap:6px;justify-content:center;align-items:center">' +
                 (hasShips ?
-                    '<button id="ls-banner-send-btn" style="background:#27ae60;color:#fff;border:none;padding:6px 13px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.5)">🚀 Filoyu Gönder (Space)</button>'
-                    : '<button id="ls-banner-skip-btn" style="background:#f39c12;color:#000;border:none;padding:6px 13px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏭️ Bu Gezegeni Atla (Space)</button>') +
-                '<button id="ls-banner-retry-btn" style="background:#e67e22;color:#fff;border:none;padding:6px 12px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer" title="Bu adımı ve hedef ayarlarını sıfırdan tekrarla">🔄 Tekrarla</button>' +
-                (hasShips ? '<button id="ls-banner-skip-btn" style="background:#34495e;color:#fff;border:none;padding:6px 12px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏭️ Atla</button>' : '') +
-                '<button id="ls-banner-cancel-btn" style="background:#e74c3c;color:#fff;border:none;padding:6px 12px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏹️ İptal</button>' +
+                    '<button id="ls-banner-send-btn" style="background:#27ae60;color:#fff;border:none;padding:6px 11px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.5)">🚀 Gönder (Space)</button>'
+                    : '<button class="ls-banner-skip-btn" style="background:#f39c12;color:#000;border:none;padding:6px 11px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏭️ Atla (Space)</button>') +
+                '<button id="ls-banner-retry-btn" style="background:#e67e22;color:#fff;border:none;padding:6px 11px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer" title="Bu adımı ve hedef ayarlarını sıfırdan tekrarla">🔄 Tekrarla</button>' +
+                (hasShips ? '<button class="ls-banner-skip-btn" style="background:#34495e;color:#fff;border:none;padding:6px 11px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏭️ Atla</button>' : '') +
+                '<button id="ls-banner-cancel-btn" style="background:#e74c3c;color:#fff;border:none;padding:6px 11px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏹️ İptal</button>' +
             '</div>';
 
         const sendFleet = () => {
@@ -3644,15 +3586,9 @@
                 // Eğer kullanıcı hızlıca basıp henüz Step 1'deyse Devam'a tıkla, Step 2'ye geçince gönder
                 setFleetTargetCoords(details.g, details.s, details.p, session.targetType);
                 clickDevamButton();
-                execPageContext(`
-                    try {
-                        if (window.fleetDispatcher && typeof window.fleetDispatcher.trySubmitFleet1 === 'function') {
-                            window.fleetDispatcher.trySubmitFleet1();
-                        } else if (window.$) {
-                            $('#continueToFleet2, button.continue, a.continue').trigger('click');
-                        }
-                    } catch (e) {}
-                `);
+                window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                    detail: { type: 'SUBMIT_FLEET1' }
+                }));
                 setTimeout(() => {
                     setFleetTargetCoords(details.g, details.s, details.p, session.targetType);
                     setFleetMission(missionId);
@@ -3683,7 +3619,13 @@
         };
 
         const dispatchSendFleetButton = () => {
+            window.removeEventListener('keydown', keyListener);
             const sendBtn = findSendFleetButton();
+
+            // Önce kuyruğu derhal bir sonraki adıma geçir ve kaydet!
+            // Böylece OGame AJAX ile sayfayı yenilese bile aynı gezegen tekrar etmez.
+            session.currentIndex++;
+            sessionStorage.setItem(KEYS.COLLECTOR_RUN, JSON.stringify(session));
 
             if (banner) {
                 banner.innerHTML =
@@ -3693,45 +3635,16 @@
             }
 
             // Sayfa bağlamında (Main World) OGame'in native submit fonksiyonunu çalıştır
-            execPageContext(`
-                try {
-                    if (window.fleetDispatcher) {
-                        if (typeof window.fleetDispatcher.trySubmitFleet2 === 'function') {
-                            window.fleetDispatcher.trySubmitFleet2();
-                        } else if (typeof window.fleetDispatcher.submitFleet2 === 'function') {
-                            window.fleetDispatcher.submitFleet2();
-                        } else if (typeof window.fleetDispatcher.sendFleet === 'function') {
-                            window.fleetDispatcher.sendFleet();
-                        }
-                    }
-                    if (window.$ && $('#sendFleet').length) {
-                        $('#sendFleet').trigger('click');
-                    }
-                } catch(e) {
-                    console.error('fleetDispatcher submit error:', e);
-                }
-            `);
+            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                detail: { type: 'SUBMIT_FLEET2' }
+            }));
 
             // DOM butonuna da tıkla
             if (sendBtn) {
-                sendBtn.click();
+                try { sendBtn.click(); } catch (e) {}
             }
 
-            // OGame sunucusuna isteğin ulaşması için 1200ms bekle, ardından sonraki hedefe geç
-            setTimeout(() => {
-                proceedToNext();
-            }, 1200);
-        };
-
-        const proceedToNext = () => {
-            window.removeEventListener('keydown', keyListener);
-            session.currentIndex++;
-            sessionStorage.setItem(KEYS.COLLECTOR_RUN, JSON.stringify(session));
-
-            if (banner) {
-                banner.innerHTML = '<div style="font-size:12px;color:#2ecc71;padding:6px">⏳ Filo gönderildi, sıradaki gezegene geçiliyor...</div>';
-            }
-
+            // Bir sonraki gezegene yönlendir
             setTimeout(() => {
                 if (session.currentIndex < session.queue.length) {
                     const nextItem = session.queue[session.currentIndex];
@@ -3743,7 +3656,30 @@
                     if (banner) banner.remove();
                     showCollectorToast('🎉 Tebrikler! Tüm filolar başarıyla gönderildi.', 6000);
                 }
-            }, 700);
+            }, 800);
+        };
+
+        const proceedToNext = () => {
+            window.removeEventListener('keydown', keyListener);
+            session.currentIndex++;
+            sessionStorage.setItem(KEYS.COLLECTOR_RUN, JSON.stringify(session));
+
+            if (banner) {
+                banner.innerHTML = '<div style="font-size:12px;color:#f39c12;padding:6px">⏭️ Gezegen atlandı, sıradakine geçiliyor...</div>';
+            }
+
+            setTimeout(() => {
+                if (session.currentIndex < session.queue.length) {
+                    const nextItem = session.queue[session.currentIndex];
+                    const [g, s, p] = session.targetCoord.split(':');
+                    const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${nextItem.id}&galaxy=${g}&system=${s}&position=${p}&type=${session.targetType}&mission=${session.mission || 3}`;
+                    window.location.href = url;
+                } else {
+                    sessionStorage.removeItem(KEYS.COLLECTOR_RUN);
+                    if (banner) banner.remove();
+                    showCollectorToast('🎉 Toplama asistanı tamamlandı.', 5000);
+                }
+            }, 400);
         };
 
         const cancel = () => {
@@ -3770,7 +3706,7 @@
 
         document.getElementById('ls-banner-send-btn')?.addEventListener('click', sendFleet);
         document.getElementById('ls-banner-retry-btn')?.addEventListener('click', retryCurrentStep);
-        document.getElementById('ls-banner-skip-btn')?.addEventListener('click', proceedToNext);
+        banner.querySelectorAll('.ls-banner-skip-btn').forEach(btn => btn.addEventListener('click', proceedToNext));
         document.getElementById('ls-banner-cancel-btn')?.addEventListener('click', cancel);
     }
 

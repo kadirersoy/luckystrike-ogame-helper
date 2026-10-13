@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LuckyStrike OGame Helper",
-  "version": "7.2.0",
+  "version": "7.2.5",
   "permissions": [
     "notifications",
     "storage"
@@ -21,6 +21,16 @@
     "default_title": "LuckyStrike OGame Helper"
   },
   "content_scripts": [
+    {
+      "matches": [
+        "*://*.ogame.gameforge.com/game/index.php*"
+      ],
+      "js": [
+        "bridge.js"
+      ],
+      "world": "MAIN",
+      "run_at": "document_start"
+    },
     {
       "matches": [
         "*://*.ogame.gameforge.com/game/index.php*"
