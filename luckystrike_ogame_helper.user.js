@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         LuckyStrike OGame Helper
 // @namespace    http://tampermonkey.net/
-// @version      7.2.1
+// @version      7.2.2
 // @description  LuckyStrike OGame Helper: Maliyet Sepeti, Galaxy Scanner, Player Finder, Sesli Alarm, Harabe Takipçisi, Maden Toplayıcı
 // @author       LuckyStrike
 // @match        *://*.ogame.gameforge.com/game/index.php*
@@ -883,10 +883,34 @@
         return true;
     };
 
+    function clickDevamButton() {
+        const btn = document.getElementById('continueToFleet2') ||
+                    document.querySelector('button.continue.toFleet2') ||
+                    document.querySelector('button#continueToFleet2') ||
+                    document.querySelector('a#continueToFleet2') ||
+                    document.querySelector('#continueToFleet2') ||
+                    document.querySelector('button.continue') ||
+                    document.querySelector('a.continue') ||
+                    document.querySelector('#fleet1 .continue') ||
+                    document.querySelector('#fleet1 .btn_blue') ||
+                    document.querySelector('#fleetdispatchcomponent button.continue') ||
+                    document.querySelector('#fleetdispatchcomponent .continue');
+        if (btn) {
+            btn.click();
+            return true;
+        }
+        return false;
+    }
+
     function setFleetTargetCoords(g, s, p, type) {
+        const galInp = document.getElementById('galaxy') || document.querySelector('input[name="galaxy"]');
+        const sysInp = document.getElementById('system') || document.querySelector('input[name="system"]');
+        const posInp = document.getElementById('position') || document.querySelector('input[name="position"]');
+
         const setVal = (el, val) => {
             if (!el) return;
             const targetVal = String(val);
+            if (el.value === targetVal) return; // ZATEN DOĞRUYSA DOKUNMA (Ünlem uyarısını önler)
             try {
                 const proto = window.HTMLInputElement.prototype;
                 const nativeSetter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
@@ -898,33 +922,22 @@
             } catch (e) {
                 el.value = targetVal;
             }
-            ['focus', 'input', 'change', 'keydown', 'keyup', 'blur'].forEach(evt => {
+            ['input', 'change'].forEach(evt => {
                 el.dispatchEvent(new Event(evt, { bubbles: true, cancelable: true }));
             });
         };
-        setVal(document.getElementById('galaxy') || document.querySelector('input[name="galaxy"]'), g);
-        setVal(document.getElementById('system') || document.querySelector('input[name="system"]'), s);
-        setVal(document.getElementById('position') || document.querySelector('input[name="position"]'), p);
+
+        setVal(galInp, g);
+        setVal(sysInp, s);
+        setVal(posInp, p);
 
         if (type === 3) {
             const moonBtn = document.getElementById('mbutton') || document.querySelector('[data-type="3"]') || document.querySelector('#fleet2 .moon') || document.querySelector('.planet_type_moon');
-            if (moonBtn) moonBtn.click();
+            if (moonBtn && !moonBtn.classList.contains('active') && !moonBtn.classList.contains('selected')) moonBtn.click();
         } else {
             const planetBtn = document.getElementById('pbutton') || document.querySelector('[data-type="1"]') || document.querySelector('#fleet2 .planet') || document.querySelector('.planet_type_planet');
-            if (planetBtn) planetBtn.click();
+            if (planetBtn && !planetBtn.classList.contains('active') && !planetBtn.classList.contains('selected')) planetBtn.click();
         }
-
-        execPageContext(`
-            try {
-                if (window.fleetDispatcher) {
-                    if (typeof window.fleetDispatcher.setTarget === 'function') {
-                        window.fleetDispatcher.setTarget(${g}, ${s}, ${p}, ${type});
-                    } else if (typeof window.fleetDispatcher.updateTarget === 'function') {
-                        window.fleetDispatcher.updateTarget();
-                    }
-                }
-            } catch (e) {}
-        `);
     }
 
     function setFleetMission(missionId) {
@@ -3441,26 +3454,52 @@
         setShipAmount(202, knCount);
         setShipAmount(219, rehberCount);
 
-        // Hedef koordinatlarını ayarla
+        // Hedef koordinatlarını ayarla (URL'den zaten doğru geldiyse dokunulmaz)
         const [g, s, p] = session.targetCoord.split(':');
         setFleetTargetCoords(g, s, p, session.targetType);
 
-        // Görev ve Kaynakları doldur
-        setTimeout(() => {
+        // Step 2 (Görev ve Kaynaklar) Hazırlık Fonksiyonu
+        const prepareStep2 = () => {
             setFleetMission(3); // Nakliye / Taşıma
-            setTimeout(() => {
-                fillFleetResources(metLoad, criLoad, deuLoad);
-                execPageContext(`
-                    try {
-                        if (window.fleetDispatcher) {
-                            if (typeof window.fleetDispatcher.updateTarget === 'function') window.fleetDispatcher.updateTarget();
-                            if (typeof window.fleetDispatcher.cargoCalculation === 'function') window.fleetDispatcher.cargoCalculation();
-                            if (typeof window.fleetDispatcher.refresh === 'function') window.fleetDispatcher.refresh();
-                        }
-                    } catch (e) {}
-                `);
-            }, 150);
-        }, 150);
+            fillFleetResources(metLoad, criLoad, deuLoad);
+            execPageContext(`
+                try {
+                    if (window.fleetDispatcher) {
+                        if (typeof window.fleetDispatcher.selectMission === 'function') window.fleetDispatcher.selectMission(3);
+                        if (typeof window.fleetDispatcher.cargoCalculation === 'function') window.fleetDispatcher.cargoCalculation();
+                        if (typeof window.fleetDispatcher.refresh === 'function') window.fleetDispatcher.refresh();
+                    }
+                } catch (e) {}
+            `);
+        };
+
+        // Otomatik olarak Devam butonuna tıklayıp Step 2'ye geç
+        setTimeout(() => {
+            clickDevamButton();
+            execPageContext(`
+                try {
+                    if (window.fleetDispatcher && typeof window.fleetDispatcher.trySubmitFleet1 === 'function') {
+                        window.fleetDispatcher.trySubmitFleet1();
+                    } else if (window.$) {
+                        $('#continueToFleet2, button.continue, a.continue').trigger('click');
+                    }
+                } catch (e) {}
+            `);
+
+            // Step 2'nin açılmasını izle ve Nakliye + Kaynakları yükle
+            let step2Tries = 0;
+            const step2Interval = setInterval(() => {
+                step2Tries++;
+                const isStep2 = document.getElementById('missionButton3') ||
+                                document.querySelector('[data-mission="3"]') ||
+                                document.getElementById('sendFleet') ||
+                                document.getElementById('metal');
+                if (isStep2 || step2Tries > 25) {
+                    clearInterval(step2Interval);
+                    prepareStep2();
+                }
+            }, 100);
+        }, 200);
 
         // Asistan Banner'ını Çiz
         renderCollectorAssistantBanner(session, currentItem, {
@@ -3513,12 +3552,43 @@
             '</div>';
 
         const sendFleet = () => {
+            const devamBtn = document.getElementById('continueToFleet2') || document.querySelector('button.continue') || document.querySelector('a.continue');
+            const isDevamVisible = devamBtn && (devamBtn.offsetWidth > 0 || window.getComputedStyle(devamBtn).display !== 'none');
+
+            if (isDevamVisible) {
+                // Eğer kullanıcı hızlıca basıp henüz Step 1'deyse Devam'a tıkla, Step 2'ye geçince gönder
+                clickDevamButton();
+                execPageContext(`
+                    try {
+                        if (window.fleetDispatcher && typeof window.fleetDispatcher.trySubmitFleet1 === 'function') {
+                            window.fleetDispatcher.trySubmitFleet1();
+                        } else if (window.$) {
+                            $('#continueToFleet2, button.continue, a.continue').trigger('click');
+                        }
+                    } catch (e) {}
+                `);
+                setTimeout(() => {
+                    setFleetMission(3);
+                    fillFleetResources(details.met, details.cri, details.deu);
+                    setTimeout(() => {
+                        dispatchSendFleetButton();
+                    }, 200);
+                }, 300);
+            } else {
+                // Zaten Step 2'deyse görevi ve kaynakları son kez garantiye alıp gönder
+                setFleetMission(3);
+                fillFleetResources(details.met, details.cri, details.deu);
+                dispatchSendFleetButton();
+            }
+        };
+
+        const dispatchSendFleetButton = () => {
             const sendBtn = findSendFleetButton();
 
             if (banner) {
                 banner.innerHTML =
-                    '<div style="font-size:12px;color:#00bcff;padding:8px;font-weight:bold">' +
-                        '🚀 Filo gönderiliyor... Lütfen bekleyin.' +
+                    '<div style="font-size:12px;color:#2ecc71;padding:8px;font-weight:bold">' +
+                        '🚀 Filo gönderildi! Sıradaki gezegene geçiliyor...' +
                     '</div>';
             }
 
