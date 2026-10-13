@@ -21,27 +21,38 @@
                 }
             } else if (d.type === 'SET_TARGET') {
                 var targetType = parseInt(d.targetType, 10) || 1;
-                if (window.fleetDispatcher) {
-                    if (typeof window.fleetDispatcher.setTargetPlanetType === 'function') window.fleetDispatcher.setTargetPlanetType(targetType);
-                    if (typeof window.fleetDispatcher.setTargetType === 'function') window.fleetDispatcher.setTargetType(targetType);
-                    if (typeof window.fleetDispatcher.updateTargetPlanetType === 'function') window.fleetDispatcher.updateTargetPlanetType(targetType);
-                    if (typeof window.fleetDispatcher.targetType !== 'undefined') window.fleetDispatcher.targetType = targetType;
-                    if (typeof window.fleetDispatcher.updateTarget === 'function') window.fleetDispatcher.updateTarget();
-                    if (typeof window.fleetDispatcher.refresh === 'function') window.fleetDispatcher.refresh();
-                }
+                var changed = false;
                 if (window.$) {
                     var $g = $('#galaxy, input[name="galaxy"]');
                     var $s = $('#system, input[name="system"]');
                     var $p = $('#position, input[name="position"]');
                     var $t = $('#type, input[name="type"]');
-                    if (d.g && $g.length) $g.val(d.g).trigger('change');
-                    if (d.s && $s.length) $s.val(d.s).trigger('change');
-                    if (d.p && $p.length) $p.val(d.p).trigger('change');
-                    if ($t.length) $t.val('' + targetType).trigger('change');
+
+                    if (d.g && $g.length && String($g.val()).trim() !== String(d.g).trim()) { $g.val(d.g); changed = true; }
+                    if (d.s && $s.length && String($s.val()).trim() !== String(d.s).trim()) { $s.val(d.s); changed = true; }
+                    if (d.p && $p.length && String($p.val()).trim() !== String(d.p).trim()) { $p.val(d.p); changed = true; }
+                    if ($t.length && String($t.val()).trim() !== String(targetType).trim()) { $t.val('' + targetType); changed = true; }
+
                     if (targetType === 3) {
-                        $('#mbutton, #fleet2 #mbutton, [data-type="3"], [data-planet-type="3"], a.moon').trigger('click');
+                        var $m = $('#mbutton, #fleet2 #mbutton, [data-type="3"], [data-planet-type="3"], a.moon');
+                        if ($m.length && !$m.hasClass('selected') && !$m.hasClass('active')) {
+                            $m.trigger('click');
+                            changed = true;
+                        }
                     } else {
-                        $('#pbutton, #fleet2 #pbutton, [data-type="1"], [data-planet-type="1"], a.planet').trigger('click');
+                        var $pb = $('#pbutton, #fleet2 #pbutton, [data-type="1"], [data-planet-type="1"], a.planet');
+                        if ($pb.length && !$pb.hasClass('selected') && !$pb.hasClass('active')) {
+                            $pb.trigger('click');
+                            changed = true;
+                        }
+                    }
+
+                    if (changed) {
+                        if (window.fleetDispatcher && typeof window.fleetDispatcher.updateTarget === 'function') {
+                            window.fleetDispatcher.updateTarget();
+                        } else {
+                            if ($p.length) $p.trigger('change');
+                        }
                     }
                 }
             } else if (d.type === 'SELECT_MISSION') {

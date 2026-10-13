@@ -887,6 +887,31 @@
         const posInp = document.getElementById('position') || document.querySelector('input[name="position"]');
         const typeInp = document.getElementById('type') || document.querySelector('input[name="type"]');
 
+        const targetType = parseInt(type, 10) || 1;
+
+        let needsChange = false;
+        if (galInp && String(galInp.value).trim() !== String(g).trim()) needsChange = true;
+        if (sysInp && String(sysInp.value).trim() !== String(s).trim()) needsChange = true;
+        if (posInp && String(posInp.value).trim() !== String(p).trim()) needsChange = true;
+        if (typeInp && String(typeInp.value).trim() !== String(targetType).trim()) needsChange = true;
+
+        if (targetType === 3) {
+            const moonBtn = document.querySelector('#mbutton, [data-type="3"], [data-planet-type="3"], #fleet2 .moon');
+            if (moonBtn && !moonBtn.classList.contains('selected') && !moonBtn.classList.contains('active')) {
+                needsChange = true;
+            }
+        } else {
+            const planetBtn = document.querySelector('#pbutton, [data-type="1"], [data-planet-type="1"], #fleet2 .planet');
+            if (planetBtn && !planetBtn.classList.contains('selected') && !planetBtn.classList.contains('active')) {
+                needsChange = true;
+            }
+        }
+
+        // Eğer zaten tüm koordinatlar ve tip doğruysa hiçbir şey yapma!
+        if (!needsChange) {
+            return;
+        }
+
         const setVal = (el, val) => {
             if (!el) return;
             const targetVal = String(val);
@@ -902,27 +927,23 @@
             } catch (e) {
                 el.value = targetVal;
             }
-            ['input', 'change'].forEach(evt => {
-                el.dispatchEvent(new Event(evt, { bubbles: true, cancelable: true }));
-            });
         };
 
         setVal(galInp, g);
         setVal(sysInp, s);
         setVal(posInp, p);
-        if (typeInp) setVal(typeInp, type);
+        if (typeInp) setVal(typeInp, targetType);
 
-        const targetType = parseInt(type, 10) || 1;
         if (targetType === 3) {
-            const moonBtns = document.querySelectorAll('#mbutton, [data-type="3"], [data-planet-type="3"], #fleet2 .moon, #fleet1 .moon, .planet_type_moon, a.moon, #fleetdispatchcomponent .moon');
-            moonBtns.forEach(btn => {
-                try { btn.click(); } catch (e) {}
-            });
+            const moonBtn = document.querySelector('#mbutton, [data-type="3"], [data-planet-type="3"], #fleet2 .moon');
+            if (moonBtn && !moonBtn.classList.contains('selected') && !moonBtn.classList.contains('active')) {
+                try { moonBtn.click(); } catch (e) {}
+            }
         } else {
-            const planetBtns = document.querySelectorAll('#pbutton, [data-type="1"], [data-planet-type="1"], #fleet2 .planet, #fleet1 .planet, .planet_type_planet, a.planet, #fleetdispatchcomponent .planet');
-            planetBtns.forEach(btn => {
-                try { btn.click(); } catch (e) {}
-            });
+            const planetBtn = document.querySelector('#pbutton, [data-type="1"], [data-planet-type="1"], #fleet2 .planet');
+            if (planetBtn && !planetBtn.classList.contains('selected') && !planetBtn.classList.contains('active')) {
+                try { planetBtn.click(); } catch (e) {}
+            }
         }
 
         window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
@@ -2916,17 +2937,13 @@
         const ddEl = document.getElementById('ls-coll-dd');
         if (!listEl || !targetLabelEl || !ddEl) return;
 
-        // Varsayılan hedef seçimi
-        if (empire.length > 0) {
-            const hasValidTarget = collectorSettings.targetId === 'manual' ||
-                empire.some(p => p.id === collectorSettings.targetId || (p.moon && p.moon.id === collectorSettings.targetId));
-            if (!collectorSettings.targetId || !hasValidTarget) {
-                collectorSettings.targetId = empire[0].id;
-                collectorSettings.targetCoord = empire[0].coords;
-                collectorSettings.targetType = 1;
-                collectorSettings.targetName = empire[0].name;
-                saveCollectorSettings();
-            }
+        // Varsayılan hedef seçimi (sadece hiç hedef seçilmemişse ilk gezegeni ata, ASLA kullanıcının hedefini ezme)
+        if (empire.length > 0 && (!collectorSettings.targetCoord || !/^\d+:\d+:\d+$/.test(collectorSettings.targetCoord))) {
+            collectorSettings.targetId = empire[0].id;
+            collectorSettings.targetCoord = empire[0].coords;
+            collectorSettings.targetType = 1;
+            collectorSettings.targetName = empire[0].name;
+            saveCollectorSettings();
         }
 
         // 1. Hedef Buton Başlığı
@@ -2941,11 +2958,11 @@
         // 2. Dropdown Listesi Doldur
         let ddHtml = '';
         empire.forEach(p => {
-            const isPActive = (collectorSettings.targetId === p.id);
+            const isPActive = (collectorSettings.targetCoord === p.coords && collectorSettings.targetType === 1);
             ddHtml += `<div class="ls-coll-dd-item ${isPActive ? 'active' : ''}" data-id="${p.id}" data-coord="${p.coords}" data-type="1" data-name="${escapeHtml(p.name)}">` +
                 `<span>🪐 ${escapeHtml(p.name)}</span><span class="crd">${p.coords}</span></div>`;
             if (p.moon) {
-                const isMActive = (collectorSettings.targetId === p.moon.id);
+                const isMActive = (collectorSettings.targetCoord === p.coords && collectorSettings.targetType === 3);
                 ddHtml += `<div class="ls-coll-dd-item moon ${isMActive ? 'active' : ''}" data-id="${p.moon.id}" data-coord="${p.coords}" data-type="3" data-name="Ay">` +
                     `<span>🌕 Ay</span><span class="crd">${p.coords}</span></div>`;
             }
@@ -2975,7 +2992,7 @@
             listHtml = '<div style="text-align:center;color:#8899aa;padding:20px;font-size:11px">Gezegen listesi okunuyor...<br>Lütfen OGame menüsünde gezinin.</div>';
         } else {
             empire.forEach(p => {
-                const isTargetPlanet = (collectorSettings.targetId === p.id);
+                const isTargetPlanet = (collectorSettings.targetCoord === p.coords && collectorSettings.targetType === 1);
                 const pRes = getPlanetCachedResources(p.id);
                 const pReserve = collectorSettings.reserves[p.id] !== undefined ? collectorSettings.reserves[p.id] : 250000;
                 const pChecked = collectorSettings.selectedItems[p.id] !== false;
@@ -3005,7 +3022,7 @@
                 }
 
                 if (p.moon) {
-                    const isTargetMoon = (collectorSettings.targetId === p.moon.id);
+                    const isTargetMoon = (collectorSettings.targetCoord === p.coords && collectorSettings.targetType === 3);
                     const mRes = getPlanetCachedResources(p.moon.id);
                     const mReserve = collectorSettings.reserves[p.moon.id] !== undefined ? collectorSettings.reserves[p.moon.id] : 250000;
                     const mChecked = collectorSettings.selectedItems[p.moon.id] !== false;
@@ -3051,7 +3068,7 @@
         let checkedPCount = 0, checkedMCount = 0;
 
         empire.forEach(p => {
-            const isTargetP = (collectorSettings.targetId === p.id);
+            const isTargetP = (collectorSettings.targetCoord === p.coords && collectorSettings.targetType === 1);
             if (!isTargetP && collectorSettings.selectedItems[p.id] !== false) {
                 checkedPCount++;
                 const res = getPlanetCachedResources(p.id);
@@ -3062,7 +3079,7 @@
             }
 
             if (p.moon) {
-                const isTargetM = (collectorSettings.targetId === p.moon.id);
+                const isTargetM = (collectorSettings.targetCoord === p.coords && collectorSettings.targetType === 3);
                 if (!isTargetM && collectorSettings.selectedItems[p.moon.id] !== false) {
                     checkedMCount++;
                     const res = getPlanetCachedResources(p.moon.id);
@@ -3182,8 +3199,10 @@
 
         document.getElementById('ls-coll-sel-all')?.addEventListener('click', () => {
             empire().forEach(p => {
-                if (p.id !== collectorSettings.targetId) collectorSettings.selectedItems[p.id] = true;
-                if (p.moon && p.moon.id !== collectorSettings.targetId) collectorSettings.selectedItems[p.moon.id] = true;
+                const isTargetP = (collectorSettings.targetCoord === p.coords && collectorSettings.targetType === 1);
+                if (!isTargetP) collectorSettings.selectedItems[p.id] = true;
+                const isTargetM = (collectorSettings.targetCoord === p.coords && collectorSettings.targetType === 3);
+                if (p.moon && !isTargetM) collectorSettings.selectedItems[p.moon.id] = true;
             });
             saveCollectorSettings();
             renderCollector();
@@ -3191,7 +3210,8 @@
 
         document.getElementById('ls-coll-sel-planets')?.addEventListener('click', () => {
             empire().forEach(p => {
-                if (p.id !== collectorSettings.targetId) collectorSettings.selectedItems[p.id] = true;
+                const isTargetP = (collectorSettings.targetCoord === p.coords && collectorSettings.targetType === 1);
+                if (!isTargetP) collectorSettings.selectedItems[p.id] = true;
                 if (p.moon) collectorSettings.selectedItems[p.moon.id] = false;
             });
             saveCollectorSettings();
@@ -3201,7 +3221,8 @@
         document.getElementById('ls-coll-sel-moons')?.addEventListener('click', () => {
             empire().forEach(p => {
                 collectorSettings.selectedItems[p.id] = false;
-                if (p.moon && p.moon.id !== collectorSettings.targetId) collectorSettings.selectedItems[p.moon.id] = true;
+                const isTargetM = (collectorSettings.targetCoord === p.coords && collectorSettings.targetType === 3);
+                if (p.moon && !isTargetM) collectorSettings.selectedItems[p.moon.id] = true;
             });
             saveCollectorSettings();
             renderCollector();
@@ -3293,11 +3314,15 @@
         const queue = [];
 
         empire.forEach(p => {
-            if (p.id !== collectorSettings.targetId && collectorSettings.selectedItems[p.id] !== false) {
+            const isTargetPlanet = (collectorSettings.targetCoord === p.coords && collectorSettings.targetType === 1);
+            if (!isTargetPlanet && collectorSettings.selectedItems[p.id] !== false) {
                 queue.push({ id: p.id, name: p.name, coords: p.coords, isMoon: false });
             }
-            if (p.moon && p.moon.id !== collectorSettings.targetId && collectorSettings.selectedItems[p.moon.id] !== false) {
-                queue.push({ id: p.moon.id, name: 'Ay', coords: p.coords, isMoon: true });
+            if (p.moon) {
+                const isTargetMoon = (collectorSettings.targetCoord === p.coords && collectorSettings.targetType === 3);
+                if (!isTargetMoon && collectorSettings.selectedItems[p.moon.id] !== false) {
+                    queue.push({ id: p.moon.id, name: 'Ay', coords: p.coords, isMoon: true });
+                }
             }
         });
 
@@ -3476,14 +3501,13 @@
         setShipAmount(202, knCount);
         setShipAmount(219, rehberCount);
 
-        // Hedef koordinatlarını ayarla (URL'den zaten doğru geldiyse dokunulmaz)
+        // Hedef koordinatları
         const [g, s, p] = session.targetCoord.split(':');
-        setFleetTargetCoords(g, s, p, session.targetType);
 
         // Step 2 (Görev ve Kaynaklar) Hazırlık Fonksiyonu
         const prepareStep2 = () => {
             const missionId = session.mission || 3;
-            // Step 2'de de hedef koordinatları kontrol et (boş veya mevcut gezegense hedefle eşitle)
+            // Sadece eksik veya yanlışsa hedefi düzelt (doğruysa change tetiklemez)
             setFleetTargetCoords(g, s, p, session.targetType);
             setFleetMission(missionId);
             fillFleetResources(metLoad, criLoad, deuLoad);
@@ -3498,15 +3522,14 @@
             }, 100);
         };
 
-        // Devam butonuna tıklayıp Step 2'ye geç (OGame'e koordinatları ve gemileri sindirmesi için 600ms ver)
+        // Devam butonuna tıklayıp Step 2'ye geç (Gemilerin girilmesi için 350ms ver)
         setTimeout(() => {
-            setFleetTargetCoords(g, s, p, session.targetType);
             clickDevamButton();
             window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
                 detail: { type: 'SUBMIT_FLEET1' }
             }));
 
-            // Step 2'nin açılmasını izle ve Görev + Kaynakları yükle
+            // Step 2'nin açılmasını ve OGame hedef doğrulamasının (inquiry) bitmesini izle
             let step2Tries = 0;
             const step2Interval = setInterval(() => {
                 step2Tries++;
@@ -3516,12 +3539,23 @@
                 const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
                 const isStep2Active = (!isStep1StillActive && isSendBtnVisible) || document.getElementById('fleet2');
 
-                if (isStep2Active || step2Tries > 30) {
+                if (isStep2Active) {
+                    const briefingText = document.querySelector('#briefing, #fleet2, #fleetdispatchcomponent')?.innerText || '';
+                    const isInquiryPending = briefingText.includes('sonsuz uzaklar') || briefingText.includes('Bu görevi başlatamazsın');
+                    const durationEl = document.getElementById('duration') || document.querySelector('.duration');
+                    const hasDuration = durationEl && durationEl.innerText && durationEl.innerText.trim() !== '-' && durationEl.innerText.trim() !== '';
+
+                    // Eğer hedef doğrulaması (inquiry) bittiyse veya 20 deneme (2 sn) dolduysa Step 2'yi hazırla
+                    if ((!isInquiryPending && hasDuration) || step2Tries > 20) {
+                        clearInterval(step2Interval);
+                        setTimeout(prepareStep2, 100);
+                    }
+                } else if (step2Tries > 35) {
                     clearInterval(step2Interval);
-                    setTimeout(prepareStep2, 180);
+                    setTimeout(prepareStep2, 100);
                 }
             }, 100);
-        }, 600);
+        }, 350);
 
         // Asistan Banner'ını Çiz
         renderCollectorAssistantBanner(session, currentItem, {
@@ -3583,28 +3617,23 @@
             const isDevamVisible = devamBtn && (devamBtn.offsetWidth > 0 || window.getComputedStyle(devamBtn).display !== 'none');
 
             if (isDevamVisible) {
-                // Eğer kullanıcı hızlıca basıp henüz Step 1'deyse Devam'a tıkla, Step 2'ye geçince gönder
-                setFleetTargetCoords(details.g, details.s, details.p, session.targetType);
                 clickDevamButton();
                 window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
                     detail: { type: 'SUBMIT_FLEET1' }
                 }));
                 setTimeout(() => {
-                    setFleetTargetCoords(details.g, details.s, details.p, session.targetType);
-                    setFleetMission(missionId);
-                    fillFleetResources(details.met, details.cri, details.deu);
+                    prepareStep2();
                     setTimeout(() => {
                         dispatchSendFleetButton();
                     }, 250);
-                }, 500);
+                }, 400);
             } else {
-                // Zaten Step 2'deyse: Koordinatları, görevi ve kaynakları son kez garantiye alıp gönder
-                setFleetTargetCoords(details.g, details.s, details.p, session.targetType);
+                // Zaten Step 2'deyse: Görevi ve kaynakları son kez garantiye alıp gönder
                 setFleetMission(missionId);
                 fillFleetResources(details.met, details.cri, details.deu);
                 setTimeout(() => {
                     dispatchSendFleetButton();
-                }, 120);
+                }, 100);
             }
         };
 
