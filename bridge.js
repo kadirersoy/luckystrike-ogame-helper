@@ -100,6 +100,35 @@
                     if (typeof window.fleetDispatcher.cargoCalculation === 'function') window.fleetDispatcher.cargoCalculation();
                     if (typeof window.fleetDispatcher.refresh === 'function') window.fleetDispatcher.refresh();
                 }
+            } else if (d.type === 'SELECT_TEMPLATE') {
+                if (window.$) {
+                    var $sel = $('select#expeditionfleet, select[name="expeditionfleet"], select#standardfleet, select[name="standardfleet"], select[id*="expedition"], select[name*="expedition"], select[id*="template"], select[name*="template"]');
+                    if ($sel.length) {
+                        $sel.val(d.id).trigger('change');
+                    }
+                }
+                if (window.fleetDispatcher && typeof window.fleetDispatcher.standardFleetSelected === 'function') {
+                    window.fleetDispatcher.standardFleetSelected(d.id);
+                }
+            } else if (d.type === 'SET_SPEED') {
+                var speedVal = parseInt(d.speed, 10) || 100;
+                if (window.$) {
+                    $('[data-step="' + speedVal + '"], [data-value="' + speedVal + '"], ul.steps li[data-step="' + speedVal + '"], #speedPercentage [data-step="' + speedVal + '"]').trigger('click');
+                    var $sp = $('#speed, input[name="speed"]');
+                    if ($sp.length) $sp.val(speedVal).trigger('change');
+                }
+                if (window.fleetDispatcher && typeof window.fleetDispatcher.setSpeed === 'function') {
+                    window.fleetDispatcher.setSpeed(speedVal);
+                }
+            } else if (d.type === 'SET_HOLDING_TIME') {
+                var hTime = parseInt(d.hours, 10) || 1;
+                if (window.$) {
+                    var $ht = $('#holdingtime, select[name="holdingtime"], input[name="holdingtime"], select#holdingtime, [name*="holding"]');
+                    if ($ht.length) $ht.val(hTime).trigger('change');
+                }
+                if (window.fleetDispatcher && typeof window.fleetDispatcher.setHoldingTime === 'function') {
+                    window.fleetDispatcher.setHoldingTime(hTime);
+                }
             }
         } catch (e) {}
     });
