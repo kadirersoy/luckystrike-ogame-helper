@@ -2,7 +2,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v9.0 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v10.0 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -25,8 +25,109 @@
         PLANET_CACHE: 'LS_PLANET_CACHE',
         EXPEDITION: 'LS_EXPEDITION_SETTINGS',
         EXPEDITION_RUN: 'LS_EXPEDITION_RUN',
-        EXPEDITION_TEMPLATES: 'LS_EXPEDITION_TEMPLATES'
+        EXPEDITION_TEMPLATES: 'LS_EXPEDITION_TEMPLATES',
+        DEBUG_ENABLED: 'LS_DEBUG_ENABLED',
+        DEBUG_LOGS: 'LS_DEBUG_LOGS'
     };
+
+    // ============================================================
+    // CENTRAL DEBUG LOGGER
+    // ============================================================
+    let activeDebugFilter = 'ALL';
+    let onDebugLiveUpdate = null;
+
+    const LS_LOGGER = {
+        isEnabled: function() {
+            try {
+                return localStorage.getItem(KEYS.DEBUG_ENABLED) === 'true';
+            } catch (e) {
+                return false;
+            }
+        },
+        setEnabled: function(val) {
+            try {
+                localStorage.setItem(KEYS.DEBUG_ENABLED, val ? 'true' : 'false');
+                window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                    detail: { type: 'SET_DEBUG_MODE', enabled: !!val }
+                }));
+            } catch (e) {}
+            this.log('ACTION', 'SYSTEM', `Debug modu ${val ? 'AÇILDI' : 'KAPATILDI'}.`);
+        },
+        getLogs: function() {
+            try {
+                return JSON.parse(sessionStorage.getItem(KEYS.DEBUG_LOGS) || '[]');
+            } catch (e) {
+                return [];
+            }
+        },
+        clearLogs: function() {
+            try {
+                sessionStorage.removeItem(KEYS.DEBUG_LOGS);
+            } catch (e) {}
+        },
+        log: function(level, cat, msg, data) {
+            if (!this.isEnabled()) return;
+            try {
+                const logs = this.getLogs();
+                const now = new Date();
+                const timeStr = [
+                    String(now.getHours()).padStart(2, '0'),
+                    String(now.getMinutes()).padStart(2, '0'),
+                    String(now.getSeconds()).padStart(2, '0')
+                ].join(':') + '.' + String(now.getMilliseconds()).padStart(3, '0');
+
+                const entry = {
+                    id: Date.now() + Math.random().toString(36).substring(2, 6),
+                    time: timeStr,
+                    level: level || 'INFO',
+                    cat: (cat || 'GENERAL').toUpperCase(),
+                    msg: typeof msg === 'string' ? msg : JSON.stringify(msg),
+                    data: data ? (typeof data === 'object' ? JSON.stringify(data) : String(data)) : null
+                };
+
+                logs.push(entry);
+                if (logs.length > 500) {
+                    logs.splice(0, logs.length - 500);
+                }
+                sessionStorage.setItem(KEYS.DEBUG_LOGS, JSON.stringify(logs));
+
+                try {
+                    console.log(`%c[LS-DEBUG] [${timeStr}] [${entry.cat}] [${entry.level}]`, 'color:#00bcff;font-weight:bold', entry.msg, entry.data || '');
+                } catch(e) {}
+
+                if (typeof onDebugLiveUpdate === 'function') {
+                    onDebugLiveUpdate(entry);
+                }
+            } catch (e) {}
+        },
+        info: function(cat, msg, data) { this.log('INFO', cat, msg, data); },
+        action: function(cat, msg, data) { this.log('ACTION', cat, msg, data); },
+        dispatch: function(cat, msg, data) { this.log('DISPATCH', cat, msg, data); },
+        warn: function(cat, msg, data) { this.log('WARN', cat, msg, data); },
+        error: function(cat, msg, data) { this.log('ERROR', cat, msg, data); }
+    };
+
+    window.addEventListener('LS_BRIDGE_LOG', function(e) {
+        if (e && e.detail) {
+            LS_LOGGER.log(e.detail.level, e.detail.cat, e.detail.msg, e.detail.data);
+        }
+    });
+
+    window.addEventListener('error', function(e) {
+        if (LS_LOGGER.isEnabled()) {
+            LS_LOGGER.error('WINDOW', e.message || 'Window Error', (e.filename || '') + ':' + (e.lineno || ''));
+        }
+    });
+
+    window.addEventListener('unhandledrejection', function(e) {
+        if (LS_LOGGER.isEnabled()) {
+            LS_LOGGER.error('PROMISE', e.reason ? (e.reason.message || String(e.reason)) : 'Unhandled Promise Rejection');
+        }
+    });
+
+    try {
+        LS_LOGGER.info('SYSTEM', 'Sayfa başlatıldı: ' + window.location.search);
+    } catch (e) {}
 
     let cart = JSON.parse(localStorage.getItem(KEYS.CART) || '[]');
     let activeTab = localStorage.getItem(KEYS.TAB) || 'cart';
@@ -664,6 +765,7 @@
         });
         saveCart();
         renderCart();
+        LS_LOGGER.action('CART', `Sepete eklendi: ${data.name} (${data.level || 'x' + data.count})`, { metal: data.metal, crystal: data.crystal, deuterium: data.deuterium, coords: metaCoords });
 
         const btn = document.getElementById('ls-add-cart-btn');
         if (btn) {
@@ -764,8 +866,10 @@
                 hyperspace: hyperspaceLvl
             };
             localStorage.setItem(KEYS.TECH, JSON.stringify(techCache));
+            LS_LOGGER.info('CART', `Araştırma seviyeleri güncellendi: Hiperuzay=${techCache.hyperspace}`);
         } catch (e) {
             console.error(LS, 'Araştırma seviyeleri çekilemedi:', e);
+            LS_LOGGER.warn('CART', `Araştırma seviyeleri çekilemedi: ${e.message}`);
         }
         return techCache;
     }
@@ -1299,6 +1403,7 @@
 
         const caps = calculateShipCapacities();
         const totalCap = (shipCounts.kn * caps.kn) + (shipCounts.bn * caps.bn);
+        LS_LOGGER.action('CART', `Sepet filosu hazırlanıyor: Hedef [${data.targetCoord}], Gemi: BN=${shipCounts.bn}, KN=${shipCounts.kn}, Toplam Kapasite=${totalCap}`);
 
         const liveRes = getLiveResources();
         let deuAvail = data.d;
@@ -1482,6 +1587,7 @@
                     '</div>';
             }
 
+            LS_LOGGER.dispatch('CART', `Sepet filosu gönderiliyor: SUBMIT_FLEET2 tetiklendi.`);
             window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
                 detail: { type: 'SUBMIT_FLEET2' }
             }));
@@ -1789,6 +1895,7 @@
 
         scanSettings = { gStart, gEnd, sStart, sEnd, slots: slotsStr, minEmpty };
         localStorage.setItem(KEYS.SCAN, JSON.stringify(scanSettings));
+        LS_LOGGER.action('SCANNER', `Galaksi taraması başlatıldı: G[${gStart}-${gEnd}], S[${sStart}-${sEnd}], Slotlar: ${slotsStr}, Min Boş: ${minEmpty}`);
 
         btn.disabled = true;
         btn.textContent = '⏳ Taranıyor...';
@@ -1952,6 +2059,7 @@
         btn.disabled = true;
         statusEl.textContent = 'Aranıyor...';
         resultsEl.innerHTML = '';
+        LS_LOGGER.action('FINDER', `Arama yapılıyor: "${query}" (Tip: ${type})`);
 
         try {
             const data = await loadApiData();
@@ -2444,9 +2552,11 @@
 
             if (shouldPlay) {
                 if (isAttackThreat) {
+                    LS_LOGGER.warn('ALARM', 'Saldırı alarmı çalındı: ' + alarmSettings.attackSound, currentSig);
                     playAttackAlertSound(alarmSettings.attackSound);
                     triggerDesktopNotification('🚨 OGame Saldırı Alarmı!', 'Gezegeninize düşman saldırı filosu yaklaşıyor!');
                 } else if (isEspionageThreat) {
+                    LS_LOGGER.warn('ALARM', 'Casusluk uyarısı çalındı: ' + alarmSettings.espionageSound, currentSig);
                     playEspionageAlertSound(alarmSettings.espionageSound);
                     triggerDesktopNotification('📡 OGame Casusluk Uyarısı', 'Gezegeninize casus sondası yaklaşıyor!');
                 }
@@ -3752,6 +3862,7 @@
     }
 
     function executeFleetDispatchStep(session, currentItem) {
+        LS_LOGGER.info('COLLECTOR', `Toplama adımı: ${currentItem.name} [${currentItem.g}:${currentItem.s}:${currentItem.p}] (${session.currentIndex + 1}/${session.queue.length}) -> Hedef: [${session.targetCoord}]`);
         const liveRes = getLiveResources();
         updateActivePlanetCache();
 
@@ -3975,6 +4086,8 @@
             session.currentIndex++;
             sessionStorage.setItem(KEYS.COLLECTOR_RUN, JSON.stringify(session));
 
+            LS_LOGGER.dispatch('COLLECTOR', `Collector filosu gönderiliyor: ${currentItem.name} -> Hedef: [${session.targetCoord}] (Adım ${session.currentIndex}/${session.queue.length})`);
+
             if (banner) {
                 banner.innerHTML =
                     '<div style="font-size:12px;color:#2ecc71;padding:8px;font-weight:bold">' +
@@ -4037,6 +4150,7 @@
 
         const cancel = () => {
             window.removeEventListener('keydown', keyListener);
+            LS_LOGGER.warn('COLLECTOR', 'Toplama işlemi iptal edildi.');
             sessionStorage.removeItem(KEYS.COLLECTOR_RUN);
             if (banner) banner.remove();
             showCollectorToast('Toplama işlemi iptal edildi.', 3000);
@@ -4884,6 +4998,7 @@
 
     function executeExpeditionStep(session, currentItem) {
         let isStepCancelled = false;
+        LS_LOGGER.info('EXPEDITION', `Keşif adımı: [${currentItem.g}:${currentItem.s}:16] (${session.currentIndex + 1}/${session.queue.length})`);
 
         const updateBannerReady = () => {
             const btn = document.getElementById('ls-exp-banner-send-btn');
@@ -4904,6 +5019,8 @@
 
             const targetHolding = parseInt(session.holdingTime, 10) || 1;
             const targetSpeed = parseInt(session.speed, 10) || 100;
+
+            LS_LOGGER.info('EXPEDITION', `Step 2 parametreleri hazırlanıyor: Hız=%${targetSpeed}, Süre=${targetHolding}s, Hedef [${currentItem.g}:${currentItem.s}:16]`);
 
             const applyStep2Settings = () => {
                 if (isStepCancelled) return;
@@ -4953,6 +5070,7 @@
 
         // 1. Şablonu seç (Gemileri doldur)
         if (session.templateId || session.templateName) {
+            LS_LOGGER.action('EXPEDITION', `Şablon uygulanıyor: ${session.templateName || session.templateId}`);
             applyExpeditionTemplate(session.templateId, session.templateName);
         }
 
@@ -4975,6 +5093,7 @@
                 setTimeout(() => {
                     if (isStepCancelled) return;
                     setExpeditionTarget(currentItem.g, currentItem.s, false);
+                    LS_LOGGER.action('EXPEDITION', 'Step 1 Devam butonu tıklandı, Step 2 bekleniyor.');
                     clickDevamButton();
                     window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
                         detail: { type: 'SUBMIT_FLEET1' }
@@ -5083,6 +5202,7 @@
             }
 
             isDispatching = true;
+            LS_LOGGER.action('EXPEDITION', `Keşif gönder emri verildi (Space/Tık). [${currentItem.g}:${currentItem.s}:16]`);
             dispatchSendExpeditionFleet();
         };
 
@@ -5110,6 +5230,8 @@
 
             session.currentIndex++;
             sessionStorage.setItem(KEYS.EXPEDITION_RUN, JSON.stringify(session));
+
+            LS_LOGGER.dispatch('EXPEDITION', `Keşif filosu gönderiliyor: [${currentItem.g}:${currentItem.s}:16] (Adım: ${session.currentIndex}/${session.queue.length})`);
 
             if (banner) {
                 banner.innerHTML =
@@ -5173,6 +5295,7 @@
         const cancelSession = () => {
             isDispatching = false;
             window.removeEventListener('keydown', keyListener);
+            LS_LOGGER.warn('EXPEDITION', 'Keşif işlemi iptal edildi / durduruldu.');
             if (typeof details.cancel === 'function') details.cancel();
             sessionStorage.removeItem(KEYS.EXPEDITION_RUN);
             if (banner) banner.remove();
@@ -5232,23 +5355,31 @@
             '#ls-close:hover{color:#ff6b6b}',
 
             '#ls-tabs{display:flex;border-bottom:1px solid #1a2c3f;container-type:inline-size;container-name:lstabs}',
-            '.ls-tab{flex:1;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:4px;',
-            'text-align:center;padding:7px 3px;cursor:pointer;font-size:10px;',
+            '.ls-tab{flex:1;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:3px;',
+            'text-align:center;padding:7px 2px;cursor:pointer;font-size:10px;',
             'background:rgba(26,44,63,0.4);transition:all .2s;color:#8899aa;user-select:none;white-space:nowrap}',
             '.ls-tab *{pointer-events:none}',
             '.ls-tab:hover{background:rgba(0,188,255,0.15);color:#fff}',
             '.ls-tab.active{background:rgba(0,188,255,0.25);color:#00bcff;font-weight:bold;',
             'border-bottom:2px solid #00bcff}',
             '.ls-tab-icon{font-size:12px;line-height:1;display:inline-flex;align-items:center;justify-content:center}',
-            '.ls-tab-label{font-size:10px;line-height:1;white-space:nowrap}',
-            '@container lstabs (max-width: 440px){',
-            '  .ls-tab{flex-direction:column;gap:2px;padding:5px 2px}',
-            '  .ls-tab-icon{font-size:13px}',
-            '  .ls-tab-label{font-size:9.5px}',
+            '.ls-tab-label{font-size:9.5px;line-height:1;white-space:nowrap}',
+            '@container lstabs (max-width: 480px){',
+            '  .ls-tab{flex-direction:column;gap:2px;padding:5px 1px}',
+            '  .ls-tab-icon{font-size:12px}',
+            '  .ls-tab-label{font-size:8.5px}',
             '}',
-            '.ls-tabs-stacked .ls-tab{flex-direction:column;gap:2px;padding:5px 2px}',
-            '.ls-tabs-stacked .ls-tab-icon{font-size:13px}',
-            '.ls-tabs-stacked .ls-tab-label{font-size:9.5px}',
+            '.ls-tabs-stacked .ls-tab{flex-direction:column;gap:2px;padding:5px 1px}',
+            '.ls-tabs-stacked .ls-tab-icon{font-size:12px}',
+            '.ls-tabs-stacked .ls-tab-label{font-size:8.5px}',
+
+            '.ls-debug-slider{position:relative;display:inline-block;width:32px;height:18px;background-color:#2c3e50;border-radius:18px;transition:.3s;border:1px solid #34495e}',
+            '.ls-debug-slider:before{position:absolute;content:"";height:12px;width:12px;left:2px;bottom:2px;background-color:#fff;border-radius:50%;transition:.3s}',
+            '#ls-debug-toggle:checked + .ls-debug-slider{background-color:#2ecc71;border-color:#27ae60}',
+            '#ls-debug-toggle:checked + .ls-debug-slider:before{transform:translateX(14px)}',
+            '.ls-debug-filter{background:rgba(255,255,255,0.05);border:1px solid #1a2c3f;color:#8899aa;font-size:9.5px;padding:2px 6px;border-radius:3px;cursor:pointer;user-select:none}',
+            '.ls-debug-filter:hover{background:rgba(0,188,255,0.15);color:#fff}',
+            '.ls-debug-filter.active{background:#00bcff;color:#000;font-weight:bold;border-color:#00bcff}',
 
             '#ls-body{padding:10px;overflow-y:auto;overflow-x:hidden !important;flex:1;min-height:0;display:flex;flex-direction:column}',
             '.ls-tc{display:none;width:100%;overflow-x:hidden}.ls-tc.active{display:flex;flex-direction:column;flex:1;min-height:0;width:100%}',
@@ -5397,7 +5528,7 @@
         panel.id = 'ls-panel';
         panel.innerHTML =
             '<div id="ls-header">' +
-                '<span id="ls-header-title">' + boltSvg + ' LuckyStrike Helper <span style="font-size:10px;color:#8899aa;font-weight:normal;opacity:0.8">v9.0</span></span>' +
+                '<span id="ls-header-title">' + boltSvg + ' LuckyStrike Helper <span style="font-size:10px;color:#8899aa;font-weight:normal;opacity:0.8">v10.0</span></span>' +
                 '<div style="display:flex;align-items:center;gap:6px">' +
                     '<button id="ls-header-stop-btn" class="ls-btn-d ls-btn-sm" style="display:none;padding:2px 7px;font-size:10px;align-items:center;gap:3px;cursor:pointer" title="Tekrarlayan bu alarmı sustur">⏹️ Sustur</button>' +
                     '<span id="ls-close">✖</span>' +
@@ -5411,6 +5542,7 @@
                 '<div class="ls-tab" data-tab="scanner"><span class="ls-tab-icon">🌌</span><span class="ls-tab-label">Scanner</span></div>' +
                 '<div class="ls-tab" data-tab="finder"><span class="ls-tab-icon">🔍</span><span class="ls-tab-label">Finder</span></div>' +
                 '<div class="ls-tab" data-tab="alarm"><span class="ls-tab-icon">🚨</span><span class="ls-tab-label">Alarm</span></div>' +
+                '<div class="ls-tab" data-tab="debug"><span class="ls-tab-icon">🐞</span><span class="ls-tab-label">Debug</span></div>' +
             '</div>' +
             '<div id="ls-body">' +
 
@@ -5754,6 +5886,47 @@
                     '<button id="ls-exp-start-btn" class="ls-exp-go">🚀 Keşifleri Başlat (Adım Adım)</button>' +
                 '</div>' +
 
+                // DEBUG TAB
+                '<div id="tc-debug" class="ls-tc">' +
+                    '<div style="background:rgba(255,255,255,0.03);border:1px solid #1a2c3f;border-radius:6px;padding:8px;margin-bottom:8px">' +
+                        '<div style="display:flex;justify-content:space-between;align-items:center">' +
+                            '<span style="font-weight:bold;color:#00bcff;font-size:11.5px;display:flex;align-items:center;gap:5px">' +
+                                '🐞 Debug Modu (Kayıt)' +
+                            '</span>' +
+                            '<label style="position:relative;display:inline-block;width:32px;height:18px;margin:0;cursor:pointer">' +
+                                '<input type="checkbox" id="ls-debug-toggle" style="opacity:0;width:0;height:0">' +
+                                '<span class="ls-debug-slider"></span>' +
+                            '</label>' +
+                        '</div>' +
+                        '<div style="font-size:10px;color:#8899aa;margin-top:4px;line-height:1.3">' +
+                            'Açıldığında tüm sekmelerdeki eylemleri, OGame sunucu isteklerini ve hataları kaydeder.' +
+                        '</div>' +
+                    '</div>' +
+
+                    '<div style="display:flex;gap:4px;margin-bottom:6px;flex-shrink:0">' +
+                        '<button id="ls-debug-copy" class="ls-btn" style="flex:1;display:flex;align-items:center;justify-content:center;gap:3px;font-size:10.5px;padding:4px 6px">📋 Logları Kopyala</button>' +
+                        '<button id="ls-debug-clear" class="ls-btn ls-btn-d" style="flex:1;display:flex;align-items:center;justify-content:center;gap:3px;font-size:10.5px;padding:4px 6px">🗑️ Temizle</button>' +
+                        '<button id="ls-debug-refresh" class="ls-btn" style="width:30px;display:flex;align-items:center;justify-content:center;font-size:10px;padding:4px" title="Yenile">🔄</button>' +
+                    '</div>' +
+
+                    '<div style="display:flex;gap:3px;margin-bottom:6px;flex-wrap:wrap;flex-shrink:0" id="ls-debug-filters">' +
+                        '<span class="ls-debug-filter active" data-filter="ALL">Tümü</span>' +
+                        '<span class="ls-debug-filter" data-filter="EXPEDITION">🧭 Keşif</span>' +
+                        '<span class="ls-debug-filter" data-filter="COLLECTOR">📦 Toplayıcı</span>' +
+                        '<span class="ls-debug-filter" data-filter="OGAME-AJAX">🌐 Sunucu/Ajax</span>' +
+                        '<span class="ls-debug-filter" data-filter="BRIDGE">⚡ Bridge</span>' +
+                        '<span class="ls-debug-filter" data-filter="ERROR">⚠️ Hatalar</span>' +
+                    '</div>' +
+
+                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-size:9.5px;color:#8899aa">' +
+                        '<span id="ls-debug-count">0 kayıt</span>' +
+                        '<span id="ls-debug-status" style="font-weight:bold">○ Kapalı</span>' +
+                    '</div>' +
+
+                    '<div id="ls-debug-console" style="background:#0a0e17;border:1px solid #1a2c3f;border-radius:6px;padding:8px;flex:1;min-height:160px;max-height:300px;overflow-y:auto;overflow-x:hidden;font-family:\'Consolas\',\'Courier New\',monospace;font-size:10px;line-height:1.45;color:#c9d1d9;white-space:pre-wrap;word-break:break-word">' +
+                    '</div>' +
+                '</div>' +
+
             '</div>' +
             '<div id="ls-footer-drag" style="padding:4px 8px;background:linear-gradient(90deg,#0d1b2a,#1a2c3f);border-top:1px solid #1a2c3f;border-radius:0 0 8px 8px;display:flex;justify-content:space-between;align-items:center;user-select:none;font-size:10px;color:#4a627a;position:relative" title="Pencereyi taşımak için sürükleyin">' +
                 '<span class="ls-corner-grip" data-dir="sw" style="cursor:nesw-resize;padding:0 6px;font-size:12px;color:#6b8aa8;line-height:1" title="Sol alt köşeden boyutlandır">⤡</span>' +
@@ -5791,6 +5964,7 @@
             panel.style.display = willOpen ? 'flex' : 'none';
             isPanelOpen = willOpen;
             localStorage.setItem(KEYS.OPEN, willOpen ? 'true' : 'false');
+            LS_LOGGER.action('UI', willOpen ? 'Panel açıldı.' : 'Panel kapatıldı.');
             if (willOpen) setTimeout(ensurePanelInView, 20);
         });
 
@@ -5798,6 +5972,7 @@
             panel.style.display = 'none';
             isPanelOpen = false;
             localStorage.setItem(KEYS.OPEN, 'false');
+            LS_LOGGER.action('UI', 'Panel kapatıldı (X tıklandı).');
         });
 
         let dragging = false, dx = 0, dy = 0, startX, startY;
@@ -5931,6 +6106,8 @@
                 if (t === 'debris') renderDebrisList();
                 if (t === 'collector') renderCollector();
                 if (t === 'expedition') renderExpedition();
+                if (t === 'debug') renderDebugLogs();
+                LS_LOGGER.action('UI', 'Sekme değiştirildi: ' + t);
                 setTimeout(ensurePanelInView, 20);
             });
         });
@@ -5940,6 +6117,7 @@
         if (savedTabEl) savedTabEl.classList.add('active');
         if (savedContentEl) savedContentEl.classList.add('active');
         if (activeTab === 'expedition') renderExpedition();
+        if (activeTab === 'debug') renderDebugLogs();
         if (!savedTabEl) {
             const first = document.querySelector('.ls-tab');
             if (first) { first.classList.add('active'); document.getElementById('tc-cart').classList.add('active'); }
@@ -6215,6 +6393,170 @@
             };
         } catch (e) {}
 
+        // ============================================================
+        // DEBUG TAB LOGIC & CONTROLS
+        // ============================================================
+        function renderDebugLogs() {
+            const consoleEl = document.getElementById('ls-debug-console');
+            const countEl = document.getElementById('ls-debug-count');
+            const statusEl = document.getElementById('ls-debug-status');
+            const toggleEl = document.getElementById('ls-debug-toggle');
+            if (!consoleEl) return;
+
+            const enabled = LS_LOGGER.isEnabled();
+            if (toggleEl) toggleEl.checked = enabled;
+            if (statusEl) {
+                statusEl.textContent = enabled ? '● Kayıt Açık' : '○ Kapalı';
+                statusEl.style.color = enabled ? '#2ecc71' : '#8899aa';
+            }
+
+            const allLogs = LS_LOGGER.getLogs();
+            let filteredLogs = allLogs;
+            if (activeDebugFilter && activeDebugFilter !== 'ALL') {
+                if (activeDebugFilter === 'ERROR') {
+                    filteredLogs = allLogs.filter(l => l.level === 'ERROR' || l.level === 'WARN');
+                } else {
+                    filteredLogs = allLogs.filter(l => l.cat === activeDebugFilter);
+                }
+            }
+
+            if (countEl) {
+                countEl.textContent = `${filteredLogs.length} / ${allLogs.length} kayıt`;
+            }
+
+            if (allLogs.length === 0) {
+                consoleEl.innerHTML = '<div style="color:#6e7681;padding:15px;text-align:center;font-style:italic">' +
+                    (enabled ? 'Henüz kaydedilmiş bir eylem yok. Eklentiyi kullanırken loglar burada listelenecektir.' : 'Debug modu kapalı.<br>Yukarıdaki switch\'i açarak tüm sekmelerdeki hareketleri ve hataları kaydetmeye başlayabilirsiniz.') +
+                    '</div>';
+                return;
+            }
+
+            const catColors = {
+                'EXPEDITION': '#bb86fc',
+                'COLLECTOR': '#00bcff',
+                'OGAME-AJAX': '#2ecc71',
+                'BRIDGE': '#f39c12',
+                'SCANNER': '#3498db',
+                'CART': '#9b59b6',
+                'DEBRIS': '#1abc9c',
+                'FINDER': '#f1c40f',
+                'ALARM': '#e74c3c',
+                'SYSTEM': '#95a5a6',
+                'UI': '#7f8c8d'
+            };
+
+            const levelColors = {
+                'INFO': '#58a6ff',
+                'ACTION': '#7ee787',
+                'DISPATCH': '#d2a8ff',
+                'WARN': '#d29922',
+                'ERROR': '#ff7b72'
+            };
+
+            const html = filteredLogs.map(entry => {
+                const catColor = catColors[entry.cat] || '#8899aa';
+                const lvlColor = levelColors[entry.level] || '#c9d1d9';
+                const escapedMsg = escapeHtml(entry.msg);
+                const dataPart = entry.data ? `<div style="color:#8b949e;margin-left:14px;font-size:9.5px;white-space:pre-wrap;word-break:break-all">${escapeHtml(entry.data)}</div>` : '';
+                return `<div style="margin-bottom:3px;padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.03)"><span style="color:#6e7681">[${entry.time}]</span> <span style="color:${catColor};font-weight:bold">[${entry.cat}]</span> <span style="color:${lvlColor};font-weight:bold">[${entry.level}]</span> <span style="color:#e6edf3">${escapedMsg}</span>${dataPart}</div>`;
+            }).join('');
+
+            consoleEl.innerHTML = html;
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+
+        onDebugLiveUpdate = function(entry) {
+            if (activeTab === 'debug') {
+                renderDebugLogs();
+            }
+        };
+
+        const debugToggleEl = document.getElementById('ls-debug-toggle');
+        if (debugToggleEl) {
+            debugToggleEl.checked = LS_LOGGER.isEnabled();
+            debugToggleEl.addEventListener('change', () => {
+                LS_LOGGER.setEnabled(debugToggleEl.checked);
+                renderDebugLogs();
+            });
+        }
+
+        const debugClearBtn = document.getElementById('ls-debug-clear');
+        if (debugClearBtn) {
+            debugClearBtn.addEventListener('click', () => {
+                LS_LOGGER.clearLogs();
+                renderDebugLogs();
+            });
+        }
+
+        const debugRefreshBtn = document.getElementById('ls-debug-refresh');
+        if (debugRefreshBtn) {
+            debugRefreshBtn.addEventListener('click', () => {
+                renderDebugLogs();
+            });
+        }
+
+        const debugCopyBtn = document.getElementById('ls-debug-copy');
+        if (debugCopyBtn) {
+            debugCopyBtn.addEventListener('click', () => {
+                const logs = LS_LOGGER.getLogs();
+                if (!logs || logs.length === 0) {
+                    debugCopyBtn.textContent = '⚠️ Log Yok';
+                    setTimeout(() => { debugCopyBtn.textContent = '📋 Logları Kopyala'; }, 1500);
+                    return;
+                }
+                const now = new Date();
+                const nowStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
+                let out = '==================================================\n' +
+                          '  LuckyStrike OGame Helper v10.0 - Debug Log\n' +
+                          '  Tarih: ' + nowStr + '\n' +
+                          '  URL: ' + window.location.href + '\n' +
+                          '  Toplam Kayıt: ' + logs.length + '\n' +
+                          '==================================================\n\n';
+                logs.forEach(l => {
+                    out += `[${l.time}] [${l.cat}] [${l.level}] ${l.msg}\n`;
+                    if (l.data) out += `    Data: ${l.data}\n`;
+                });
+                out += '\n==================================================\n' +
+                       '  Log Sonu\n' +
+                       '==================================================\n';
+
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(out).then(() => {
+                        debugCopyBtn.textContent = '✅ Kopyalandı!';
+                        setTimeout(() => { debugCopyBtn.textContent = '📋 Logları Kopyala'; }, 2000);
+                    }).catch(() => fallbackCopy(out));
+                } else {
+                    fallbackCopy(out);
+                }
+
+                function fallbackCopy(text) {
+                    const ta = document.createElement('textarea');
+                    ta.value = text;
+                    ta.style.position = 'fixed';
+                    ta.style.opacity = '0';
+                    document.body.appendChild(ta);
+                    ta.select();
+                    try {
+                        document.execCommand('copy');
+                        debugCopyBtn.textContent = '✅ Kopyalandı!';
+                    } catch (e) {
+                        debugCopyBtn.textContent = '❌ Başarısız';
+                    }
+                    document.body.removeChild(ta);
+                    setTimeout(() => { debugCopyBtn.textContent = '📋 Logları Kopyala'; }, 2000);
+                }
+            });
+        }
+
+        document.querySelectorAll('#ls-debug-filters .ls-debug-filter').forEach(f => {
+            f.addEventListener('click', () => {
+                document.querySelectorAll('#ls-debug-filters .ls-debug-filter').forEach(el => el.classList.remove('active'));
+                f.classList.add('active');
+                activeDebugFilter = f.getAttribute('data-filter') || 'ALL';
+                renderDebugLogs();
+            });
+        });
+
         setTimeout(() => {
             checkThreatsInDOM();
         }, 1000);
@@ -6343,6 +6685,6 @@
     checkAndRunCollectorAssistant();
     checkAndRunExpeditionAssistant();
     scanAndSaveExpeditionTemplates();
-    console.log(LS, 'LuckyStrike OGame Helper v9.0 hazır!');
+    console.log(LS, 'LuckyStrike OGame Helper v10.0 hazır!');
 
 })();

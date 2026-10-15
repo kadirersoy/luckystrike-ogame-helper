@@ -7,6 +7,25 @@
         return !!(el && el.closest && el.closest('#ls-panel, [id^="ls-"]'));
     }
 
+    function bridgeLog(level, cat, msg, data) {
+        try {
+            window.dispatchEvent(new CustomEvent('LS_BRIDGE_LOG', {
+                detail: {
+                    level: level || 'INFO',
+                    cat: cat || 'BRIDGE',
+                    msg: msg,
+                    data: data ? (typeof data === 'object' ? JSON.stringify(data) : String(data)) : null
+                }
+            }));
+        } catch (e) {}
+    }
+
+    var isDebugEnabled = false;
+    try {
+        isDebugEnabled = (localStorage.getItem('LS_DEBUG_ENABLED') === 'true');
+    } catch (e) {}
+    window.LS_DEBUG_ENABLED = isDebugEnabled;
+
     function findExpeditionSelect(targetName) {
         var all = Array.prototype.slice.call(document.querySelectorAll('select')).filter(function (s) { return !isLsNode(s); });
         var candidates = [];
@@ -85,7 +104,14 @@
             var d = e.detail;
             if (!d || !d.type) return;
 
+            if (d.type === 'SET_DEBUG_MODE') {
+                window.LS_DEBUG_ENABLED = !!d.enabled;
+                bridgeLog('ACTION', 'BRIDGE', 'Bridge debug modu güncellendi: ' + (window.LS_DEBUG_ENABLED ? 'AÇIK' : 'KAPALI'));
+                return;
+            }
+
             if (d.type === 'SELECT_SHIP') {
+                bridgeLog('ACTION', 'BRIDGE', 'Gemi seçimi: ' + d.shipId + ', Adet: ' + d.amount);
                 if (window.fleetDispatcher && typeof window.fleetDispatcher.selectShip === 'function') {
                     window.fleetDispatcher.selectShip(d.shipId, d.amount);
                     if (typeof window.fleetDispatcher.refresh === 'function') window.fleetDispatcher.refresh();
@@ -98,6 +124,7 @@
                 }
             } else if (d.type === 'SET_TARGET') {
                 var targetType = parseInt(d.targetType, 10) || 1;
+                bridgeLog('ACTION', 'BRIDGE', 'Hedef koordinat ayarlandı: [' + d.g + ':' + d.s + ':' + d.p + '] Tip: ' + targetType);
                 var changed = false;
                 if (window.$) {
                     var $g = $('#galaxy, input[name="galaxy"]');
@@ -134,6 +161,7 @@
                 }
             } else if (d.type === 'SELECT_MISSION') {
                 var missionId = parseInt(d.missionId, 10) || 3;
+                bridgeLog('ACTION', 'BRIDGE', 'Görev seçildi: ID ' + missionId);
                 if (window.fleetDispatcher && typeof window.fleetDispatcher.selectMission === 'function') {
                     window.fleetDispatcher.selectMission(missionId);
                 }
@@ -141,25 +169,32 @@
                     $('#missionButton' + missionId + ', [data-mission="' + missionId + '"]').trigger('click');
                 }
             } else if (d.type === 'SUBMIT_FLEET1') {
+                bridgeLog('ACTION', 'BRIDGE', 'SUBMIT_FLEET1 tetiklendi.');
                 if (window.fleetDispatcher && typeof window.fleetDispatcher.trySubmitFleet1 === 'function') {
                     window.fleetDispatcher.trySubmitFleet1();
                 } else if (window.$) {
                     $('#continueToFleet2, button.continue, a.continue').trigger('click');
                 }
             } else if (d.type === 'SUBMIT_FLEET2') {
+                bridgeLog('DISPATCH', 'BRIDGE', 'SUBMIT_FLEET2 tetiklendi.');
                 if (window.fleetDispatcher) {
                     if (typeof window.fleetDispatcher.trySubmitFleet2 === 'function') {
+                        bridgeLog('DISPATCH', 'BRIDGE', 'fleetDispatcher.trySubmitFleet2() çağrıldı.');
                         window.fleetDispatcher.trySubmitFleet2();
                     } else if (typeof window.fleetDispatcher.submitFleet2 === 'function') {
+                        bridgeLog('DISPATCH', 'BRIDGE', 'fleetDispatcher.submitFleet2() çağrıldı.');
                         window.fleetDispatcher.submitFleet2();
                     } else if (typeof window.fleetDispatcher.sendFleet === 'function') {
+                        bridgeLog('DISPATCH', 'BRIDGE', 'fleetDispatcher.sendFleet() çağrıldı.');
                         window.fleetDispatcher.sendFleet();
                     }
                 }
                 if (window.$ && $('#sendFleet').length) {
+                    bridgeLog('DISPATCH', 'BRIDGE', '$("#sendFleet").trigger("click") çağrıldı.');
                     $('#sendFleet').trigger('click');
                 }
             } else if (d.type === 'FILL_RESOURCES') {
+                bridgeLog('ACTION', 'BRIDGE', 'Kaynaklar dolduruldu: M:' + (d.m||0) + ' C:' + (d.c||0) + ' D:' + (d.d||0));
                 if (window.$) {
                     var mEl = $('#metal, input[name="metal"]');
                     var cEl = $('#crystal, input[name="crystal"]');
@@ -173,15 +208,18 @@
                     if (typeof window.fleetDispatcher.refresh === 'function') window.fleetDispatcher.refresh();
                 }
             } else if (d.type === 'CARGO_REFRESH') {
+                bridgeLog('ACTION', 'BRIDGE', 'Kargo hesaplaması yenilendi.');
                 if (window.fleetDispatcher) {
                     if (typeof window.fleetDispatcher.cargoCalculation === 'function') window.fleetDispatcher.cargoCalculation();
                     if (typeof window.fleetDispatcher.refresh === 'function') window.fleetDispatcher.refresh();
                 }
             } else if (d.type === 'SELECT_TEMPLATE') {
+                bridgeLog('ACTION', 'BRIDGE', 'Şablon seçiliyor: ' + (d.name || d.id));
                 selectExpeditionTemplateMain(d);
             } else if (d.type === 'SET_SPEED') {
                 var speedVal = parseInt(d.speed, 10) || 100;
                 var stepVal = Math.round(speedVal / 10);
+                bridgeLog('ACTION', 'BRIDGE', 'Hız ayarlandı: %' + speedVal);
                 if (window.fleetDispatcher) {
                     if (typeof window.fleetDispatcher.setSpeed === 'function') {
                         try { window.fleetDispatcher.setSpeed(speedVal); } catch(e) {}
@@ -210,6 +248,7 @@
             } else if (d.type === 'SET_HOLDING_TIME') {
                 var hTime = parseInt(d.hours, 10) || 1;
                 var hTimeStr = '' + hTime;
+                bridgeLog('ACTION', 'BRIDGE', 'Bekleme süresi ayarlandı: ' + hTime + ' saat');
                 if (window.fleetDispatcher) {
                     if (typeof window.fleetDispatcher.setHoldingTime === 'function') {
                         try { window.fleetDispatcher.setHoldingTime(hTime); } catch(e) {}
@@ -254,6 +293,7 @@
             } else if (d.type === 'SET_EXPEDITION_TARGET') {
                 var g = d.g ? String(d.g).trim() : '';
                 var s = d.s ? String(d.s).trim() : '';
+                bridgeLog('ACTION', 'BRIDGE', 'Keşif hedefi ayarlandı: [' + g + ':' + s + ':16]');
 
                 if (window.$) {
                     var $g = $('#galaxy, input[name="galaxy"]');
@@ -291,4 +331,41 @@
             }
         } catch (e) {}
     });
+
+    // Intercept OGame AJAX when debug is enabled
+    function attachAjaxListeners() {
+        if (!window.$ && !window.jQuery) {
+            setTimeout(attachAjaxListeners, 200);
+            return;
+        }
+        var $ = window.$ || window.jQuery;
+        try {
+            $(document).ajaxSend(function(event, jqXHR, settings) {
+                if (window.LS_DEBUG_ENABLED && settings && settings.url) {
+                    var u = settings.url;
+                    if (u.indexOf('fleetdispatch') !== -1 || u.indexOf('sendFleet') !== -1 || u.indexOf('checkTarget') !== -1 || u.indexOf('galaxy') !== -1 || u.indexOf('ajax') !== -1) {
+                        bridgeLog('INFO', 'OGAME-AJAX', 'İstek yapılıyor: ' + u.split('&_st=')[0]);
+                    }
+                }
+            });
+            $(document).ajaxComplete(function(event, xhr, settings) {
+                if (window.LS_DEBUG_ENABLED && settings && settings.url) {
+                    var u = settings.url;
+                    if (u.indexOf('fleetdispatch') !== -1 || u.indexOf('sendFleet') !== -1 || u.indexOf('checkTarget') !== -1 || u.indexOf('galaxy') !== -1 || u.indexOf('ajax') !== -1) {
+                        var snippet = '';
+                        try {
+                            snippet = (xhr.responseText || '').substring(0, 160);
+                        } catch (e) {}
+                        bridgeLog(xhr.status === 200 ? 'INFO' : 'WARN', 'OGAME-AJAX', 'İstek yanıtı (' + xhr.status + '): ' + u.split('&_st=')[0], snippet);
+                    }
+                }
+            });
+            $(document).ajaxError(function(event, xhr, settings, thrownError) {
+                if (window.LS_DEBUG_ENABLED && settings && settings.url) {
+                    bridgeLog('ERROR', 'OGAME-AJAX', 'İstek hatası: ' + (settings.url ? settings.url.split('&_st=')[0] : 'URL bilinmiyor') + ' | ' + thrownError);
+                }
+            });
+        } catch (e) {}
+    }
+    attachAjaxListeners();
 })();

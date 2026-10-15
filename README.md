@@ -1,4 +1,4 @@
-# ⚡ LuckyStrike OGame Helper (v9.0)
+# ⚡ LuckyStrike OGame Helper (v10.0)
 
 [English](#-english-description) | [Türkçe](#-türkçe-açıklama)
 
@@ -164,7 +164,7 @@ LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Term
 ## 🚀 Kurulum / Installation
 
 ### Chrome & Microsoft Edge
-1. İndirin / Download: [`luckystrike-ogame-helper-v9.0.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
+1. İndirin / Download: [`luckystrike-ogame-helper-v10.0.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
 2. Tarayıcıda eklentiler sayfasına gidin / Open extensions page:
    - **Chrome:** `chrome://extensions`
    - **Edge:** `edge://extensions`
@@ -174,6 +174,12 @@ LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Term
 ---
 
 ## 📝 Sürüm Geçmişi / Changelog
+
+### v10.0
+- **🐞 Canlı Debug & Hata Teşhis Sekmesi (Debug Tab):** Tüm sekmelerdeki eylemleri (Keşif, Toplayıcı, Sepet, Harabe, Scanner, Finder, Alarm, Bridge ve OGame sunucu/AJAX isteklerini) anbean kaydeden gelişmiş teşhis modülü eklendi.
+- **⚡ Sıfır Performans Etkisi (Default Kapalı):** Varsayılan olarak kapalıdır; açıldığında sistem adımlarını, gönderilen emirleri ve sunucu yanıtlarını milisaniyelik zaman damgasıyla listeler.
+- **💾 Sayfalar Arası Oturum Hafızası (`sessionStorage`):** Gezegenler veya sistemler arası geçişlerde sayfa yenilense bile loglar silinmez, oturum boyunca geçmiş adımlar korunur.
+- **📋 Tek Tıkla Kopyalama & Filtreleme:** Tek butonla tüm logları panoya biçimlendirilmiş metin olarak kopyalama, kategorilere göre (Keşif, Toplayıcı, Sunucu/Ajax, Bridge, Hatalar) anında filtreleme desteği.
 
 ### v9.0
 - **🧭 Keşif Asistanı (Expedition Assistant):** Spiral rota algoritması (+1, -1, +2, -2...) ile 16. slotlara otomatik rota dağıtımı, Filo 1 sayfasındaki kayıtlı keşif şablonlarını otomatik algılama ve uygulama, hız (%10-%100) ve bekleme süresi (1-5 saat) kontrolleri, yüzen HUD bilgi banner'ı ve `Space` tuşu ile adım adım güvenli filo gönderimi.
