@@ -35,7 +35,11 @@
     // ============================================================
     // CENTRAL LOGGER & TRACER
     // ============================================================
-    let activeDebugFilters = new Set(['ALL']);
+    let debugFilterState = {
+        row1: new Set(['ALL']), // 'ALL', 'DEBUG', 'TRACE'
+        row2: new Set(['ALL']), // 'ALL', 'REQ', 'RESP'
+        row3: new Set(['ALL'])  // 'ALL', 'INFO', 'WARN', 'ERROR'
+    };
     let onDebugLiveUpdate = null;
 
     const LS_LOGGER = {
@@ -92,6 +96,13 @@
                 sessionStorage.removeItem(KEYS.DEBUG_LOGS);
             } catch (e) {}
         },
+        removeFilteredLogs: function(predicate) {
+            try {
+                const logs = this.getLogs();
+                const remaining = logs.filter(entry => !predicate(entry));
+                sessionStorage.setItem(KEYS.DEBUG_LOGS, JSON.stringify(remaining));
+            } catch (e) {}
+        },
         log: function(level, cat, msg, data, stream) {
             const debugOn = this.isDebugEnabled();
             const traceOn = this.isTraceEnabled();
@@ -135,7 +146,8 @@
 
                 try {
                     const tagStyle = entry.stream === 'TRACE' ? 'color:#ff7043;font-weight:bold' : 'color:#00bcff;font-weight:bold';
-                    console.log(`%c[${entry.stream}] [${timeStr}] [${entry.cat}] [${entry.level}]`, tagStyle, entry.msg, entry.data || '');
+                    const catLabel = (entry.cat && entry.cat !== 'TRACE' && entry.cat !== 'DEBUG') ? ` [${entry.cat}]` : '';
+                    console.log(`%c[${entry.stream}] [${timeStr}]${catLabel} [${entry.level}]`, tagStyle, entry.msg, entry.data || '');
                 } catch(e) {}
 
                 if (typeof onDebugLiveUpdate === 'function') {
@@ -171,6 +183,14 @@
         clearTraces: function() {
             try {
                 sessionStorage.removeItem(KEYS.TRACE_LOGS);
+            } catch (e) {}
+            this.updateIndicator();
+        },
+        removeFilteredTraces: function(predicate) {
+            try {
+                const traces = this.getTraces();
+                const remaining = traces.filter(entry => !predicate(entry));
+                sessionStorage.setItem(KEYS.TRACE_LOGS, JSON.stringify(remaining));
             } catch (e) {}
             this.updateIndicator();
         },
@@ -380,21 +400,141 @@
         } catch (e) {}
     }
 
-    // Capture User Actions (Click, Keydown, Change) for Trace Logs
+    // Helper to describe clicks on LuckyStrike UI elements
+    function describeLsUiElement(rawEl) {
+        let el = rawEl;
+        if (!el) return null;
+        if (el.nodeType === 3) el = el.parentElement;
+        if (!el || !el.tagName) return null;
+
+        // Interactive element inside LuckyStrike
+        const interactive = el.closest ? el.closest('button, .ls-tab, a, input, select, .ls-chip, .ls-x, .ls-cp-btn, [data-action], .ls-col-row, .ls-exp-colony-item') : null;
+        if (interactive) {
+            el = interactive;
+        }
+
+        const tag = (el.tagName || '').toLowerCase();
+        const id = el.id ? '#' + el.id : '';
+        const cls = el.className && typeof el.className === 'string' ? el.className : '';
+
+        // Tab click
+        if (el.classList && el.classList.contains('ls-tab')) {
+            const tabName = el.getAttribute('data-tab') || (el.innerText || '').trim();
+            return {
+                summary: `Sekmeye Tıklandı: "${tabName}"`,
+                details: { type: 'TAB', tab: tabName, id: el.id }
+            };
+        }
+
+        // Chip click (e.g. scanner filters)
+        if (el.classList && el.classList.contains('ls-chip')) {
+            const chipText = (el.innerText || '').trim();
+            return {
+                summary: `Filtre / Seçim Çipi Tıklandı: "${chipText}"`,
+                details: { type: 'CHIP', text: chipText }
+            };
+        }
+
+        // Cart delete button (.ls-x)
+        if (el.classList && el.classList.contains('ls-x')) {
+            const itemRow = el.closest('.ls-item');
+            const itemName = itemRow ? (itemRow.innerText || '').split('\n')[0].trim() : 'Öğe';
+            return {
+                summary: `Sepetten Çıkar Butonuna Tıklandı: "${itemName}"`,
+                details: { type: 'CART_REMOVE', item: itemName }
+            };
+        }
+
+        // Button clicks
+        if (tag === 'button' || (el.classList && (el.classList.contains('ls-btn') || el.classList.contains('ls-cp-btn')))) {
+            const text = (el.innerText || el.value || el.title || el.id || 'Buton').trim().replace(/\s+/g, ' ');
+            return {
+                summary: `Butona Tıklandı: "${text}" (${id || tag})`,
+                details: { type: 'BUTTON', text: text, id: el.id, class: cls }
+            };
+        }
+
+        // Checkbox or radio click
+        if (tag === 'input' && (el.type === 'checkbox' || el.type === 'radio')) {
+            const labelEl = el.closest('label');
+            const labelText = labelEl ? labelEl.innerText.trim().replace(/\s+/g, ' ') : (el.title || el.name || el.id);
+            return {
+                summary: `Seçim Kutusu Tıklandı: "${labelText}" (${el.checked ? 'SEÇİLİ' : 'SEÇİLİ DEĞİL'})`,
+                details: { type: el.type, checked: el.checked, id: el.id, name: el.name }
+            };
+        }
+
+        const fallbackText = (el.innerText || el.value || el.title || el.id || '').trim().replace(/\s+/g, ' ').substring(0, 40);
+        if (fallbackText) {
+            return {
+                summary: `UI Öğesine Tıklandı: <${tag}${id}> "${fallbackText}"`,
+                details: { tag: tag, id: el.id, text: fallbackText }
+            };
+        }
+
+        return null;
+    }
+
+    function getLsInputLabel(el) {
+        if (!el) return 'Bilinmeyen Alan';
+        const labelEl = el.closest('label');
+        if (labelEl) {
+            return labelEl.innerText.trim().replace(/\s+/g, ' ');
+        }
+        const parentRow = el.closest('.ls-row, .ls-col, div');
+        if (parentRow) {
+            const lbl = parentRow.querySelector('.ls-label, span, b');
+            if (lbl && lbl !== el) {
+                return lbl.innerText.trim().replace(/\s+/g, ' ');
+            }
+        }
+        return el.title || el.placeholder || el.name || el.id || el.tagName;
+    }
+
+    // Global Click Listener for both DEBUG and TRACE
     document.addEventListener('click', function(e) {
-        if (!LS_TRACER.isEnabled()) return;
+        const debugOn = LS_LOGGER.isDebugEnabled();
+        const traceOn = LS_TRACER.isEnabled();
+        if (!debugOn && !traceOn) return;
+
         try {
             const target = e.target;
             if (!target) return;
+            // Ignore clicks inside debug console/controls to avoid feedback loops
             if (target.closest && (target.closest('#tc-debug') || target.closest('#ls-trace-badge'))) return;
 
-            const desc = describeElement(target);
-            LS_TRACER.record('KLİK', desc.summary, desc.details);
+            const isInsideLs = !!(target.closest && (target.closest('#ls-panel') || target.closest('[id^="ls-banner"]') || target.closest('#ls-coll-floating-banner') || target.closest('#ls-exp-floating-banner') || target.closest('#ls-cart-floating-banner') || target.closest('#ls-fab')));
+
+            if (isInsideLs) {
+                const desc = describeLsUiElement(target);
+                if (desc) {
+                    if (debugOn) {
+                        LS_LOGGER.log('ACTION', 'UI', desc.summary, desc.details, 'DEBUG');
+                    }
+                    if (traceOn) {
+                        LS_TRACER.record('UI_KLİK', desc.summary, desc.details);
+                    }
+                }
+            } else {
+                const desc = describeElement(target);
+                if (desc) {
+                    if (debugOn) {
+                        LS_LOGGER.log('ACTION', 'GAME-UI', `Oyunda Tıklama: ${desc.summary}`, desc.details, 'DEBUG');
+                    }
+                    if (traceOn) {
+                        LS_TRACER.record('KLİK', desc.summary, desc.details);
+                    }
+                }
+            }
         } catch (err) {}
     }, true);
 
+    // Global Keydown Listener for both DEBUG and TRACE
     document.addEventListener('keydown', function(e) {
-        if (!LS_TRACER.isEnabled()) return;
+        const debugOn = LS_LOGGER.isDebugEnabled();
+        const traceOn = LS_TRACER.isEnabled();
+        if (!debugOn && !traceOn) return;
+
         try {
             const code = e.code;
             const key = e.key;
@@ -406,33 +546,56 @@
             const target = e.target;
             const targetDesc = target ? (target.id ? '#' + target.id : (target.tagName || '')) : '';
             const keyLabel = (e.ctrlKey ? 'Ctrl+' : '') + (e.altKey ? 'Alt+' : '') + (e.shiftKey ? 'Shift+' : '') + (code || key);
+            const summary = `Tuş Basıldı: [${keyLabel}] (Hedef: ${targetDesc})`;
+            const details = { code: code, key: key, target: targetDesc };
 
-            LS_TRACER.record('TUŞ', `Tuş Basıldı: [${keyLabel}] (Hedef: ${targetDesc})`, {
-                code: code,
-                key: key,
-                target: targetDesc
-            });
+            if (debugOn) {
+                LS_LOGGER.log('ACTION', 'KEYBOARD', summary, details, 'DEBUG');
+            }
+            if (traceOn) {
+                LS_TRACER.record('TUŞ', summary, details);
+            }
         } catch (err) {}
     }, true);
 
+    // Global Change Listener for both DEBUG and TRACE
     document.addEventListener('change', function(e) {
-        if (!LS_TRACER.isEnabled()) return;
+        const debugOn = LS_LOGGER.isDebugEnabled();
+        const traceOn = LS_TRACER.isEnabled();
+        if (!debugOn && !traceOn) return;
+
         try {
             const target = e.target;
             if (!target) return;
-            if (target.closest && (target.closest('#tc-debug') || target.closest('#ls-panel'))) return;
+            if (target.closest && (target.closest('#tc-debug') || target.closest('#ls-trace-badge'))) return;
 
+            const isInsideLs = !!(target.closest && target.closest('#ls-panel'));
             const name = target.name || target.id || target.className || target.tagName;
             let val = target.value;
             if (target.type === 'checkbox' || target.type === 'radio') {
                 val = target.checked ? 'SEÇİLİ' : 'SEÇİLİ DEĞİL';
             }
-            LS_TRACER.record('GİRDİ_DEĞİŞİMİ', `Alan Değişti: [${name}] = "${val}"`, {
-                id: target.id,
-                name: target.name,
-                value: val,
-                type: target.type
-            });
+
+            if (isInsideLs) {
+                const label = getLsInputLabel(target);
+                const summary = `UI Ayar Değişti: [${label}] = "${val}"`;
+                const details = { id: target.id, name: target.name, value: val, type: target.type };
+                if (debugOn) {
+                    LS_LOGGER.log('ACTION', 'UI', summary, details, 'DEBUG');
+                }
+                if (traceOn) {
+                    LS_TRACER.record('UI_AYAR', summary, details);
+                }
+            } else {
+                const summary = `Oyun Alanı Değişti: [${name}] = "${val}"`;
+                const details = { id: target.id, name: target.name, value: val, type: target.type };
+                if (debugOn) {
+                    LS_LOGGER.log('ACTION', 'GAME-UI', summary, details, 'DEBUG');
+                }
+                if (traceOn) {
+                    LS_TRACER.record('GİRDİ_DEĞİŞİMİ', summary, details);
+                }
+            }
         } catch (err) {}
     }, true);
 
@@ -5710,12 +5873,14 @@
             '#ls-debug-toggle:checked + .ls-debug-slider:before{transform:translateX(12px)}',
             '#ls-trace-toggle:checked + .ls-debug-slider{background-color:#ff5722;border-color:#e64a19}',
             '#ls-trace-toggle:checked + .ls-debug-slider:before{transform:translateX(12px)}',
-            '@keyframes ls-pulse{0%{opacity:0.6;transform:scale(0.9)}50%{opacity:1;transform:scale(1.15)}100%{opacity:0.6;transform:scale(0.9)}}',
-            '.ls-debug-filter{background:rgba(255,255,255,0.05);border:1px solid #1a2c3f;color:#8899aa;font-size:9.5px;padding:2px 6px;border-radius:3px;cursor:pointer;user-select:none;transition:all .15s}',
+            '.ls-debug-filter{background:rgba(255,255,255,0.05);border:1px solid #1a2c3f;color:#8899aa;font-size:9px;padding:2px 5px;border-radius:3px;cursor:pointer;user-select:none;transition:all .15s;line-height:1.2}',
             '.ls-debug-filter:hover{background:rgba(0,188,255,0.15);color:#fff}',
             '.ls-debug-filter.active{background:#00bcff;color:#000;font-weight:bold;border-color:#00bcff}',
-            '.ls-debug-filter[data-filter="TRACE"].active{background:#ff5722;color:#fff;border-color:#ff5722}',
-            '.ls-debug-filter[data-filter="ERROR"].active{background:#e74c3c;color:#fff;border-color:#e74c3c}',
+            '.ls-debug-filter[data-val="TRACE"].active{background:#ff5722;color:#fff;border-color:#ff5722}',
+            '.ls-debug-filter[data-val="ERROR"].active{background:#e74c3c;color:#fff;border-color:#e74c3c}',
+            '.ls-debug-filter[data-val="WARN"].active{background:#f39c12;color:#fff;border-color:#f39c12}',
+            '.ls-debug-filter[data-val="REQ"].active{background:#3498db;color:#fff;border-color:#3498db}',
+            '.ls-debug-filter[data-val="RESP"].active{background:#2ecc71;color:#fff;border-color:#2ecc71}',
 
             '#ls-body{padding:10px;overflow-y:auto;overflow-x:hidden !important;flex:1;min-height:0;display:flex;flex-direction:column}',
             '.ls-tc{display:none;width:100%;overflow-x:hidden}.ls-tc.active{display:flex;flex-direction:column;flex:1;min-height:0;width:100%}',
@@ -5864,7 +6029,7 @@
         panel.id = 'ls-panel';
         panel.innerHTML =
             '<div id="ls-header">' +
-                '<span id="ls-header-title">' + boltSvg + ' LuckyStrike Helper <span style="font-size:10px;color:#8899aa;font-weight:normal;opacity:0.8">v10.0</span></span>' +
+                '<span id="ls-header-title">' + boltSvg + ' LuckyStrike Helper <span style="font-size:10px;color:#8899aa;font-weight:normal;opacity:0.8">v10.2</span></span>' +
                 '<div style="display:flex;align-items:center;gap:6px">' +
                     '<button id="ls-header-stop-btn" class="ls-btn-d ls-btn-sm" style="display:none;padding:2px 7px;font-size:10px;align-items:center;gap:3px;cursor:pointer" title="Tekrarlayan bu alarmı sustur">⏹️ Sustur</button>' +
                     '<span id="ls-close">✖</span>' +
@@ -6238,7 +6403,7 @@
                                 '</label>' +
                             '</div>' +
                             '<div style="font-size:9px;color:#8899aa;margin-top:3px;line-height:1.2">' +
-                                'Sistem uyarı & hata kayıtları' +
+                                'Uygulama logları' +
                             '</div>' +
                         '</div>' +
 
@@ -6254,28 +6419,42 @@
                                 '</label>' +
                             '</div>' +
                             '<div style="font-size:9px;color:#8899aa;margin-top:3px;line-height:1.2">' +
-                                'Tıklama, tuş & yanıt takibi' +
+                                'İzleme kayıtları' +
                             '</div>' +
                         '</div>' +
                     '</div>' +
 
-                    // BUTONLAR: LOGLARI KOPYALA | TRACE KOPYALA | TEMİZLE | YENİLE
+                    // BUTONLAR: LOGLARI KOPYALA | LOGLARI TEMİZLE | LOGLARI ÇIKAR (3 SEÇENEK)
                     '<div style="display:flex;gap:4px;margin-bottom:6px;flex-shrink:0">' +
-                        '<button id="ls-debug-copy" class="ls-btn" style="flex:1.1;display:flex;align-items:center;justify-content:center;gap:2px;font-size:10px;padding:4px 4px" title="Filtrelenmiş debug loglarını panoya kopyalar">📋 Logları Kopyala</button>' +
-                        '<button id="ls-trace-copy" class="ls-btn" style="flex:1.1;background:#ff5722;color:#fff;display:flex;align-items:center;justify-content:center;gap:2px;font-size:10px;padding:4px 4px" title="Kullanıcı eylem akışını (Trace Logs) panoya kopyalar">🎯 Trace Kopyala</button>' +
-                        '<button id="ls-debug-clear" class="ls-btn ls-btn-d" style="width:30px;display:flex;align-items:center;justify-content:center;font-size:10px;padding:4px 0" title="Tüm log ve trace kayıtlarını temizler">🗑️</button>' +
-                        '<button id="ls-debug-refresh" class="ls-btn" style="width:26px;display:flex;align-items:center;justify-content:center;font-size:10px;padding:4px 0" title="Yenile">🔄</button>' +
+                        '<button id="ls-debug-copy" class="ls-btn" style="flex:1;display:flex;align-items:center;justify-content:center;gap:3px;font-size:10px;padding:5px 2px" title="Filtrelenmiş logları panoya kopyalar">📋 Logları Kopyala</button>' +
+                        '<button id="ls-debug-clear" class="ls-btn ls-btn-d" style="flex:1;display:flex;align-items:center;justify-content:center;gap:3px;font-size:10px;padding:5px 2px" title="Filtrelenmiş logları temizler">🗑️ Logları Temizle</button>' +
+                        '<button id="ls-debug-export" class="ls-btn" style="flex:1;background:#2ecc71;color:#fff;display:flex;align-items:center;justify-content:center;gap:3px;font-size:10px;padding:5px 2px" title="Filtrelenmiş logları .txt dosyası olarak masaüstüne çıkarır">💾 Logları Çıkar</button>' +
                     '</div>' +
 
-                    // MULTI-SELECT FİLTRELER
-                    '<div style="display:flex;gap:3px;margin-bottom:6px;flex-wrap:wrap;flex-shrink:0" id="ls-debug-filters">' +
-                        '<span class="ls-debug-filter active" data-filter="ALL" title="Tüm kayıtları göster">Tümü</span>' +
-                        '<span class="ls-debug-filter" data-filter="TRACE" title="Kullanıcı eylem ve yanıt takibi">🎯 Trace</span>' +
-                        '<span class="ls-debug-filter" data-filter="EXPEDITION" title="Keşif modülü kayıtları">🧭 Keşif</span>' +
-                        '<span class="ls-debug-filter" data-filter="COLLECTOR" title="Maden toplayıcı modülü kayıtları">📦 Toplayıcı</span>' +
-                        '<span class="ls-debug-filter" data-filter="OGAME-AJAX" title="OGame sunucu & AJAX istekleri">🌐 Sunucu/Ajax</span>' +
-                        '<span class="ls-debug-filter" data-filter="BRIDGE" title="Oyun içi bridge olayları">⚡ Bridge</span>' +
-                        '<span class="ls-debug-filter" data-filter="ERROR" title="Hatalar ve uyarılar">⚠️ Hatalar</span>' +
+                    // 3 SATIRLI GELİŞMİŞ MULTI FİLTRE
+                    '<div style="display:flex;flex-direction:column;gap:3px;margin-bottom:6px;flex-shrink:0" id="ls-debug-filters-container">' +
+                        // 1. Satır: Akış
+                        '<div style="display:flex;gap:3px;align-items:center;flex-wrap:wrap">' +
+                            '<span style="font-size:9px;color:#8899aa;font-weight:bold;min-width:44px">Akış:</span>' +
+                            '<span class="ls-debug-filter active" data-row="1" data-val="ALL">Tümü</span>' +
+                            '<span class="ls-debug-filter" data-row="1" data-val="DEBUG">🐞 Debug Logs</span>' +
+                            '<span class="ls-debug-filter" data-row="1" data-val="TRACE">🎯 Trace Logs</span>' +
+                        '</div>' +
+                        // 2. Satır: Kapsam / Sunucu & Ajax
+                        '<div style="display:flex;gap:3px;align-items:center;flex-wrap:wrap">' +
+                            '<span style="font-size:9px;color:#8899aa;font-weight:bold;min-width:44px">Kapsam:</span>' +
+                            '<span class="ls-debug-filter active" data-row="2" data-val="ALL">Tümü</span>' +
+                            '<span class="ls-debug-filter" data-row="2" data-val="REQ" title="Sunucuya gönderilen AJAX ve istekler">📤 Giden İstekler</span>' +
+                            '<span class="ls-debug-filter" data-row="2" data-val="RESP" title="Sunucudan ve OGame\'den dönen yanıtlar">📥 Gelen Yanıtlar</span>' +
+                        '</div>' +
+                        // 3. Satır: Seviye
+                        '<div style="display:flex;gap:3px;align-items:center;flex-wrap:wrap">' +
+                            '<span style="font-size:9px;color:#8899aa;font-weight:bold;min-width:44px">Seviye:</span>' +
+                            '<span class="ls-debug-filter active" data-row="3" data-val="ALL">Tümü</span>' +
+                            '<span class="ls-debug-filter" data-row="3" data-val="INFO">ℹ️ Info</span>' +
+                            '<span class="ls-debug-filter" data-row="3" data-val="WARN">⚠️ Warning</span>' +
+                            '<span class="ls-debug-filter" data-row="3" data-val="ERROR">❌ Error</span>' +
+                        '</div>' +
                     '</div>' +
 
                     // DURUM & SAYAÇ
@@ -6762,29 +6941,39 @@
         // DEBUG & TRACE LOGS LOGIC & CONTROLS
         // ============================================================
         function matchesFilters(entry) {
-            if (!activeDebugFilters || activeDebugFilters.size === 0 || activeDebugFilters.has('ALL')) {
-                return true;
+            // 1. Satır: Akış (Stream: Tümü, Debug Logs, Trace Logs)
+            if (!debugFilterState.row1.has('ALL')) {
+                const stream = entry.stream || (entry.cat === 'TRACE' ? 'TRACE' : 'DEBUG');
+                if (!debugFilterState.row1.has(stream)) {
+                    return false;
+                }
             }
 
-            const hasErrorFilter = activeDebugFilters.has('ERROR');
-            const categoryFilters = [];
-            activeDebugFilters.forEach(f => {
-                if (f !== 'ERROR' && f !== 'ALL') {
-                    categoryFilters.push(f);
-                }
-            });
+            // 2. Satır: Kapsam / Sunucu & Ajax (Tümü, Giden İstekler, Gelen Yanıtlar)
+            if (!debugFilterState.row2.has('ALL')) {
+                let matchRow2 = false;
+                const cat = (entry.cat || '').toUpperCase();
+                const msg = (entry.msg || '');
 
-            const isErrorOrWarn = (entry.level === 'ERROR' || entry.level === 'WARN');
+                const isReq = (cat === 'AJAX-REQ' || cat === 'OGAME-AJAX-REQ' || msg.includes('GİDEN İSTEK') || msg.includes('SUNUCU İSTEĞİ') || msg.includes('İstek yapılıyor'));
+                const isResp = (cat === 'AJAX-RESP' || cat === 'OGAME-AJAX-RESP' || cat === 'OGAME-YANIT' || msg.includes('GELEN YANIT') || msg.includes('SUNUCU YANITI') || msg.includes('OGame Bildirimi') || msg.includes('İstek yanıtı') || msg.includes('SUNUCU HATASI'));
 
-            if (categoryFilters.length > 0 && hasErrorFilter) {
-                // Örn: Keşif + Hata -> Kategorisi Keşif olan VE seviyesi Hata/Uyarı olan kayıtlar
-                return categoryFilters.includes(entry.cat) && isErrorOrWarn;
-            } else if (categoryFilters.length > 0) {
-                // Seçilen kategorilerden birine uyan kayıtlar
-                return categoryFilters.includes(entry.cat);
-            } else if (hasErrorFilter) {
-                // Yalnızca hata veya uyarı olan tüm kayıtlar
-                return isErrorOrWarn;
+                if (debugFilterState.row2.has('REQ') && isReq) matchRow2 = true;
+                if (debugFilterState.row2.has('RESP') && isResp) matchRow2 = true;
+
+                if (!matchRow2) return false;
+            }
+
+            // 3. Satır: Seviye (Tümü, Info, Warning, Error)
+            if (!debugFilterState.row3.has('ALL')) {
+                let matchRow3 = false;
+                const lvl = (entry.level || '').toUpperCase();
+
+                if (debugFilterState.row3.has('INFO') && (lvl === 'INFO' || lvl === 'ACTION' || lvl === 'DISPATCH')) matchRow3 = true;
+                if (debugFilterState.row3.has('WARN') && (lvl === 'WARN' || lvl === 'WARNING')) matchRow3 = true;
+                if (debugFilterState.row3.has('ERROR') && lvl === 'ERROR') matchRow3 = true;
+
+                if (!matchRow3) return false;
             }
 
             return true;
@@ -6812,6 +7001,73 @@
                 }
                 document.body.removeChild(ta);
             }
+        }
+
+        function formatLogsForExport(logs) {
+            const now = new Date();
+            const nowStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
+
+            const r1 = Array.from(debugFilterState.row1).join(', ');
+            const r2 = Array.from(debugFilterState.row2).join(', ');
+            const r3 = Array.from(debugFilterState.row3).join(', ');
+
+            let out = '==================================================\n' +
+                      '  LuckyStrike OGame Helper v10.2 - Log Kayıtları\n' +
+                      '  Tarih: ' + nowStr + '\n' +
+                      '  URL: ' + window.location.href + '\n' +
+                      '  Filtreler: [Akış: ' + r1 + '] [Kapsam: ' + r2 + '] [Seviye: ' + r3 + ']\n' +
+                      '  Toplam Kayıt: ' + logs.length + '\n' +
+                      '==================================================\n\n';
+
+            logs.forEach(l => {
+                const sTag = l.stream || (l.cat === 'TRACE' ? 'TRACE' : 'DEBUG');
+                const catPart = (l.cat && l.cat !== 'TRACE' && l.cat !== 'DEBUG') ? `[${l.cat}] ` : '';
+                out += `[${sTag}] [${l.time}] ${catPart}[${l.level}] ${l.msg}\n`;
+                if (l.data) {
+                    out += `    Data: ${l.data}\n`;
+                }
+            });
+
+            out += '\n==================================================\n' +
+                   '  Log Sonu\n' +
+                   '==================================================\n';
+            return out;
+        }
+
+        async function saveLogsToFile(filename, content) {
+            if (window.showSaveFilePicker) {
+                try {
+                    const handle = await window.showSaveFilePicker({
+                        suggestedName: filename,
+                        startIn: 'desktop',
+                        types: [{
+                            description: 'Metin Dosyası (*.txt)',
+                            accept: { 'text/plain': ['.txt'] }
+                        }]
+                    });
+                    const writable = await handle.createWritable();
+                    await writable.write(content);
+                    await writable.close();
+                    return true;
+                } catch (err) {
+                    if (err && err.name === 'AbortError') {
+                        return false;
+                    }
+                }
+            }
+
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 500);
+            return true;
         }
 
         function renderDebugLogs() {
@@ -6862,7 +7118,11 @@
                 'TRACE': '#ff7043',
                 'EXPEDITION': '#bb86fc',
                 'COLLECTOR': '#00bcff',
+                'AJAX-REQ': '#3498db',
+                'AJAX-RESP': '#2ecc71',
                 'OGAME-AJAX': '#2ecc71',
+                'OGAME-YANIT': '#f39c12',
+                'MOTOR': '#1abc9c',
                 'BRIDGE': '#f39c12',
                 'SCANNER': '#3498db',
                 'CART': '#9b59b6',
@@ -6888,11 +7148,29 @@
                 const lvlColor = levelColors[entry.level] || '#c9d1d9';
                 const escapedMsg = escapeHtml(entry.msg);
                 const dataPart = entry.data ? `<div style="color:#8b949e;margin-left:14px;font-size:9.5px;white-space:pre-wrap;word-break:break-all">${escapeHtml(entry.data)}</div>` : '';
-                return `<div style="margin-bottom:3px;padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.03)"><span style="color:${streamColor};font-weight:bold">[${streamTag}]</span> <span style="color:#6e7681">[${entry.time}]</span> <span style="color:${catColor};font-weight:bold">[${entry.cat}]</span> <span style="color:${lvlColor};font-weight:bold">[${entry.level}]</span> <span style="color:#e6edf3">${escapedMsg}</span>${dataPart}</div>`;
+
+                // Trace kayıtlarında ikinci bir [TRACE] tekrarı gösterilmez; doğrudan [ACTION] / [INFO] gelir
+                const catPartHtml = (entry.cat && entry.cat !== 'TRACE' && entry.cat !== 'DEBUG') 
+                    ? `<span style="color:${catColor};font-weight:bold">[${entry.cat}]</span> ` 
+                    : '';
+
+                return `<div style="margin-bottom:3px;padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.03)"><span style="color:${streamColor};font-weight:bold">[${streamTag}]</span> <span style="color:#6e7681">[${entry.time}]</span> ${catPartHtml}<span style="color:${lvlColor};font-weight:bold">[${entry.level}]</span> <span style="color:#e6edf3">${escapedMsg}</span>${dataPart}</div>`;
             }).join('');
 
             consoleEl.innerHTML = html;
             consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+
+        function updateFilterVisuals() {
+            document.querySelectorAll('#ls-debug-filters-container .ls-debug-filter').forEach(el => {
+                const rowKey = 'row' + el.getAttribute('data-row');
+                const val = el.getAttribute('data-val');
+                if (debugFilterState[rowKey] && debugFilterState[rowKey].has(val)) {
+                    el.classList.add('active');
+                } else {
+                    el.classList.remove('active');
+                }
+            });
         }
 
         onDebugLiveUpdate = function(entry) {
@@ -6919,22 +7197,7 @@
             });
         }
 
-        const debugClearBtn = document.getElementById('ls-debug-clear');
-        if (debugClearBtn) {
-            debugClearBtn.addEventListener('click', () => {
-                LS_LOGGER.clearLogs();
-                LS_TRACER.clearTraces();
-                renderDebugLogs();
-            });
-        }
-
-        const debugRefreshBtn = document.getElementById('ls-debug-refresh');
-        if (debugRefreshBtn) {
-            debugRefreshBtn.addEventListener('click', () => {
-                renderDebugLogs();
-            });
-        }
-
+        // 2.1. Logları Kopyala (Seçili filtrelere göre panoya kopyalar)
         const debugCopyBtn = document.getElementById('ls-debug-copy');
         if (debugCopyBtn) {
             debugCopyBtn.addEventListener('click', () => {
@@ -6944,24 +7207,8 @@
                     setTimeout(() => { debugCopyBtn.textContent = '📋 Logları Kopyala'; }, 1500);
                     return;
                 }
-                const now = new Date();
-                const nowStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
-                let out = '==================================================\n' +
-                          '  LuckyStrike OGame Helper v10.1 - Sistem & Eylem Logları\n' +
-                          '  Tarih: ' + nowStr + '\n' +
-                          '  URL: ' + window.location.href + '\n' +
-                          '  Filtre: ' + Array.from(activeDebugFilters).join(', ') + '\n' +
-                          '  Toplam Kayıt: ' + logs.length + '\n' +
-                          '==================================================\n\n';
-                logs.forEach(l => {
-                    const sTag = l.stream || (l.cat === 'TRACE' ? 'TRACE' : 'DEBUG');
-                    out += `[${sTag}] [${l.time}] [${l.cat}] [${l.level}] ${l.msg}\n`;
-                    if (l.data) out += `    Data: ${l.data}\n`;
-                });
-                out += '\n==================================================\n' +
-                       '  Log Sonu\n' +
-                       '==================================================\n';
 
+                const out = formatLogsForExport(logs);
                 copyTextToClipboard(out, () => {
                     debugCopyBtn.textContent = '✅ Kopyalandı!';
                     setTimeout(() => { debugCopyBtn.textContent = '📋 Logları Kopyala'; }, 2000);
@@ -6972,79 +7219,107 @@
             });
         }
 
-        const traceCopyBtn = document.getElementById('ls-trace-copy');
-        if (traceCopyBtn) {
-            traceCopyBtn.addEventListener('click', () => {
-                const traces = LS_TRACER.getTraces();
-                if (!traces || traces.length === 0) {
-                    traceCopyBtn.textContent = '⚠️ Trace Yok';
-                    setTimeout(() => { traceCopyBtn.textContent = '🎯 Trace Kopyala'; }, 1500);
+        // 2.2. Logları Temizle (Seçili filtrelere göre siler, tümü seçiliyse hepsini)
+        const debugClearBtn = document.getElementById('ls-debug-clear');
+        if (debugClearBtn) {
+            debugClearBtn.addEventListener('click', () => {
+                const allLogs = LS_LOGGER.getLogs();
+                const filteredLogs = allLogs.filter(matchesFilters);
+                if (!filteredLogs || filteredLogs.length === 0) {
+                    debugClearBtn.textContent = '⚠️ Log Yok';
+                    setTimeout(() => { debugClearBtn.textContent = '🗑️ Logları Temizle'; }, 1500);
                     return;
                 }
-                const now = new Date();
-                const nowStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
-                let out = '==================================================\n' +
-                          '  🎯 LuckyStrike OGame Helper v10.1 - Trace Logs\n' +
-                          '  (Kullanıcı Eylem & Oyun Yanıt Akışı)\n' +
-                          '  Tarih: ' + nowStr + '\n' +
-                          '  URL: ' + window.location.href + '\n' +
-                          '  Toplam Eylem: ' + traces.length + '\n' +
-                          '==================================================\n\n';
-                traces.forEach(t => {
-                    out += `[TRACE] [${t.time}] [${t.type}] ${t.summary}\n`;
-                    if (t.details) {
-                        const dStr = typeof t.details === 'object' ? JSON.stringify(t.details, null, 2) : String(t.details);
-                        out += `  Detay: ${dStr.split('\n').join('\n  ')}\n`;
-                    }
-                    out += '\n';
-                });
-                out += '==================================================\n' +
-                       '  Trace Sonu\n' +
-                       '==================================================\n';
 
-                copyTextToClipboard(out, () => {
-                    traceCopyBtn.textContent = '✅ Kopyalandı!';
-                    setTimeout(() => { traceCopyBtn.textContent = '🎯 Trace Kopyala'; }, 2000);
-                }, () => {
-                    traceCopyBtn.textContent = '❌ Başarısız';
-                    setTimeout(() => { traceCopyBtn.textContent = '🎯 Trace Kopyala'; }, 2000);
-                });
+                const isAllSelected = debugFilterState.row1.has('ALL') && debugFilterState.row2.has('ALL') && debugFilterState.row3.has('ALL');
+                if (isAllSelected) {
+                    LS_LOGGER.clearLogs();
+                    LS_TRACER.clearTraces();
+                } else {
+                    LS_LOGGER.removeFilteredLogs(matchesFilters);
+                    if (debugFilterState.row1.has('ALL') || debugFilterState.row1.has('TRACE')) {
+                        LS_TRACER.removeFilteredTraces(t => {
+                            return matchesFilters({
+                                stream: 'TRACE',
+                                cat: 'TRACE',
+                                level: 'ACTION',
+                                msg: t.summary || '',
+                                data: t.details
+                            });
+                        });
+                    }
+                }
+
+                renderDebugLogs();
+                debugClearBtn.textContent = '✅ Temizlendi!';
+                setTimeout(() => { debugClearBtn.textContent = '🗑️ Logları Temizle'; }, 1500);
             });
         }
 
-        // Multi-Select Filter Listeners
-        document.querySelectorAll('#ls-debug-filters .ls-debug-filter').forEach(f => {
-            f.addEventListener('click', () => {
-                const filterTag = f.getAttribute('data-filter') || 'ALL';
+        // 2.3. Logları Çıkar (Seçili filtrelere göre .txt olarak masaüstüne kaydeder)
+        const debugExportBtn = document.getElementById('ls-debug-export');
+        if (debugExportBtn) {
+            debugExportBtn.addEventListener('click', async () => {
+                const logs = LS_LOGGER.getLogs().filter(matchesFilters);
+                if (!logs || logs.length === 0) {
+                    debugExportBtn.textContent = '⚠️ Log Yok';
+                    setTimeout(() => { debugExportBtn.textContent = '💾 Logları Çıkar'; }, 1500);
+                    return;
+                }
 
-                if (filterTag === 'ALL') {
-                    activeDebugFilters.clear();
-                    activeDebugFilters.add('ALL');
-                } else {
-                    activeDebugFilters.delete('ALL');
-                    if (activeDebugFilters.has(filterTag)) {
-                        activeDebugFilters.delete(filterTag);
+                const now = new Date();
+                const timeStr = now.getFullYear() + '-' +
+                    String(now.getMonth() + 1).padStart(2, '0') + '-' +
+                    String(now.getDate()).padStart(2, '0') + '_' +
+                    String(now.getHours()).padStart(2, '0') + '-' +
+                    String(now.getMinutes()).padStart(2, '0') + '-' +
+                    String(now.getSeconds()).padStart(2, '0');
+                const filename = `LuckyStrike_logs_${timeStr}.txt`;
+                const content = formatLogsForExport(logs);
+
+                try {
+                    debugExportBtn.textContent = '⏳ Kaydediliyor...';
+                    const saved = await saveLogsToFile(filename, content);
+                    if (saved) {
+                        debugExportBtn.textContent = '✅ Kaydedildi!';
                     } else {
-                        activeDebugFilters.add(filterTag);
+                        debugExportBtn.textContent = '💾 Logları Çıkar';
                     }
-                    if (activeDebugFilters.size === 0) {
-                        activeDebugFilters.add('ALL');
+                } catch (e) {
+                    debugExportBtn.textContent = '❌ Hata';
+                }
+                setTimeout(() => { debugExportBtn.textContent = '💾 Logları Çıkar'; }, 2000);
+            });
+        }
+
+        // 3. 3 Satırlı Multi-Select Filtre Dinleyicileri
+        document.querySelectorAll('#ls-debug-filters-container .ls-debug-filter').forEach(f => {
+            f.addEventListener('click', () => {
+                const rowKey = 'row' + f.getAttribute('data-row');
+                const val = f.getAttribute('data-val') || 'ALL';
+                if (!debugFilterState[rowKey]) return;
+
+                if (val === 'ALL') {
+                    debugFilterState[rowKey].clear();
+                    debugFilterState[rowKey].add('ALL');
+                } else {
+                    debugFilterState[rowKey].delete('ALL');
+                    if (debugFilterState[rowKey].has(val)) {
+                        debugFilterState[rowKey].delete(val);
+                    } else {
+                        debugFilterState[rowKey].add(val);
+                    }
+                    if (debugFilterState[rowKey].size === 0) {
+                        debugFilterState[rowKey].add('ALL');
                     }
                 }
 
-                // Butonların görsel aktiflik durumunu güncelle
-                document.querySelectorAll('#ls-debug-filters .ls-debug-filter').forEach(el => {
-                    const tag = el.getAttribute('data-filter') || 'ALL';
-                    if (activeDebugFilters.has(tag)) {
-                        el.classList.add('active');
-                    } else {
-                        el.classList.remove('active');
-                    }
-                });
-
+                updateFilterVisuals();
                 renderDebugLogs();
             });
         });
+
+        updateFilterVisuals();
 
         setTimeout(() => {
             checkThreatsInDOM();

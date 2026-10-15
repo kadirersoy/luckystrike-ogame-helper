@@ -355,8 +355,8 @@
                     var u = settings.url;
                     if (u.indexOf('fleetdispatch') !== -1 || u.indexOf('sendFleet') !== -1 || u.indexOf('checkTarget') !== -1 || u.indexOf('galaxy') !== -1 || u.indexOf('ajax') !== -1) {
                         var cleanUrl = u.split('&_st=')[0];
-                        if (isDebug) bridgeLog('INFO', 'OGAME-AJAX', 'İstek yapılıyor: ' + cleanUrl);
-                        if (isTrace) bridgeLog('ACTION', 'TRACE', '🌐 [SUNUCU İSTEĞİ] ' + cleanUrl);
+                        if (isDebug) bridgeLog('INFO', 'AJAX-REQ', '📤 [GİDEN İSTEK] ' + cleanUrl);
+                        if (isTrace) bridgeLog('ACTION', 'TRACE', '📤 [SUNUCU İSTEĞİ] ' + cleanUrl);
                     }
                 }
             });
@@ -371,8 +371,8 @@
                         try {
                             snippet = (xhr.responseText || '').substring(0, 160);
                         } catch (e) {}
-                        if (isDebug) bridgeLog(xhr.status === 200 ? 'INFO' : 'WARN', 'OGAME-AJAX', 'İstek yanıtı (' + xhr.status + '): ' + cleanUrl, snippet);
-                        if (isTrace) bridgeLog('INFO', 'TRACE', '🌐 [SUNUCU YANITI (' + xhr.status + ')] ' + cleanUrl, snippet);
+                        if (isDebug) bridgeLog(xhr.status === 200 ? 'INFO' : 'WARN', 'AJAX-RESP', '📥 [GELEN YANIT (' + xhr.status + ')] ' + cleanUrl, snippet);
+                        if (isTrace) bridgeLog('INFO', 'TRACE', '📥 [SUNUCU YANITI (' + xhr.status + ')] ' + cleanUrl, snippet);
                     }
                 }
             });
@@ -381,7 +381,7 @@
                 var isDebug = !!window.LS_DEBUG_ENABLED;
                 if (isTrace || isDebug) {
                     var cleanUrl = (settings && settings.url) ? settings.url.split('&_st=')[0] : 'URL bilinmiyor';
-                    if (isDebug) bridgeLog('ERROR', 'OGAME-AJAX', 'İstek hatası: ' + cleanUrl + ' | ' + thrownError);
+                    if (isDebug) bridgeLog('ERROR', 'AJAX-RESP', '❌ [SUNUCU HATASI] ' + cleanUrl + ' | ' + thrownError);
                     if (isTrace) bridgeLog('ERROR', 'TRACE', '❌ [SUNUCU HATASI] ' + cleanUrl + ' | ' + thrownError);
                 }
             });

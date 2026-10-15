@@ -1,4 +1,4 @@
-# ⚡ LuckyStrike OGame Helper (v10.1)
+# ⚡ LuckyStrike OGame Helper (v10.2)
 
 [English](#-english-description) | [Türkçe](#-türkçe-açıklama)
 
@@ -164,7 +164,7 @@ LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Term
 ## 🚀 Kurulum / Installation
 
 ### Chrome & Microsoft Edge
-1. İndirin / Download: [`luckystrike-ogame-helper-v10.1.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
+1. İndirin / Download: [`luckystrike-ogame-helper-v10.2.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
 2. Tarayıcıda eklentiler sayfasına gidin / Open extensions page:
    - **Chrome:** `chrome://extensions`
    - **Edge:** `edge://extensions`
@@ -174,6 +174,18 @@ LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Term
 ---
 
 ## 📝 Sürüm Geçmişi / Changelog
+
+### v10.2
+- **🎛️ 3 Satırlı Gelişmiş Multi-Filtre (AND Mantığı):**
+  - **1. Satır (Akış):** `Tümü`, `🐞 Debug Logs`, `🎯 Trace Logs`
+  - **2. Satır (Kapsam):** `Tümü`, `📤 Giden İstekler`, `📥 Gelen Yanıtlar` (AJAX istekleri ile gelen yanıtlar bağımsız olarak filtrelenebilir).
+  - **3. Satır (Seviye):** `Tümü`, `ℹ️ Info`, `⚠️ Warning`, `❌ Error`
+- **💾 Logları Çıkar (.txt Dışa Aktarma):** Ekranda filtrelenmiş logları doğrudan `LuckyStrike_logs_YYYY-MM-DD_HH-mm-ss.txt` olarak masaüstüne kaydeden dosya kaydetme diyaloğu eklendi.
+- **🧹 Filtreye Duyarlı Kopyalama ve Temizleme:**
+  - `📋 Logları Kopyala`: Yalnızca seçili filtrelere uyan logları panoya kopyalar.
+  - `🗑️ Logları Temizle`: Filtrelenen logları seçici olarak temizler (Tümü seçiliyse tüm hafızayı sıfırlar).
+- **✨ Temiz Trace Formatı:** Trace loglarındaki çift `[TRACE]` tekrarı kaldırıldı (`[TRACE] [HH:mm:ss.ms] [ACTION] [KLİK] ...`).
+- **📱 Optimize Edilmiş Kart Başlıkları:** Üst kart açıklamaları buton altına taşmayacak şekilde `Uygulama logları` ve `İzleme kayıtları` olarak sadeleştirildi.
 
 ### v10.1
 - **🎯 Trace Logs (Kullanıcı Eylem & Oyun Yanıt Takibi):** Kullanıcının nereye geçtiğini, neye tıkladığını (gemi, buton, menü, gezegen), basılan tuşları (Space, Enter), form değişikliklerini ve OGame'den dönen tüm bildirim ve sunucu yanıtlarını anbean kaydeden kullanıcı akış takipçisi eklendi.
