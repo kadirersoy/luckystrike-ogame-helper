@@ -29,7 +29,10 @@
         DEBUG_ENABLED: 'LS_DEBUG_ENABLED',
         DEBUG_LOGS: 'LS_DEBUG_LOGS',
         TRACE_ENABLED: 'LS_TRACE_ENABLED',
-        TRACE_LOGS: 'LS_TRACE_LOGS'
+        TRACE_LOGS: 'LS_TRACE_LOGS',
+        CART_SHIPS: 'LS_CART_SHIPS',
+        CART_PLANET_PREFS: 'LS_CART_PLANET_PREFS',
+        CART_QUEUE: 'LS_CART_QUEUE'
     };
 
     // ============================================================
@@ -634,6 +637,7 @@
         targetCoord: '',
         targetType: 1,
         targetName: '',
+        manualTarget: false,
         mission: 3,
         selectedShips: { bn: true, kn: true, rehber: false },
         selectedRes: { deu: true, cri: true, met: true },
@@ -801,6 +805,9 @@
     }
 
     function getCurrentPlanetName() {
+        const metaType = document.querySelector('meta[name="ogame-planet-type"]')?.getAttribute('content');
+        const isMoon = (metaType === 'moon');
+
         // 1. Sidebar'daki aktif gezegen linki
         const activeEl = document.querySelector('#planetList .smallplanet a.active .planet-name') ||
                          document.querySelector('#planetList .smallplanet.hightlightStaff .planet-name') ||
@@ -811,22 +818,46 @@
                          document.querySelector('.smallplanet a.active .planet-name') ||
                          document.querySelector('#planetList a.active .planet-name') ||
                          document.querySelector('#planetList .smallplanet.selected .planet-name');
-        if (activeEl && activeEl.textContent.trim()) {
-            return activeEl.textContent.trim();
-        }
 
         // 2. Aktif Ay seçimi varsa
         const activeMoon = document.querySelector('#planetList .moonlink.active') ||
                            document.querySelector('.smallplanet .moonlink.active');
-        if (activeMoon) {
-            const moonTitle = activeMoon.getAttribute('title') || activeMoon.textContent;
-            if (moonTitle && moonTitle.trim()) return moonTitle.split('[')[0].trim() || 'Ay';
+        if (activeMoon || isMoon) {
+            let parentName = '';
+            if (activeEl && activeEl.textContent.trim()) {
+                parentName = activeEl.textContent.trim();
+            } else if (activeMoon) {
+                const parentP = activeMoon.closest('.smallplanet');
+                const pNameEl = parentP ? parentP.querySelector('.planet-name') : null;
+                if (pNameEl && pNameEl.textContent.trim()) parentName = pNameEl.textContent.trim();
+            }
+            if (parentName) return `${parentName} ( Ay )`;
+
+            const metaCoords = document.querySelector('meta[name="ogame-planet-coordinates"]')?.getAttribute('content');
+            if (metaCoords) {
+                const emp = getEmpirePlanetsAndMoons();
+                const matched = emp.find(p => p.coords === metaCoords);
+                if (matched && matched.name) return `${matched.name} ( Ay )`;
+            }
+
+            if (activeMoon) {
+                const moonTitle = activeMoon.getAttribute('title') || activeMoon.textContent;
+                if (moonTitle && moonTitle.trim()) {
+                    const raw = moonTitle.split('[')[0].trim();
+                    if (raw && raw !== 'Ay') return `${raw} ( Ay )`;
+                }
+            }
+            return 'Gezegen ( Ay )';
+        }
+
+        if (activeEl && activeEl.textContent.trim()) {
+            return activeEl.textContent.trim();
         }
 
         // 3. OGame resmi meta etiketi (Sunucu tarafından aktif gezegene göre üretilir)
         const metaName = document.querySelector('meta[name="ogame-planet-name"]')?.getAttribute('content');
         if (metaName && metaName.trim()) {
-            return metaName.trim();
+            return isMoon ? `${metaName.trim()} ( Ay )` : metaName.trim();
         }
 
         // 4. Üst başlık veya seçili gezegen başlığı
@@ -834,10 +865,10 @@
                          document.querySelector('#selectedPlanetName') ||
                          document.querySelector('.planet-header .planet-name');
         if (headerEl && headerEl.textContent.trim()) {
-            return headerEl.textContent.trim();
+            return isMoon ? `${headerEl.textContent.trim()} ( Ay )` : headerEl.textContent.trim();
         }
 
-        return 'Gezegen';
+        return isMoon ? 'Gezegen ( Ay )' : 'Gezegen';
     }
 
     // ============================================================
@@ -1245,7 +1276,7 @@
         const isMoon = (metaType === 'moon');
 
         cart.push({
-            id: Date.now(),
+            id: Date.now() + Math.random().toString(36).substring(2, 6),
             name: data.name,
             level: data.level,
             planet: data.planet,
@@ -1255,7 +1286,8 @@
             crystal: data.crystal,
             deuterium: data.deuterium,
             count: data.count,
-            isDeduction: false
+            isDeduction: false,
+            checked: true
         });
         saveCart();
         renderCart();
@@ -1274,12 +1306,18 @@
         }
     }
 
-    function deductPlanetResources() {
+    function deductPlanetResources(targetCoords, targetType, targetName) {
         const live = getLiveResources();
         const pName = getCurrentPlanetName();
         const metaCoords = document.querySelector('meta[name="ogame-planet-coordinates"]')?.getAttribute('content') || '';
         const metaType = document.querySelector('meta[name="ogame-planet-type"]')?.getAttribute('content');
         const isMoon = (metaType === 'moon');
+        const curType = isMoon ? 3 : 1;
+
+        if (targetCoords && (metaCoords !== targetCoords || curType !== (targetType || 1))) {
+            alert(`⚠️ Bu gezegenin canlı kaynaklarını düşmek için önce ${targetName || 'Hedef'} [${targetCoords}] gezegenine/ayına geçmelisiniz!`);
+            return;
+        }
 
         if (live.metal === 0 && live.crystal === 0 && live.deuterium === 0) {
             alert('Bu gezegende kaynak bulunamadı veya okunamadı.');
@@ -1287,20 +1325,22 @@
         }
 
         cart.push({
-            id: Date.now(),
+            id: Date.now() + Math.random().toString(36).substring(2, 6),
             name: `Mevcut Kaynak`,
             level: null,
-            planet: pName,
+            planet: pName || (isMoon ? 'Ay' : 'Gezegen'),
             coords: metaCoords,
-            type: isMoon ? 3 : 1,
+            type: curType,
             metal: -live.metal,
             crystal: -live.crystal,
             deuterium: -live.deuterium,
             count: 1,
-            isDeduction: true
+            isDeduction: true,
+            checked: true
         });
         saveCart();
         renderCart();
+        showCollectorToast(`✓ ${pName || metaCoords} mevcut kaynakları sepetten düşüldü.`);
     }
 
     function removeCartItem(idx) {
@@ -1309,6 +1349,19 @@
         renderCart();
     }
     window.lsRemoveCartItem = removeCartItem;
+
+    function removePlanetCart(key) {
+        cart = cart.filter(item => {
+            const itemKey = `${item.coords}_${item.type || 1}`;
+            return itemKey !== key;
+        });
+        const pPrefs = getCartPlanetPrefs();
+        delete pPrefs[key];
+        saveCartPlanetPrefs(pPrefs);
+        saveCart();
+        renderCart();
+        showCollectorToast('Gezegen sepeti kaldırıldı.');
+    }
 
     function copyNumber(val, elemId) {
         const absVal = Math.abs(val);
@@ -1462,6 +1515,11 @@
             }
         }
         return 0;
+    };
+
+    const isLuckyElement = (el) => {
+        if (!el) return true;
+        return !!el.closest?.('#ls-panel, [id^="ls-"], .ls-custom, #ls-coll-floating-banner, #ls-exp-floating-banner');
     };
 
     const setShipAmount = (shipId, amount) => {
@@ -1719,149 +1777,250 @@
         return filled;
     }
 
-    function getCartRequiredResources() {
-        let netM = 0, netC = 0, netD = 0;
-        let posM = 0, posC = 0, posD = 0;
+    // ============================================================
+    // CART PREFERENCES & MULTI-PLANET GROUPING
+    // ============================================================
+    function getCartShipPrefs() {
+        let prefs = { rehber: false, kn: true, bn: true };
+        try {
+            const raw = localStorage.getItem(KEYS.CART_SHIPS);
+            if (raw) prefs = Object.assign(prefs, JSON.parse(raw));
+        } catch (e) {}
+        return prefs;
+    }
 
-        let targetCoord = '';
-        let targetType = 1;
-        let targetName = '';
+    function saveCartShipPrefs(prefs) {
+        localStorage.setItem(KEYS.CART_SHIPS, JSON.stringify(prefs));
+    }
 
-        // Düşüm (deduction) yapılmış bir gezegen varsa, orası doğrudan hedeftir
-        const deductionItem = cart.find(item => item.isDeduction && item.coords);
-        if (deductionItem) {
-            targetCoord = deductionItem.coords;
-            targetType = deductionItem.type || 1;
-            targetName = deductionItem.planet || '';
-        } else {
-            // Aksi halde sepete eklenen ilk elemanın koordinatını al
-            const itemWithCoord = cart.find(item => item.coords);
-            if (itemWithCoord) {
-                targetCoord = itemWithCoord.coords;
-                targetType = itemWithCoord.type || 1;
-                targetName = itemWithCoord.planet || '';
-            } else if (cart.length > 0 && cart[0].planet) {
-                // Koordinat yoksa imparatorluk listesinden gezegen adından bul
-                const empire = getEmpirePlanetsAndMoons();
-                const matched = empire.find(p => p.name === cart[0].planet);
-                if (matched) {
-                    targetCoord = matched.coords;
-                    targetType = 1;
-                    targetName = matched.name;
+    function getCartPlanetPrefs() {
+        let prefs = {};
+        try {
+            const raw = localStorage.getItem(KEYS.CART_PLANET_PREFS);
+            if (raw) prefs = JSON.parse(raw);
+        } catch (e) {}
+        return prefs;
+    }
+
+    function saveCartPlanetPrefs(prefs) {
+        localStorage.setItem(KEYS.CART_PLANET_PREFS, JSON.stringify(prefs));
+    }
+
+    function getCartGroups() {
+        const prefs = getCartPlanetPrefs();
+        const groupsMap = new Map();
+
+        cart.forEach((item, originalIndex) => {
+            const coords = item.coords || '0:0:0';
+            const type = parseInt(item.type, 10) || 1;
+            const key = coords + '_' + type;
+
+            if (!groupsMap.has(key)) {
+                const planetPref = prefs[key] || {};
+                let pName = item.planet;
+                if (type === 3) {
+                    const empire = getEmpirePlanetsAndMoons();
+                    const parentP = empire.find(p => p.coords === coords);
+                    if (parentP) {
+                        pName = `${parentP.name} ( Ay )`;
+                    } else if (!pName || pName === 'Ay') {
+                        pName = 'Ay ( Ay )';
+                    } else if (!pName.includes('( Ay )')) {
+                        pName = `${pName} ( Ay )`;
+                    }
+                } else if (!pName) {
+                    pName = 'Gezegen';
                 }
-            }
-        }
 
-        // Eğer hala bulunamadıysa mevcut gezegenin koordinatını al
-        if (!targetCoord) {
-            const metaCoords = document.querySelector('meta[name="ogame-planet-coordinates"]')?.getAttribute('content') || '';
-            const metaType = document.querySelector('meta[name="ogame-planet-type"]')?.getAttribute('content');
-            targetCoord = metaCoords;
-            targetType = (metaType === 'moon') ? 3 : 1;
-            targetName = getCurrentPlanetName() || '';
-        }
-
-        cart.forEach(item => {
-            netM += item.metal;
-            netC += item.crystal;
-            netD += item.deuterium;
-            if (!item.isDeduction) {
-                posM += Math.max(0, item.metal);
-                posC += Math.max(0, item.crystal);
-                posD += Math.max(0, item.deuterium);
+                groupsMap.set(key, {
+                    key: key,
+                    coords: coords,
+                    type: type,
+                    planetName: pName,
+                    selected: planetPref.selected !== undefined ? planetPref.selected : true, // Level 1 Checkbox
+                    mission: planetPref.mission || 3, // 3: Nakliye, 4: Konuşlandır
+                    items: []
+                });
             }
+
+            const grp = groupsMap.get(key);
+            if (item.checked === undefined) item.checked = true;
+            grp.items.push({ item, originalIndex });
         });
 
-        const hasDeduction = cart.some(item => item.isDeduction);
+        const groups = Array.from(groupsMap.values());
 
-        let reqM = 0, reqC = 0, reqD = 0;
-        if (hasDeduction) {
-            // Gezegenden düşüldüyse, SADECE açığı olan (pozitif kalan) kaynakları taşı
-            reqM = Math.max(0, netM);
-            reqC = Math.max(0, netC);
-            reqD = Math.max(0, netD);
-        } else {
-            // Düşülmediyse sepetin tam pozitif maliyetini taşı
-            reqM = Math.max(0, posM);
-            reqC = Math.max(0, posC);
-            reqD = Math.max(0, posD);
+        // Calculate group totals
+        groups.forEach(grp => {
+            let rawM = 0, rawC = 0, rawD = 0;
+            let posM = 0, posC = 0, posD = 0;
+            let hasDeduction = false;
+
+            grp.items.forEach(({ item }) => {
+                if (item.checked !== false) {
+                    rawM += item.metal;
+                    rawC += item.crystal;
+                    rawD += item.deuterium;
+                    if (item.isDeduction) {
+                        hasDeduction = true;
+                    } else {
+                        posM += Math.max(0, item.metal);
+                        posC += Math.max(0, item.crystal);
+                        posD += Math.max(0, item.deuterium);
+                    }
+                }
+            });
+
+            grp.hasDeduction = hasDeduction;
+            grp.rawM = rawM;
+            grp.rawC = rawC;
+            grp.rawD = rawD;
+
+            if (hasDeduction) {
+                grp.netDeficitM = Math.max(0, rawM);
+                grp.netDeficitC = Math.max(0, rawC);
+                grp.netDeficitD = Math.max(0, rawD);
+            } else {
+                grp.netDeficitM = Math.max(0, posM);
+                grp.netDeficitC = Math.max(0, posC);
+                grp.netDeficitD = Math.max(0, posD);
+            }
+            grp.totalCargoNeeded = grp.netDeficitM + grp.netDeficitC + grp.netDeficitD;
+        });
+
+        return groups;
+    }
+
+    function calculateCartShips(totalCargoNeeded, shipPrefs) {
+        const caps = calculateShipCapacities();
+        const prefs = shipPrefs || getCartShipPrefs();
+
+        const rehberAvail = getAvailableCount(219);
+        const knAvail = getAvailableCount(202);
+        const bnAvail = getAvailableCount(203);
+
+        let rehberCount = 0;
+        let knCount = 0;
+        let bnCount = 0;
+
+        let rem = Math.max(0, totalCargoNeeded);
+
+        // Cascade Öncelik: Rehber > KN > BN
+        if (prefs.rehber && rem > 0 && rehberAvail > 0) {
+            rehberCount = Math.min(rehberAvail, Math.ceil(rem / caps.rehber));
+            rem = Math.max(0, rem - (rehberCount * caps.rehber));
+        }
+        if (prefs.kn && rem > 0 && knAvail > 0) {
+            knCount = Math.min(knAvail, Math.ceil(rem / caps.kn));
+            rem = Math.max(0, rem - (knCount * caps.kn));
+        }
+        if (prefs.bn && rem > 0 && bnAvail > 0) {
+            bnCount = Math.min(bnAvail, Math.ceil(rem / caps.bn));
+            rem = Math.max(0, rem - (bnCount * caps.bn));
         }
 
+        const totalCap = (rehberCount * caps.rehber) + (knCount * caps.kn) + (bnCount * caps.bn);
+        const missingCargo = Math.max(0, totalCargoNeeded - totalCap);
+
         return {
-            m: reqM,
-            c: reqC,
-            d: reqD,
-            hasDeduction,
-            targetCoord,
-            targetType,
-            targetName
+            rehber: rehberCount,
+            kn: knCount,
+            bn: bnCount,
+            totalCap: totalCap,
+            missingCargo: missingCargo,
+            insufficientShips: missingCargo > 0
         };
     }
 
-    function loadIntoFleet(mode) {
-        mode = mode || 'auto'; // 'auto' | 'kn' | 'bn'
-        const req = getCartRequiredResources();
-        const totalReq = req.m + req.c + req.d;
+    function startCartDelivery(mode, targetKey) {
+        const groups = getCartGroups();
+        let queue = [];
 
-        if (totalReq === 0) {
-            if (req.hasDeduction) {
-                alert('Bu gezegende tüm kaynaklar fazlasıyla mevcut, dışarıdan kaynak taşımaya gerek yok!');
-            } else {
-                alert('Sepette yüklenecek kaynak bulunamadı.');
+        if (mode === 'single') {
+            const target = groups.find(g => g.key === targetKey);
+            if (!target) {
+                alert('Hedef gezegen sepeti bulunamadı.');
+                return;
             }
+            if (target.totalCargoNeeded <= 0) {
+                alert('Bu gezegen için taşınacak kaynak ihtiyacı bulunmuyor!');
+                return;
+            }
+            queue = [target];
+        } else {
+            // mode === 'bulk'
+            queue = groups.filter(g => g.selected && g.totalCargoNeeded > 0);
+            if (queue.length === 0) {
+                alert('Lütfen gönderim yapılacak en az bir gezegen seçin!');
+                return;
+            }
+        }
+
+        const shipPrefs = getCartShipPrefs();
+        if (!shipPrefs.rehber && !shipPrefs.kn && !shipPrefs.bn) {
+            alert('Lütfen en az bir gemi türünü (Rehber, KN veya BN) aktif yapın!');
             return;
         }
-        const data = {
+
+        const session = {
             active: true,
-            m: req.m,
-            c: req.c,
-            d: req.d,
-            mode: mode,
-            targetCoord: req.targetCoord,
-            targetType: req.targetType || 1,
-            targetName: req.targetName || 'Hedef',
-            ts: Date.now()
+            queue: queue.map(g => ({
+                key: g.key,
+                coords: g.coords,
+                type: g.type,
+                name: g.planetName,
+                mission: g.mission || 3,
+                m: g.netDeficitM,
+                c: g.netDeficitC,
+                d: g.netDeficitD,
+                totalCargoNeeded: g.totalCargoNeeded
+            })),
+            currentIndex: 0,
+            startedAt: Date.now()
         };
 
-        sessionStorage.setItem(KEYS.AUTOLOAD, JSON.stringify(data));
+        sessionStorage.setItem(KEYS.CART_QUEUE, JSON.stringify(session));
+
+        const first = session.queue[0];
+        const [g, s, p] = first.coords.split(':');
+        const url = `/game/index.php?page=ingame&component=fleetdispatch&galaxy=${g}&system=${s}&position=${p}&type=${first.type}&mission=${first.mission}`;
 
         const isFleetPage = window.location.href.includes('component=fleetdispatch') ||
                             document.getElementById('fleetdispatchcomponent') ||
-                            document.getElementById('fleet1') ||
-                            document.getElementById('fleet2') ||
-                            document.getElementById('fleet3');
+                            document.getElementById('fleet1');
 
         if (isFleetPage) {
-            executeCartFleetDispatch(data);
+            checkAndApplyCartDelivery();
         } else {
-            const btnAuto = document.getElementById('ls-load-btn-auto');
-            const btnKN = document.getElementById('ls-load-btn-kn');
-            const btnBN = document.getElementById('ls-load-btn-bn');
-            const activeBtn = mode === 'kn' ? btnKN : (mode === 'bn' ? btnBN : btnAuto);
-            if (activeBtn) activeBtn.innerHTML = '⏳ Filoya Gidiliyor...';
-
-            let url = '/game/index.php?page=ingame&component=fleetdispatch';
-            if (req.targetCoord && /^\d+:\d+:\d+$/.test(req.targetCoord)) {
-                const [g, s, p] = req.targetCoord.split(':');
-                url += `&galaxy=${g}&system=${s}&position=${p}&type=${req.targetType || 1}&mission=3`;
-            }
             window.location.href = url;
         }
     }
 
-    function checkAndApplyFleetAutoLoad() {
-        const raw = sessionStorage.getItem(KEYS.AUTOLOAD);
+    function checkAndApplyCartDelivery() {
+        const raw = sessionStorage.getItem(KEYS.CART_QUEUE);
         if (!raw) return false;
-        let data;
+
+        let session;
         try {
-            data = JSON.parse(raw);
+            session = JSON.parse(raw);
         } catch (e) {
-            sessionStorage.removeItem(KEYS.AUTOLOAD);
+            sessionStorage.removeItem(KEYS.CART_QUEUE);
             return false;
         }
 
-        if (!data || !data.active || !data.ts || (Date.now() - data.ts > 180000)) {
-            sessionStorage.removeItem(KEYS.AUTOLOAD);
+        if (!session || !session.active || !Array.isArray(session.queue)) {
+            sessionStorage.removeItem(KEYS.CART_QUEUE);
+            return false;
+        }
+
+        if (session.startedAt && (Date.now() - session.startedAt > 15 * 60 * 1000)) {
+            sessionStorage.removeItem(KEYS.CART_QUEUE);
+            return false;
+        }
+
+        if (session.currentIndex >= session.queue.length) {
+            sessionStorage.removeItem(KEYS.CART_QUEUE);
+            showCollectorToast('🎉 Sepetteki tüm seçili gezegenlere nakliye başarıyla tamamlandı!', 6000);
             return false;
         }
 
@@ -1869,6 +2028,8 @@
                             document.getElementById('fleetdispatchcomponent') ||
                             document.getElementById('fleet1');
         if (!isFleetPage) return false;
+
+        const currentItem = session.queue[session.currentIndex];
 
         let tries = 0;
         const pollInterval = setInterval(() => {
@@ -1883,34 +2044,33 @@
             if ((domReady && hasShipInput && hasCoords && hasRes) || tries > 40) {
                 clearInterval(pollInterval);
                 setTimeout(() => {
-                    executeCartFleetDispatch(data);
-                }, 350);
+                    executeCartDeliveryStep(session, currentItem);
+                }, 400);
             }
         }, 150);
 
         return true;
     }
 
-    function executeCartFleetDispatch(data) {
-        const totalReq = (data.m || 0) + (data.c || 0) + (data.d || 0);
-        const shipCounts = selectFleetShips(data.mode || 'auto', totalReq);
-
-        const caps = calculateShipCapacities();
-        const totalCap = (shipCounts.kn * caps.kn) + (shipCounts.bn * caps.bn);
-        LS_LOGGER.action('CART', `Sepet filosu hazırlanıyor: Hedef [${data.targetCoord}], Gemi: BN=${shipCounts.bn}, KN=${shipCounts.kn}, Toplam Kapasite=${totalCap}`);
+    function executeCartDeliveryStep(session, currentItem) {
+        const shipPrefs = getCartShipPrefs();
+        const shipCounts = calculateCartShips(currentItem.totalCargoNeeded, shipPrefs);
 
         const liveRes = getLiveResources();
-        let deuAvail = data.d;
-        let criAvail = data.c;
-        let metAvail = data.m;
+        const missingM = Math.max(0, currentItem.m - liveRes.metal);
+        const missingC = Math.max(0, currentItem.c - liveRes.crystal);
+        const missingD = Math.max(0, currentItem.d - liveRes.deuterium);
 
-        if (liveRes.metal > 0 || liveRes.crystal > 0 || liveRes.deuterium > 0) {
-            deuAvail = Math.min(liveRes.deuterium, data.d);
-            criAvail = Math.min(liveRes.crystal, data.c);
-            metAvail = Math.min(liveRes.metal, data.m);
-        }
+        const hasResourceShortage = (missingM > 0 || missingC > 0 || missingD > 0);
+        const hasShipShortage = shipCounts.insufficientShips;
 
-        let remCap = totalCap;
+        // Eldeki canlı kaynağa göre yükleme:
+        let deuAvail = Math.min(liveRes.deuterium, currentItem.d);
+        let criAvail = Math.min(liveRes.crystal, currentItem.c);
+        let metAvail = Math.min(liveRes.metal, currentItem.m);
+
+        // Kargo kapasitesine göre yükleme:
+        let remCap = shipCounts.totalCap;
         let deuLoad = Math.min(remCap, deuAvail);
         remCap -= deuLoad;
         let criLoad = Math.min(remCap, criAvail);
@@ -1918,15 +2078,21 @@
         let metLoad = Math.min(remCap, metAvail);
         remCap -= metLoad;
 
+        // Gemileri seç
+        setShipAmount(219, shipCounts.rehber);
+        setShipAmount(202, shipCounts.kn);
+        setShipAmount(203, shipCounts.bn);
+
         let g = '', s = '', p = '';
-        if (data.targetCoord && /^\d+:\d+:\d+$/.test(data.targetCoord)) {
-            [g, s, p] = data.targetCoord.split(':');
+        if (currentItem.coords && /^\d+:\d+:\d+$/.test(currentItem.coords)) {
+            [g, s, p] = currentItem.coords.split(':');
         }
 
+        const missionId = currentItem.mission || 3;
+
         const prepareStep2 = () => {
-            const missionId = 3; // Nakliye
             if (g && s && p) {
-                setFleetTargetCoords(g, s, p, data.targetType || 1);
+                setFleetTargetCoords(g, s, p, currentItem.type || 1);
             }
             setFleetMission(missionId);
             fillFleetResources(metLoad, criLoad, deuLoad);
@@ -1941,7 +2107,6 @@
             }, 100);
         };
 
-        // Devam butonuna tıklayıp Step 2'ye geç
         setTimeout(() => {
             clickDevamButton();
             window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
@@ -1974,18 +2139,16 @@
             }, 100);
         }, 350);
 
-        renderCartFleetBanner(data, {
-            kn: shipCounts.kn,
-            bn: shipCounts.bn,
-            totalCap: totalCap,
-            deu: deuLoad,
-            cri: criLoad,
-            met: metLoad,
-            prepareStep2: prepareStep2
+        renderCartHUD(session, currentItem, {
+            shipCounts,
+            deuLoad, criLoad, metLoad,
+            missingM, missingC, missingD,
+            hasResourceShortage, hasShipShortage,
+            prepareStep2
         });
     }
 
-    function renderCartFleetBanner(data, details) {
+    function renderCartHUD(session, currentItem, details) {
         let banner = document.getElementById('ls-coll-floating-banner');
         if (!banner) {
             banner = document.createElement('div');
@@ -1993,48 +2156,88 @@
             document.body.appendChild(banner);
         }
 
-        const hasShips = details.totalCap > 0;
+        const totalItems = session.queue.length;
+        const currentStep = session.currentIndex + 1;
         const currentMetaType = document.querySelector('meta[name="ogame-planet-type"]')?.getAttribute('content');
         const currentIcon = (currentMetaType === 'moon') ? '🌕' : '🪐';
         const currentName = getCurrentPlanetName() || 'Mevcut';
 
-        const targetIcon = (data.targetType === 3) ? '🌕' : '🪐';
-        const cleanTName = (data.targetName || '').replace(/^[\s\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]+/u, '').trim();
-        const displayTargetTitle = cleanTName || (data.targetType === 3 ? 'Ay' : 'Hedef');
+        const targetIcon = (currentItem.type === 3) ? '🌕' : '🪐';
+        const cleanTName = (currentItem.name || '').replace(/^[\s\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]+/u, '').trim();
+        let displayTargetTitle = cleanTName;
+        if (!displayTargetTitle) {
+            if (currentItem.type === 3) {
+                const emp = getEmpirePlanetsAndMoons();
+                const matched = emp.find(x => x.coords === currentItem.coords);
+                displayTargetTitle = matched ? `${matched.name} ( Ay )` : 'Ay ( Ay )';
+            } else {
+                displayTargetTitle = 'Hedef';
+            }
+        }
 
         let shipDesc = [];
-        if (details.bn > 0) shipDesc.push(details.bn + ' BN');
-        if (details.kn > 0) shipDesc.push(details.kn + ' KN');
-        const shipText = shipDesc.length > 0 ? shipDesc.join(', ') : '<span style="color:#e74c3c">Nakliye gemisi seçilemedi!</span>';
+        if (details.shipCounts.bn > 0) shipDesc.push(details.shipCounts.bn + ' BN');
+        if (details.shipCounts.kn > 0) shipDesc.push(details.shipCounts.kn + ' KN');
+        if (details.shipCounts.rehber > 0) shipDesc.push(details.shipCounts.rehber + ' Rehber');
+        const shipText = shipDesc.length > 0 ? shipDesc.join(', ') : '<span style="color:#e74c3c">Nakliye gemisi yok!</span>';
 
-        banner.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);background:rgba(13,27,42,0.96);border:2px solid #2ecc71;box-shadow:0 10px 32px rgba(0,0,0,0.85);border-radius:8px;padding:12px 18px;min-width:400px;max-width:90vw;z-index:9999999;font-family:sans-serif;color:#d1d8e0;text-align:center;box-sizing:border-box';
+        const missionName = (currentItem.mission === 4 ? '🚀 Konuşlandır' : '🚚 Nakliye');
+        const missionColor = (currentItem.mission === 4 ? '#2980b9' : '#2ecc71');
 
-        const coordText = data.targetCoord ? ' <span style="color:#ffbe3b;font-family:monospace">[' + data.targetCoord + ']</span>' : '';
+        banner.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);background:rgba(13,27,42,0.96);border:2px solid #2ecc71;box-shadow:0 10px 32px rgba(0,0,0,0.85);border-radius:8px;padding:12px 18px;min-width:420px;max-width:90vw;z-index:9999999;font-family:sans-serif;color:#d1d8e0;text-align:center;box-sizing:border-box';
+
+        const coordText = currentItem.coords ? ' <span style="color:#ffbe3b;font-family:monospace">[' + currentItem.coords + ']</span>' : '';
+
+        // Uyarı mesajları (Kaynak veya Gemi Yetersizliği)
+        let warningHtml = '';
+        const hasAnyShortage = details.hasResourceShortage || details.hasShipShortage;
+        if (hasAnyShortage) {
+            let reasons = [];
+            if (details.hasShipShortage) {
+                reasons.push(`Gemi Kapasitesi Yetersiz (${formatShort(details.shipCounts.missingCargo)} kargo açıkta kaldı)`);
+            }
+            if (details.missingM > 0) reasons.push(`Metal ${formatShort(details.missingM)} eksik`);
+            if (details.missingC > 0) reasons.push(`Kristal ${formatShort(details.missingC)} eksik`);
+            if (details.missingD > 0) reasons.push(`Deuterium ${formatShort(details.missingD)} eksik`);
+
+            warningHtml =
+                '<div id="ls-cart-warning-box" style="background:rgba(231,76,60,0.22);border:1px solid #e74c3c;border-radius:4px;padding:6px 8px;margin-bottom:8px;font-size:11px;color:#ff6b6b;text-align:left">' +
+                    '<div style="font-weight:bold;margin-bottom:2px">⚠️ Yetersiz Kaynak veya Gemi Kapasitesi!</div>' +
+                    '<div style="font-size:10.5px;color:#f5b7b1;margin-bottom:6px">' + reasons.join(' · ') + '</div>' +
+                    '<div style="display:flex;gap:6px;justify-content:center">' +
+                        '<button id="ls-cart-stop-btn" style="background:#e74c3c;color:#fff;border:none;padding:4px 9px;border-radius:3px;font-weight:bold;font-size:10.5px;cursor:pointer">⏹️ Dağıtımı Durdur</button>' +
+                        '<button id="ls-cart-proceed-btn" style="background:#f39c12;color:#000;border:none;padding:4px 9px;border-radius:3px;font-weight:bold;font-size:10.5px;cursor:pointer">⏩ Olduğu Kadar Gönder (Devam Et)</button>' +
+                    '</div>' +
+                '</div>';
+        }
 
         banner.innerHTML =
             '<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1a2c3f;padding-bottom:6px;margin-bottom:8px">' +
-                '<span style="font-size:12px;font-weight:bold;color:#2ecc71">🛒 Maliyet Sepeti Gönderimi</span>' +
+                '<span style="font-size:12px;font-weight:bold;color:#2ecc71">🛒 Maliyet Dağıtımı [' + currentStep + ' / ' + totalItems + ']</span>' +
                 '<span style="font-size:11px;color:#fff">' + currentIcon + ' ' + escapeHtml(currentName) + ' ➔ ' + targetIcon + ' ' + escapeHtml(displayTargetTitle) + coordText + '</span>' +
             '</div>' +
+            warningHtml +
             '<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;margin-bottom:6px">' +
                 '<div><b style="color:#8899aa">Seçilen Filo:</b> <span style="font-weight:bold">' + shipText + '</span></div>' +
-                '<div style="font-size:10.5px;color:#2ecc71;font-weight:bold">🚚 Nakliye</div>' +
+                '<div style="font-size:10.5px;color:' + missionColor + ';font-weight:bold">' + missionName + '</div>' +
             '</div>' +
             '<div style="font-size:11.5px;font-family:monospace;margin-bottom:10px">' +
                 '<b style="color:#8899aa">Yüklenen:</b> ' +
-                '<span style="color:#2ecc71">' + formatShort(details.deu) + ' Deu</span> · ' +
-                '<span style="color:#5dade2">' + formatShort(details.cri) + ' Kristal</span> · ' +
-                '<span style="color:#ffbe3b">' + formatShort(details.met) + ' Metal</span>' +
+                '<span style="color:#ffbe3b">' + formatShort(details.metLoad) + ' Metal</span> · ' +
+                '<span style="color:#5dade2">' + formatShort(details.criLoad) + ' Kristal</span> · ' +
+                '<span style="color:#2ecc71">' + formatShort(details.deuLoad) + ' Deu</span>' +
             '</div>' +
-            '<div style="display:flex;gap:6px;justify-content:center;align-items:center">' +
-                (hasShips ?
-                    '<button id="ls-cart-banner-send-btn" style="background:#27ae60;color:#fff;border:none;padding:5px 12px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.5)">🚀 Gönder (Space)</button>'
-                    : '<button id="ls-cart-banner-close-btn" style="background:#e74c3c;color:#fff;border:none;padding:5px 12px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">Yetersiz Gemi - Kapat</button>') +
+            '<div id="ls-cart-hud-controls" style="display:flex;gap:6px;justify-content:center;align-items:center;' + (hasAnyShortage ? 'display:none;' : '') + '">' +
+                '<button id="ls-cart-banner-send-btn" style="background:#27ae60;color:#fff;border:none;padding:5px 12px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.5)">🚀 Gönder (Space)</button>' +
                 '<button id="ls-cart-banner-retry-btn" style="background:#e67e22;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer" title="Hedef koordinat ve yüklemeyi tekrar dene">🔄 Tekrarla</button>' +
-                '<button id="ls-cart-banner-cancel-btn" style="background:#7f8c8d;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏹️ Kapat</button>' +
+                '<button id="ls-cart-banner-skip-btn" style="background:#34495e;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏭️ Atla</button>' +
+                '<button id="ls-cart-banner-cancel-btn" style="background:#7f8c8d;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏹️ İptal</button>' +
             '</div>';
 
+        let isSending = false;
+
         const sendFleet = () => {
+            if (isSending) return;
             if (document.activeElement && document.activeElement.blur) {
                 document.activeElement.blur();
             }
@@ -2058,50 +2261,112 @@
             }
         };
 
+        const dispatchSendCartFleet = () => {
+            if (isSending) return;
+            isSending = true;
+            window.removeEventListener('keydown', keyListener);
+
+            // 1. Gönderilen gezegenin Level 1 Checkbox'ını uncheck yap
+            const pPrefs = getCartPlanetPrefs();
+            if (!pPrefs[currentItem.key]) pPrefs[currentItem.key] = {};
+            pPrefs[currentItem.key].selected = false;
+            saveCartPlanetPrefs(pPrefs);
+
+            // 2. Gezegen sepeti altındaki tüm kalemleri de uncheck yap (gözle takip için)
+            cart.forEach(item => {
+                const itemKey = `${item.coords}_${item.type || 1}`;
+                if (itemKey === currentItem.key) {
+                    item.checked = false;
+                }
+            });
+            saveCart();
+            renderCart();
+
+            // 3. Kuyruk indeksini ilerlet
+            session.currentIndex++;
+            sessionStorage.setItem(KEYS.CART_QUEUE, JSON.stringify(session));
+
+            LS_LOGGER.dispatch('CART', `Maliyet filosu gönderiliyor: ${currentItem.name} [${currentItem.coords}] (Adım ${session.currentIndex}/${session.queue.length})`);
+
+            if (banner) {
+                banner.innerHTML =
+                    '<div style="font-size:12px;color:#2ecc71;padding:8px;font-weight:bold">' +
+                        '🚀 Filo gönderildi! Sıradaki gezegene geçiliyor...' +
+                    '</div>';
+            }
+
+            // Sayfa bağlamında tekil submit tetikle (bridge.js tekil submit mekanizmasıyla çalışır)
+            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                detail: { type: 'SUBMIT_FLEET2' }
+            }));
+
+            // Sıradaki adıma geçiş
+            setTimeout(() => {
+                if (session.currentIndex < session.queue.length) {
+                    const nextItem = session.queue[session.currentIndex];
+                    const [nextG, nextS, nextP] = nextItem.coords.split(':');
+                    const url = `/game/index.php?page=ingame&component=fleetdispatch&galaxy=${nextG}&system=${nextS}&position=${nextP}&type=${nextItem.type}&mission=${nextItem.mission}`;
+                    window.location.href = url;
+                } else {
+                    sessionStorage.removeItem(KEYS.CART_QUEUE);
+                    if (banner) banner.remove();
+                    showCollectorToast('🎉 Sepetteki tüm seçili gezegenlere nakliye başarıyla tamamlandı!', 6000);
+                }
+            }, 800);
+        };
+
         const retryDispatch = () => {
             window.removeEventListener('keydown', keyListener);
             if (banner) {
                 banner.innerHTML = '<div style="font-size:12px;color:#e67e22;padding:6px;font-weight:bold">🔄 Yeniden hazırlanıyor...</div>';
             }
             setTimeout(() => {
-                executeCartFleetDispatch(data);
+                executeCartDeliveryStep(session, currentItem);
             }, 150);
         };
 
-        const dispatchSendCartFleet = () => {
+        const skipStep = () => {
             window.removeEventListener('keydown', keyListener);
-            sessionStorage.removeItem(KEYS.AUTOLOAD);
+            // 1. Atlanan gezegenin Level 1 Checkbox'ını uncheck yap
+            const pPrefs = getCartPlanetPrefs();
+            if (!pPrefs[currentItem.key]) pPrefs[currentItem.key] = {};
+            pPrefs[currentItem.key].selected = false;
+            saveCartPlanetPrefs(pPrefs);
 
-            const sendBtn = findSendFleetButton();
+            // 2. Gezegen sepeti altındaki tüm kalemleri de uncheck yap
+            cart.forEach(item => {
+                const itemKey = `${item.coords}_${item.type || 1}`;
+                if (itemKey === currentItem.key) {
+                    item.checked = false;
+                }
+            });
+            saveCart();
+            renderCart();
+
+            session.currentIndex++;
+            sessionStorage.setItem(KEYS.CART_QUEUE, JSON.stringify(session));
 
             if (banner) {
-                banner.innerHTML =
-                    '<div style="font-size:12px;color:#2ecc71;padding:8px;font-weight:bold">' +
-                        '🚀 Filo gönderildi! Sepet kaynakları yola çıktı.' +
-                    '</div>';
-            }
-
-            LS_LOGGER.dispatch('CART', `Sepet filosu gönderiliyor: SUBMIT_FLEET2 tetiklendi.`);
-            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                detail: { type: 'SUBMIT_FLEET2' }
-            }));
-
-            if (sendBtn) {
-                try {
-                    sendBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
-                    sendBtn.click();
-                } catch (e) {}
+                banner.innerHTML = '<div style="font-size:12px;color:#f39c12;padding:6px">⏭️ Gezegen atlandı, sıradakine geçiliyor...</div>';
             }
 
             setTimeout(() => {
-                if (banner) banner.remove();
-                showCollectorToast('🛒 Sepet filosu başarıyla yola çıkarıldı.', 4000);
-            }, 1200);
+                if (session.currentIndex < session.queue.length) {
+                    const nextItem = session.queue[session.currentIndex];
+                    const [nextG, nextS, nextP] = nextItem.coords.split(':');
+                    const url = `/game/index.php?page=ingame&component=fleetdispatch&galaxy=${nextG}&system=${nextS}&position=${nextP}&type=${nextItem.type}&mission=${nextItem.mission}`;
+                    window.location.href = url;
+                } else {
+                    sessionStorage.removeItem(KEYS.CART_QUEUE);
+                    if (banner) banner.remove();
+                    showCollectorToast('Maliyet dağıtımı tamamlandı.', 4000);
+                }
+            }, 500);
         };
 
         const closeBanner = () => {
             window.removeEventListener('keydown', keyListener);
-            sessionStorage.removeItem(KEYS.AUTOLOAD);
+            sessionStorage.removeItem(KEYS.CART_QUEUE);
             if (banner) banner.remove();
         };
 
@@ -2111,11 +2376,13 @@
                 if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
                 e.preventDefault();
                 e.stopPropagation();
-                if (hasShips) {
-                    sendFleet();
-                } else {
-                    closeBanner();
+
+                const warningBox = document.getElementById('ls-cart-warning-box');
+                if (warningBox && warningBox.style.display !== 'none') {
+                    // Uyarı açıkken Space doğrudan gönderemez, kullanıcı onay vermelidir
+                    return;
                 }
+                sendFleet();
             }
         };
 
@@ -2123,8 +2390,20 @@
 
         document.getElementById('ls-cart-banner-send-btn')?.addEventListener('click', sendFleet);
         document.getElementById('ls-cart-banner-retry-btn')?.addEventListener('click', retryDispatch);
+        document.getElementById('ls-cart-banner-skip-btn')?.addEventListener('click', skipStep);
         document.getElementById('ls-cart-banner-cancel-btn')?.addEventListener('click', closeBanner);
-        document.getElementById('ls-cart-banner-close-btn')?.addEventListener('click', closeBanner);
+
+        document.getElementById('ls-cart-stop-btn')?.addEventListener('click', () => {
+            closeBanner();
+            showCollectorToast('⏹️ Maliyet dağıtımı durduruldu.');
+        });
+
+        document.getElementById('ls-cart-proceed-btn')?.addEventListener('click', () => {
+            const warningBox = document.getElementById('ls-cart-warning-box');
+            if (warningBox) warningBox.style.display = 'none';
+            const controls = document.getElementById('ls-cart-hud-controls');
+            if (controls) controls.style.display = 'flex';
+        });
     }
 
     function renderCart() {
@@ -2133,233 +2412,297 @@
         if (!listEl || !totalsEl) return;
 
         listEl.innerHTML = '';
-        let tM = 0, tC = 0, tD = 0;
-        let posTotal = 0;
-        let negTotal = 0;
+        totalsEl.innerHTML = '';
 
-        if (cart.length === 0) {
-            listEl.innerHTML = '<div style="text-align:center;color:#666;padding:15px;">Sepet boş</div>';
-        } else {
-            cart.forEach((item, i) => {
-                tM += item.metal; tC += item.crystal; tD += item.deuterium;
-                const itemSum = item.metal + item.crystal + item.deuterium;
-                if (item.isDeduction || itemSum < 0) {
-                    negTotal += Math.abs(itemSum);
-                } else {
-                    posTotal += itemSum;
-                }
+        const groups = getCartGroups();
+        const shipPrefs = getCartShipPrefs();
+        const caps = calculateShipCapacities();
 
-                const d = document.createElement('div');
-                d.className = 'ls-item';
-                if (item.isDeduction) d.style.borderLeft = '3px solid #e67e22';
+        if (cart.length === 0 || groups.length === 0) {
+            listEl.innerHTML = '<div style="text-align:center;color:#666;padding:25px;font-size:11px">Sepet boş<br><span style="font-size:10px;color:#555">Bina veya teknoloji detayından "Sepete Ekle" diyerek ekleyebilirsiniz.</span></div>';
+            return;
+        }
 
-                const safeName = escapeHtml(item.name);
-                const safeLevel = item.level ? escapeHtml(item.level) : null;
-                const safePlanet = item.planet ? escapeHtml(item.planet) : null;
+        let grandM = 0, grandC = 0, grandD = 0;
+        let grandTotalCargo = 0;
+
+        groups.forEach(grp => {
+            if (grp.selected) {
+                grandM += grp.netDeficitM;
+                grandC += grp.netDeficitC;
+                grandD += grp.netDeficitD;
+                grandTotalCargo += grp.totalCargoNeeded;
+            }
+
+            const card = document.createElement('div');
+            card.className = 'ls-cart-card';
+
+            const isMoon = (grp.type === 3);
+            const icon = isMoon ? '🌕' : '🪐';
+            const safePlanetName = escapeHtml(grp.planetName);
+            const safeCoords = escapeHtml(grp.coords);
+
+            // Gemi tahmini hesapla
+            let shipEstimateText = '';
+            if (grp.totalCargoNeeded > 0) {
+                let parts = [];
+                if (shipPrefs.rehber) parts.push(fmt(Math.ceil(grp.totalCargoNeeded / caps.rehber)) + ' Rehber');
+                if (shipPrefs.kn) parts.push(fmt(Math.ceil(grp.totalCargoNeeded / caps.kn)) + ' KN');
+                if (shipPrefs.bn) parts.push(fmt(Math.ceil(grp.totalCargoNeeded / caps.bn)) + ' BN');
+                shipEstimateText = parts.length > 0 ? parts.join(' | ') : 'Gemi seçilmedi';
+            } else {
+                shipEstimateText = '<span style="color:#2ecc71">Yeterli Kaynak Var ✓</span>';
+            }
+
+            card.innerHTML =
+                '<div class="ls-cart-card-head">' +
+                    '<div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1">' +
+                        '<input type="checkbox" class="ls-grp-chk" data-key="' + grp.key + '" ' + (grp.selected ? 'checked' : '') + ' style="accent-color:#00bcff;cursor:pointer;margin:0;width:13px;height:13px" title="Toplu dağıtıma dahil et">' +
+                        '<span style="font-size:11.5px;font-weight:bold;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' +
+                            icon + ' ' + safePlanetName +
+                        '</span>' +
+                        '<span style="color:#ffbe3b;font-family:monospace;font-size:10px;white-space:nowrap">[' + safeCoords + ']</span>' +
+                    '</div>' +
+                    '<div style="display:flex;align-items:center;gap:4px;flex-shrink:0">' +
+                        '<button class="ls-cart-mbtn ' + (grp.mission === 3 ? 'active' : '') + '" data-action="mission" data-key="' + grp.key + '" data-val="3" title="Nakliye: Boş geri döner">🚚 Nakliye</button>' +
+                        '<button class="ls-cart-mbtn deploy ' + (grp.mission === 4 ? 'active' : '') + '" data-action="mission" data-key="' + grp.key + '" data-val="4" title="Konuşlandır: Hedefte kalır">🚀 Konuşlandır</button>' +
+                        '<button class="ls-btn-sm" data-action="single-send" data-key="' + grp.key + '" style="background:#27ae60;color:#fff;padding:2px 7px" title="Sadece bu gezegene filo gönder">' +
+                            '⚡ Gönder' +
+                        '</button>' +
+                        '<button class="ls-btn-sm" data-action="delete-planet" data-key="' + grp.key + '" style="background:#e74c3c;color:#fff;padding:2px 6px;font-weight:bold" title="Bu gezegenin tüm sepetini kaldır">' +
+                            '✖' +
+                        '</button>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="ls-cart-items-box" style="margin:4px 0 6px 14px;display:flex;flex-direction:column;gap:3px"></div>' +
+                '<div style="border-top:1px dashed #233446;padding-top:4px;margin-top:4px">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;font-size:10px">' +
+                        '<span style="color:#8899aa;font-weight:bold">Net İhtiyaç:</span>' +
+                        '<span style="font-family:monospace">' +
+                            '<span style="color:#ffbe3b">' + formatShort(grp.netDeficitM) + ' Met</span> · ' +
+                            '<span style="color:#5dade2">' + formatShort(grp.netDeficitC) + ' Kri</span> · ' +
+                            '<span style="color:#2ecc71">' + formatShort(grp.netDeficitD) + ' Deu</span>' +
+                        '</span>' +
+                    '</div>' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;font-size:9.5px;color:#8899aa;margin-top:2px">' +
+                        '<span>Toplam: <b style="color:#fff">' + formatShort(grp.totalCargoNeeded) + '</b></span>' +
+                        '<span>' + shipEstimateText + '</span>' +
+                    '</div>' +
+                '</div>';
+
+            const itemsBox = card.querySelector('.ls-cart-items-box');
+
+            grp.items.forEach(({ item, originalIndex }) => {
+                const itemRow = document.createElement('div');
+                itemRow.className = 'ls-item';
+                itemRow.style.cssText = 'padding:3px 6px;margin-bottom:2px;font-size:10.5px;' + (item.checked === false ? 'opacity:0.4;text-decoration:line-through;' : '');
+                if (item.isDeduction) itemRow.style.borderLeft = '3px solid #e67e22';
 
                 const sign = (n) => n < 0 ? fmt(n) : '+' + fmt(n);
                 const mColor = (n) => n < 0 ? '#e67e22' : '#ffbe3b';
                 const cColor = (n) => n < 0 ? '#e67e22' : '#5dade2';
                 const dColor = (n) => n < 0 ? '#e67e22' : '#2ecc71';
 
+                const safeName = escapeHtml(item.name);
+                const safeLevel = item.level ? escapeHtml(item.level) : null;
                 let titleHtml = '<span style="color:' + (item.isDeduction ? '#e67e22' : '#ffffff') + ';font-weight:bold">' +
-                    (item.isDeduction ? '📉 ' : '') + safeName +
+                    (item.isDeduction ? '📉 ' : '➕ ') + safeName +
                 '</span>';
+                if (safeLevel) titleHtml += '<span style="color:#b0bec5;margin-left:4px">(' + safeLevel + ')</span>';
 
-                if (safeLevel) {
-                    titleHtml += '<span style="color:#b0bec5;font-weight:bold;margin-left:6px">' + safeLevel + '</span>';
-                } else if (item.count > 1) {
-                    titleHtml += '<span style="color:#b0bec5;font-weight:bold;margin-left:6px">x' + parseInt(item.count, 10) + '</span>';
-                }
-
-                const planetBadge = safePlanet ?
-                    '<span style="color:#d29bfe;font-size:10px;font-weight:bold;background:rgba(179,136,255,0.12);border:1px solid rgba(179,136,255,0.28);padding:1px 6px;border-radius:4px;white-space:nowrap;user-select:none" title="Gezegen: ' + safePlanet + '">' +
-                        safePlanet +
-                    '</span>' : '';
-
-                d.innerHTML =
-                    '<div style="flex:1;min-width:0;margin-right:8px">' +
-                        '<div style="font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' +
-                            titleHtml +
-                        '</div>' +
-                        '<div style="font-size:10px;margin-top:2px;font-family:monospace">' +
+                itemRow.innerHTML =
+                    '<div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1">' +
+                        '<input type="checkbox" class="ls-item-chk" data-idx="' + originalIndex + '" ' + (item.checked !== false ? 'checked' : '') + ' style="accent-color:#2ecc71;cursor:pointer;margin:0;width:12px;height:12px" title="Bu kalemi hesaplamaya dahil et">' +
+                        '<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + titleHtml + '</div>' +
+                    '</div>' +
+                    '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:auto">' +
+                        '<div style="font-size:9.5px;font-family:monospace">' +
                             '<span style="color:' + mColor(item.metal) + '">' + sign(item.metal) + '</span> · ' +
                             '<span style="color:' + cColor(item.crystal) + '">' + sign(item.crystal) + '</span> · ' +
                             '<span style="color:' + dColor(item.deuterium) + '">' + sign(item.deuterium) + '</span>' +
                         '</div>' +
-                    '</div>' +
-                    '<div class="ls-item-right" style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:auto">' +
-                        planetBadge +
+                        '<button class="ls-x" data-action="delete-item" data-idx="' + originalIndex + '" title="Sepetten Kaldır">✖</button>' +
                     '</div>';
 
-                const xBtn = document.createElement('button');
-                xBtn.className = 'ls-x';
-                xBtn.textContent = '✖';
-                xBtn.title = 'Sepetten Çıkar';
-                xBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    removeCartItem(i);
-                });
-                d.querySelector('.ls-item-right').appendChild(xBtn);
-
-                listEl.appendChild(d);
+                itemsBox.appendChild(itemRow);
             });
-        }
 
-        const netTotal = tM + tC + tD;
-        const caps = calculateShipCapacities();
+            // Gezegen Kaynağını Düş Butonu
+            const deductBtn = document.createElement('button');
+            deductBtn.className = 'ls-btn-sm';
+            deductBtn.style.cssText = 'width:fit-content;background:rgba(211,84,0,0.2);border:1px solid #d35400;color:#e67e22;padding:2px 8px;margin-top:2px;font-size:9.5px;border-radius:3px;cursor:pointer';
+            deductBtn.textContent = '📉 Bu Gezegenin Canlı Kaynağını Düş';
+            deductBtn.title = 'Şu an bu gezegendeyseniz eldeki kaynakları sepetten mahsup eder';
+            deductBtn.addEventListener('click', (e) => {
+                e.preventDefault(); e.stopPropagation();
+                deductPlanetResources(grp.coords, grp.type, grp.planetName);
+            });
+            itemsBox.appendChild(deductBtn);
 
-        // 1. Maliyet (+ Kaynak) İhtiyacı
-        const posBN = posTotal > 0 ? Math.ceil(posTotal / caps.bn) : 0;
-        const posKN = posTotal > 0 ? Math.ceil(posTotal / caps.kn) : 0;
+            listEl.appendChild(card);
+        });
 
-        // 2. Mevcut Gezegen (- Kaynak) Kapasitesi
-        const negBN = negTotal > 0 ? Math.ceil(negTotal / caps.bn) : 0;
-        const negKN = negTotal > 0 ? Math.ceil(negTotal / caps.kn) : 0;
+        // Event delegation for cards:
+        listEl.querySelectorAll('.ls-grp-chk').forEach(chk => {
+            chk.addEventListener('change', () => {
+                const key = chk.getAttribute('data-key');
+                const prefs = getCartPlanetPrefs();
+                if (!prefs[key]) prefs[key] = {};
+                prefs[key].selected = chk.checked;
+                saveCartPlanetPrefs(prefs);
+                renderCart();
+            });
+        });
 
-        // 3. Net Kalan Açık (Sadece pozitif kalan açıklar toplanır)
-        const hasDeduction = cart.some(item => item.isDeduction);
-        const netDeficitTotal = Math.max(0, tM) + Math.max(0, tC) + Math.max(0, tD);
-        const netBN = netDeficitTotal > 0 ? Math.ceil(netDeficitTotal / caps.bn) : 0;
-        const netKN = netDeficitTotal > 0 ? Math.ceil(netDeficitTotal / caps.kn) : 0;
+        listEl.querySelectorAll('.ls-item-chk').forEach(chk => {
+            chk.addEventListener('change', () => {
+                const idx = parseInt(chk.getAttribute('data-idx'), 10);
+                if (cart[idx]) {
+                    cart[idx].checked = chk.checked;
+                    saveCart();
+                    renderCart();
+                }
+            });
+        });
 
-        // Butonlar için hedeflenen nakliye ihtiyacı:
-        // Eğer gezegenden düşme yapıldıysa ve açık varsa -> netDeficitTotal
-        // Eğer gezegenden düşme yapılmadıysa -> posTotal
-        // Eğer tüm kaynaklar yetiyorsa (açık yoksa) -> 0
-        const targetShipTotal = hasDeduction ? netDeficitTotal : posTotal;
-        const targetBN = targetShipTotal > 0 ? Math.ceil(targetShipTotal / caps.bn) : 0;
-        const targetKN = targetShipTotal > 0 ? Math.ceil(targetShipTotal / caps.kn) : 0;
+        listEl.querySelectorAll('[data-action="mission"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault(); e.stopPropagation();
+                const key = btn.getAttribute('data-key');
+                const val = parseInt(btn.getAttribute('data-val'), 10) || 3;
+                const prefs = getCartPlanetPrefs();
+                if (!prefs[key]) prefs[key] = {};
+                prefs[key].mission = val;
+                saveCartPlanetPrefs(prefs);
+                renderCart();
+            });
+        });
 
-        let cargoHtml = '';
-        if (posTotal > 0 || negTotal > 0) {
-            cargoHtml = '<div style="margin-top:6px;padding:6px 8px;background:rgba(255,255,255,0.03);border:1px solid #1a2c3f;border-radius:4px;font-size:10.5px;display:flex;flex-direction:column;gap:3px">';
+        listEl.querySelectorAll('[data-action="single-send"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault(); e.stopPropagation();
+                const key = btn.getAttribute('data-key');
+                startCartDelivery('single', key);
+            });
+        });
 
-            if (posTotal > 0) {
-                cargoHtml +=
-                    '<div style="display:flex;justify-content:space-between;align-items:center">' +
-                        '<span style="color:#2ecc71">➕ Maliyet İhtiyacı:</span>' +
-                        '<span style="color:#d1d8e0">' +
-                            '<b style="color:#00bcff">' + fmt(posBN) + '</b> <span style="font-size:9.5px;color:#8899aa">BN</span> ' +
-                            '<span style="color:#34495e">|</span> ' +
-                            '<b style="color:#2ecc71">' + fmt(posKN) + '</b> <span style="font-size:9.5px;color:#8899aa">KN</span>' +
-                        '</span>' +
-                    '</div>';
-            }
+        listEl.querySelectorAll('[data-action="delete-planet"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault(); e.stopPropagation();
+                const key = btn.getAttribute('data-key');
+                removePlanetCart(key);
+            });
+        });
 
-            if (negTotal > 0) {
-                cargoHtml +=
-                    '<div style="display:flex;justify-content:space-between;align-items:center">' +
-                        '<span style="color:#e67e22">➖ Mevcut Gezegen:</span>' +
-                        '<span style="color:#d1d8e0">' +
-                            '<b style="color:#00bcff">' + fmt(negBN) + '</b> <span style="font-size:9.5px;color:#8899aa">BN</span> ' +
-                            '<span style="color:#34495e">|</span> ' +
-                            '<b style="color:#2ecc71">' + fmt(negKN) + '</b> <span style="font-size:9.5px;color:#8899aa">KN</span>' +
-                        '</span>' +
-                    '</div>';
-            }
+        listEl.querySelectorAll('[data-action="delete-item"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault(); e.stopPropagation();
+                const idx = parseInt(btn.getAttribute('data-idx'), 10);
+                removeCartItem(idx);
+            });
+        });
 
-            if (posTotal > 0 && negTotal > 0) {
-                cargoHtml +=
-                    '<div style="border-top:1px dashed #233446;margin-top:2px;padding-top:3px;display:flex;justify-content:space-between;align-items:center">' +
-                        '<span style="color:#00bcff;font-weight:bold">📊 Net Kalan:</span>' +
-                        '<span style="color:#d1d8e0">' +
-                            (netDeficitTotal > 0 ? (
-                                '<b style="color:#00bcff">' + fmt(netBN) + '</b> <span style="font-size:9.5px;color:#8899aa">BN</span> ' +
-                                '<span style="color:#34495e">|</span> ' +
-                                '<b style="color:#2ecc71">' + fmt(netKN) + '</b> <span style="font-size:9.5px;color:#8899aa">KN</span>'
-                            ) : '<span style="color:#2ecc71;font-size:10px">Yeterli Kaynak Var ✓</span>') +
-                        '</span>' +
-                    '</div>';
-            }
-
-            // Gemiye Yükleme Butonları (3'lü: Otomatik, KN, BN)
-            cargoHtml +=
-                '<div style="margin-top:6px;display:flex;flex-direction:column;gap:4px">' +
-                    '<button id="ls-load-btn-auto" class="ls-btn" style="width:100%;background:linear-gradient(135deg,#00bcff,#0077b6);color:#fff;padding:6px 8px;font-size:11px;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 2px 6px rgba(0,0,0,0.4)" title="Önce KN yetiyorsa KN, yoksa BN seçip kaynakları doldurur">' +
-                        '⚡ Gemiye Yükle (Otomatik)' +
-                    '</button>' +
-                    '<div style="display:flex;gap:4px">' +
-                        '<button id="ls-load-btn-kn" class="ls-btn" style="flex:1;background:#1a3a5c;color:#5dade2;border:1px solid #234d7a;padding:5px 4px;font-size:10px;display:flex;align-items:center;justify-content:center;gap:3px" title="Sadece Küçük Nakliye seçip kaynakları doldurur">' +
-                            '📦 ' + fmt(targetKN) + ' KN' +
-                        '</button>' +
-                        '<button id="ls-load-btn-bn" class="ls-btn" style="flex:1;background:#1a3a5c;color:#00bcff;border:1px solid #234d7a;padding:5px 4px;font-size:10px;display:flex;align-items:center;justify-content:center;gap:3px" title="Sadece Büyük Nakliye seçip kaynakları doldurur">' +
-                            '🚛 ' + fmt(targetBN) + ' BN' +
-                        '</button>' +
-                    '</div>' +
-                '</div>' +
-            '</div>';
-        }
-
+        // RENDER TOTALS & BOTTOM BAR
         totalsEl.innerHTML =
-            '<div style="margin-bottom:8px">' +
-                '<button id="ls-deduct-btn" class="ls-btn-sm" style="width:100%;background:#d35400;color:#fff;padding:5px;">' +
-                    '📉 Mevcut Gezegen Kaynağını Sepetten Düş' +
-                '</button>' +
-            '</div>' +
-            '<div class="ls-total-row" style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:11px">' +
-                '<div style="display:flex;align-items:center;width:110px;justify-content:space-between">' +
-                    '<span>🟡 Metal</span><span style="color:#7f8c8d;margin-right:2px">:</span>' +
+            '<div style="background:rgba(255,255,255,0.03);border:1px solid #1a2c3f;border-radius:6px;padding:8px 10px;margin-bottom:6px">' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;font-weight:bold;color:#00bcff;margin-bottom:4px">' +
+                    '<span>📊 Seçili Gezegenler Genel Toplamı:</span>' +
                 '</div>' +
-                '<span style="display:flex;align-items:center;gap:4px;">' +
-                    '<b style="color:#ffbe3b;font-family:monospace;font-size:11.5px">' + fmt(tM) + '</b>' +
-                    '<button id="ls-cp-m" class="ls-cp-btn" title="Sayısını kopyala">📋</button>' +
-                '</span>' +
-            '</div>' +
-            '<div class="ls-total-row" style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:11px">' +
-                '<div style="display:flex;align-items:center;width:110px;justify-content:space-between">' +
-                    '<span>🔵 Kristal</span><span style="color:#7f8c8d;margin-right:2px">:</span>' +
+                '<div class="ls-total-row" style="display:flex;justify-content:space-between;align-items:center;padding:2px 0;font-size:11px">' +
+                    '<span>🟡 Metal:</span>' +
+                    '<span style="display:flex;align-items:center;gap:4px">' +
+                        '<b style="color:#ffbe3b;font-family:monospace">' + fmt(grandM) + '</b>' +
+                        '<button id="ls-cp-m" class="ls-cp-btn" title="Kopyala">📋</button>' +
+                    '</span>' +
                 '</div>' +
-                '<span style="display:flex;align-items:center;gap:4px;">' +
-                    '<b style="color:#5dade2;font-family:monospace;font-size:11.5px">' + fmt(tC) + '</b>' +
-                    '<button id="ls-cp-c" class="ls-cp-btn" title="Sayısını kopyala">📋</button>' +
-                '</span>' +
-            '</div>' +
-            '<div class="ls-total-row" style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:11px">' +
-                '<div style="display:flex;align-items:center;width:110px;justify-content:space-between">' +
-                    '<span>🟢 Deuterium</span><span style="color:#7f8c8d;margin-right:2px">:</span>' +
+                '<div class="ls-total-row" style="display:flex;justify-content:space-between;align-items:center;padding:2px 0;font-size:11px">' +
+                    '<span>🔵 Kristal:</span>' +
+                    '<span style="display:flex;align-items:center;gap:4px">' +
+                        '<b style="color:#5dade2;font-family:monospace">' + fmt(grandC) + '</b>' +
+                        '<button id="ls-cp-c" class="ls-cp-btn" title="Kopyala">📋</button>' +
+                    '</span>' +
                 '</div>' +
-                '<span style="display:flex;align-items:center;gap:4px;">' +
-                    '<b style="color:#2ecc71;font-family:monospace;font-size:11.5px">' + fmt(tD) + '</b>' +
-                    '<button id="ls-cp-d" class="ls-cp-btn" title="Sayısını kopyala">📋</button>' +
-                '</span>' +
-            '</div>' +
-            '<div class="ls-total-row" style="border-top:1px solid #233446;padding-top:4px;margin-top:4px;display:flex;justify-content:space-between;align-items:center;font-size:11px">' +
-                '<div style="display:flex;align-items:center;width:110px;justify-content:space-between">' +
-                    '<span style="color:#ff6b6b;font-weight:bold">🔴 Total</span><span style="color:#7f8c8d;margin-right:2px">:</span>' +
+                '<div class="ls-total-row" style="display:flex;justify-content:space-between;align-items:center;padding:2px 0;font-size:11px">' +
+                    '<span>🟢 Deuterium:</span>' +
+                    '<span style="display:flex;align-items:center;gap:4px">' +
+                        '<b style="color:#2ecc71;font-family:monospace">' + fmt(grandD) + '</b>' +
+                        '<button id="ls-cp-d" class="ls-cp-btn" title="Kopyala">📋</button>' +
+                    '</span>' +
                 '</div>' +
-                '<span style="display:flex;align-items:center;gap:4px;">' +
-                    '<b style="color:#fff;font-family:monospace;font-size:12px;font-weight:bold">' + fmt(netTotal) + '</b>' +
-                    '<button id="ls-cp-net" class="ls-cp-btn" title="Sayısını kopyala">📋</button>' +
-                '</span>' +
+                '<div class="ls-total-row" style="border-top:1px solid #233446;padding-top:4px;margin-top:4px;display:flex;justify-content:space-between;align-items:center;font-size:11px">' +
+                    '<span style="color:#ff6b6b;font-weight:bold">🔴 Toplam Kargo:</span>' +
+                    '<span style="display:flex;align-items:center;gap:4px">' +
+                        '<b style="color:#fff;font-family:monospace;font-weight:bold">' + fmt(grandTotalCargo) + '</b>' +
+                        '<button id="ls-cp-net" class="ls-cp-btn" title="Kopyala">📋</button>' +
+                    '</span>' +
+                '</div>' +
             '</div>' +
-            cargoHtml;
 
-        document.getElementById('ls-deduct-btn')?.addEventListener('click', deductPlanetResources);
-        document.getElementById('ls-load-btn-auto')?.addEventListener('click', () => loadIntoFleet('auto'));
-        document.getElementById('ls-load-btn-kn')?.addEventListener('click', () => loadIntoFleet('kn'));
-        document.getElementById('ls-load-btn-bn')?.addEventListener('click', () => loadIntoFleet('bn'));
-        document.getElementById('ls-cp-m')?.addEventListener('click', () => copyNumber(tM, 'ls-cp-m'));
-        document.getElementById('ls-cp-c')?.addEventListener('click', () => copyNumber(tC, 'ls-cp-c'));
-        document.getElementById('ls-cp-d')?.addEventListener('click', () => copyNumber(tD, 'ls-cp-d'));
-        document.getElementById('ls-cp-net')?.addEventListener('click', () => copyNumber(netTotal, 'ls-cp-net'));
+            // Gemi Öncelik ve Switcher Barı
+            '<div style="background:rgba(255,255,255,0.02);border:1px solid #1a2c3f;border-radius:6px;padding:6px 8px;margin-bottom:6px">' +
+                '<div style="font-size:10px;color:#8899aa;margin-bottom:4px">Gemi Tercihi (Öncelik: Rehber > KN > BN):</div>' +
+                '<div style="display:flex;gap:4px">' +
+                    '<button id="ls-ship-toggle-rehber" class="ls-ship-pill ' + (shipPrefs.rehber ? 'active' : '') + '">🛰️ Rehber ' + (shipPrefs.rehber ? '✓' : '(Kapalı)') + '</button>' +
+                    '<button id="ls-ship-toggle-kn" class="ls-ship-pill ' + (shipPrefs.kn ? 'active' : '') + '">📦 KN ' + (shipPrefs.kn ? '✓' : '(Kapalı)') + '</button>' +
+                    '<button id="ls-ship-toggle-bn" class="ls-ship-pill ' + (shipPrefs.bn ? 'active' : '') + '">🚛 BN ' + (shipPrefs.bn ? '✓' : '(Kapalı)') + '</button>' +
+                '</div>' +
+            '</div>' +
+
+            // Sırayla Dağıtım Butonu
+            '<button id="ls-cart-bulk-send-btn" class="ls-btn" style="width:100%;background:linear-gradient(135deg,#00bcff,#0077b6);color:#fff;padding:8px;font-size:11px;font-weight:bold;box-shadow:0 2px 8px rgba(0,188,255,0.4)">' +
+                '⚡ SEÇİLİ GEZEGENLERE SIRAYLA DAĞIT' +
+            '</button>';
+
+        document.getElementById('ls-ship-toggle-rehber')?.addEventListener('click', () => {
+            shipPrefs.rehber = !shipPrefs.rehber;
+            saveCartShipPrefs(shipPrefs);
+            renderCart();
+        });
+        document.getElementById('ls-ship-toggle-kn')?.addEventListener('click', () => {
+            shipPrefs.kn = !shipPrefs.kn;
+            saveCartShipPrefs(shipPrefs);
+            renderCart();
+        });
+        document.getElementById('ls-ship-toggle-bn')?.addEventListener('click', () => {
+            shipPrefs.bn = !shipPrefs.bn;
+            saveCartShipPrefs(shipPrefs);
+            renderCart();
+        });
+
+        document.getElementById('ls-cart-bulk-send-btn')?.addEventListener('click', () => {
+            startCartDelivery('bulk');
+        });
+
+        document.getElementById('ls-cp-m')?.addEventListener('click', () => copyNumber(grandM, 'ls-cp-m'));
+        document.getElementById('ls-cp-c')?.addEventListener('click', () => copyNumber(grandC, 'ls-cp-c'));
+        document.getElementById('ls-cp-d')?.addEventListener('click', () => copyNumber(grandD, 'ls-cp-d'));
+        document.getElementById('ls-cp-net')?.addEventListener('click', () => copyNumber(grandTotalCargo, 'ls-cp-net'));
     }
 
     function copyCart() {
+        const groups = getCartGroups();
         let lines = ['═══ LuckyStrike Maliyet Sepeti ═══', ''];
         let tM = 0, tC = 0, tD = 0;
-        cart.forEach(item => {
-            let label = item.name;
-            if (item.level) label += ' (' + item.level + ')';
-            if (item.count > 1) label += ' x' + item.count;
-            lines.push('• ' + label + ' [' + item.planet + ']');
-            lines.push('  M: ' + fmt(item.metal) + ' | K: ' + fmt(item.crystal) + ' | D: ' + fmt(item.deuterium));
-            tM += item.metal; tC += item.crystal; tD += item.deuterium;
+
+        groups.forEach(grp => {
+            lines.push(`🪐 ${grp.planetName} [${grp.coords}] (Görev: ${grp.mission === 4 ? 'Konuşlandır' : 'Nakliye'})`);
+            grp.items.forEach(({ item }) => {
+                let label = item.name;
+                if (item.level) label += ' (' + item.level + ')';
+                const signStr = item.isDeduction ? '📉 ' : '➕ ';
+                lines.push(`  ${signStr}${label}: M: ${fmt(item.metal)} | K: ${fmt(item.crystal)} | D: ${fmt(item.deuterium)}`);
+            });
+            lines.push(`  Net İhtiyaç: M: ${fmt(grp.netDeficitM)} | K: ${fmt(grp.netDeficitC)} | D: ${fmt(grp.netDeficitD)} (Kargo: ${fmt(grp.totalCargoNeeded)})`);
+            lines.push('');
+            tM += grp.netDeficitM;
+            tC += grp.netDeficitC;
+            tD += grp.netDeficitD;
         });
-        lines.push('');
-        lines.push('NET: M: ' + fmt(tM) + ' | K: ' + fmt(tC) + ' | D: ' + fmt(tD));
-        lines.push('Total: ' + fmt(tM + tC + tD));
+
+        lines.push('GENEL SEÇİLİ TOPLAM:');
+        lines.push(`Metal: ${fmt(tM)} | Kristal: ${fmt(tC)} | Deuterium: ${fmt(tD)}`);
+        lines.push(`Toplam Kargo İhtiyacı: ${fmt(tM + tC + tD)}`);
+
         navigator.clipboard.writeText(lines.join('\n')).then(() => {
             const btn = document.getElementById('ls-cart-copy');
             if (btn) { btn.textContent = '✓ Kopyalandı!'; setTimeout(() => { btn.textContent = '📋 Panoya Kopyala'; }, 2000); }
@@ -3725,7 +4068,7 @@
 
                     moonObj = {
                         id: mId,
-                        name: 'Ay',
+                        name: `${name} ( Ay )`,
                         coords: coords,
                         isMoon: true,
                         type: 3,
@@ -3749,7 +4092,14 @@
         } else {
             const cached = localStorage.getItem('LS_EMPIRE_PLANETS');
             if (cached) {
-                try { list = JSON.parse(cached); } catch (e) {}
+                try {
+                    list = JSON.parse(cached);
+                    list.forEach(p => {
+                        if (p.moon && (!p.moon.name || p.moon.name === 'Ay')) {
+                            p.moon.name = `${p.name} ( Ay )`;
+                        }
+                    });
+                } catch (e) {}
             }
         }
 
@@ -3829,6 +4179,50 @@
         setTimeout(() => { if (toast) toast.style.display = 'none'; }, duration);
     }
 
+    function getCurrentActiveTarget(empire) {
+        if (!empire || empire.length === 0) return null;
+        const metaCoords = document.querySelector('meta[name="ogame-planet-coordinates"]')?.getAttribute('content');
+        const metaType = document.querySelector('meta[name="ogame-planet-type"]')?.getAttribute('content'); // 'moon' or 'planet'
+        const metaId = document.querySelector('meta[name="ogame-planet-id"]')?.getAttribute('content');
+        const isMoon = (metaType === 'moon');
+
+        if (metaCoords) {
+            const found = empire.find(p => p.coords === metaCoords);
+            if (found) {
+                if (isMoon && found.moon) {
+                    return {
+                        id: found.moon.id,
+                        coords: found.coords,
+                        type: 3,
+                        name: found.moon.name || `${found.name} ( Ay )`
+                    };
+                }
+                return {
+                    id: found.id,
+                    coords: found.coords,
+                    type: 1,
+                    name: found.name
+                };
+            }
+        }
+        if (metaId) {
+            for (const p of empire) {
+                if (p.id === metaId) {
+                    return { id: p.id, coords: p.coords, type: 1, name: p.name };
+                }
+                if (p.moon && p.moon.id === metaId) {
+                    return { id: p.moon.id, coords: p.coords, type: 3, name: p.moon.name || `${p.name} ( Ay )` };
+                }
+            }
+        }
+        return {
+            id: empire[0].id,
+            coords: empire[0].coords,
+            type: 1,
+            name: empire[0].name
+        };
+    }
+
     function renderCollector() {
         const empire = getEmpirePlanetsAndMoons();
         const listEl = document.getElementById('ls-coll-list');
@@ -3836,13 +4230,18 @@
         const ddEl = document.getElementById('ls-coll-dd');
         if (!listEl || !targetLabelEl || !ddEl) return;
 
-        // Varsayılan hedef seçimi (sadece hiç hedef seçilmemişse ilk gezegeni ata, ASLA kullanıcının hedefini ezme)
-        if (empire.length > 0 && (!collectorSettings.targetCoord || !/^\d+:\d+:\d+$/.test(collectorSettings.targetCoord))) {
-            collectorSettings.targetId = empire[0].id;
-            collectorSettings.targetCoord = empire[0].coords;
-            collectorSettings.targetType = 1;
-            collectorSettings.targetName = empire[0].name;
-            saveCollectorSettings();
+        // Varsayılan hedef seçimi: SADECE hedef henüz hiç belirlenmemişse veya geçersizse VE aktif toplama oturumu yoksa bulunulan aktif gezegen/ayı seç
+        const hasValidTarget = collectorSettings.targetCoord && /^\d+:\d+:\d+$/.test(collectorSettings.targetCoord);
+        const isSessionRunning = !!sessionStorage.getItem(KEYS.COLLECTOR_RUN);
+        if (empire.length > 0 && !hasValidTarget && !isSessionRunning) {
+            const cur = getCurrentActiveTarget(empire);
+            if (cur) {
+                collectorSettings.targetId = cur.id;
+                collectorSettings.targetCoord = cur.coords;
+                collectorSettings.targetType = cur.type;
+                collectorSettings.targetName = cur.name;
+                saveCollectorSettings();
+            }
         }
 
         // 1. Hedef Buton Başlığı
@@ -3850,8 +4249,13 @@
         if (collectorSettings.targetType === 3) targetIcon = '🌕';
         let rawTargetTitle = collectorSettings.targetName || 'Hedef Gezegen';
         let cleanTargetTitle = rawTargetTitle.replace(/^[\s\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]+/u, '').trim();
-        if (!cleanTargetTitle) {
-            cleanTargetTitle = collectorSettings.targetType === 3 ? 'Ay' : 'Gezegen';
+        if (!cleanTargetTitle || cleanTargetTitle === 'Ay') {
+            if (collectorSettings.targetType === 3) {
+                const parentP = empire.find(p => p.coords === collectorSettings.targetCoord);
+                cleanTargetTitle = parentP ? `${parentP.name} ( Ay )` : 'Ay ( Ay )';
+            } else {
+                cleanTargetTitle = 'Gezegen';
+            }
         }
         if (collectorSettings.targetId === 'manual') {
             cleanTargetTitle = (collectorSettings.targetType === 3 ? 'Manuel Ay' : 'Manuel Gezegen');
@@ -3867,8 +4271,9 @@
                 `<span>🪐 ${escapeHtml(p.name)}</span><span class="crd">${p.coords}</span></div>`;
             if (p.moon) {
                 const isMActive = (collectorSettings.targetCoord === p.coords && collectorSettings.targetType === 3);
-                ddHtml += `<div class="ls-coll-dd-item moon ${isMActive ? 'active' : ''}" data-id="${p.moon.id}" data-coord="${p.coords}" data-type="3" data-name="Ay">` +
-                    `<span>🌕 Ay</span><span class="crd">${p.coords}</span></div>`;
+                const mTitle = p.moon.name || `${p.name} ( Ay )`;
+                ddHtml += `<div class="ls-coll-dd-item moon ${isMActive ? 'active' : ''}" data-id="${p.moon.id}" data-coord="${p.coords}" data-type="3" data-name="${escapeHtml(mTitle)}">` +
+                    `<span>🌕 ${escapeHtml(mTitle)}</span><span class="crd">${p.coords}</span></div>`;
             }
         });
         ddHtml += `<div class="ls-coll-dd-item ls-coll-dd-manual" data-manual="1" data-type="1"><span>🪐 Manuel Gezegen...</span><span></span></div>`;
@@ -3930,12 +4335,13 @@
                     const mRes = getPlanetCachedResources(p.moon.id);
                     const mReserve = collectorSettings.reserves[p.moon.id] !== undefined ? collectorSettings.reserves[p.moon.id] : 250000;
                     const mChecked = collectorSettings.selectedItems[p.moon.id] === true;
+                    const mTitle = p.moon.name || `${p.name} ( Ay )`;
 
                     if (isTargetMoon) {
                         listHtml += `<div class="ls-coll-mrow ls-coll-dest">` +
                             `<input type="checkbox" disabled>` +
                             `<div class="ls-coll-info">` +
-                                `<div class="ls-coll-name"><b>🌕 Ay</b></div>` +
+                                `<div class="ls-coll-name"><b>🌕 ${escapeHtml(mTitle)}</b></div>` +
                                 `<div class="ls-coll-res"><span class="ls-coll-m">${formatShort(mRes.metal)}</span><span class="ls-coll-k">${formatShort(mRes.crystal)}</span><span class="ls-coll-d">${formatShort(mRes.deuterium)}</span></div>` +
                             `</div>` +
                             `<span class="note">📥 Toplama noktası</span>` +
@@ -3945,7 +4351,7 @@
                         listHtml += `<div class="ls-coll-mrow">` +
                             `<input type="checkbox" class="ls-coll-item-chk" data-id="${p.moon.id}" ${mChecked ? 'checked' : ''}>` +
                             `<div class="ls-coll-info">` +
-                                `<div class="ls-coll-name"><b>🌕 Ay</b></div>` +
+                                `<div class="ls-coll-name"><b>🌕 ${escapeHtml(mTitle)}</b></div>` +
                                 `<div class="ls-coll-res"><span class="ls-coll-m">${formatShort(mRes.metal)}</span><span class="ls-coll-k">${formatShort(mRes.crystal)}</span><span class="ls-coll-d">${formatShort(mRes.deuterium)}</span></div>` +
                             `</div>` +
                             `<input class="ls-inp ls-coll-rez" data-id="${p.moon.id}" value="${fmt(mReserve)}" title="Deu Rezerv (Korumalı miktar)">` +
@@ -4008,6 +4414,22 @@
         const ddEl = document.getElementById('ls-coll-dd');
         const targetBtn = document.getElementById('ls-coll-target-btn');
 
+        const collCurBtn = document.getElementById('ls-coll-cur-btn');
+        if (collCurBtn) {
+            collCurBtn.addEventListener('click', () => {
+                const cur = getCurrentActiveTarget(getEmpirePlanetsAndMoons());
+                if (cur) {
+                    collectorSettings.targetId = cur.id;
+                    collectorSettings.targetCoord = cur.coords;
+                    collectorSettings.targetType = cur.type;
+                    collectorSettings.targetName = cur.name;
+                    saveCollectorSettings();
+                    renderCollector();
+                    showCollectorToast('🎯 Hedef güncellendi: ' + (cur.type === 3 ? '🌕 ' : '🪐 ') + cur.name);
+                }
+            });
+        }
+
         if (targetBtn && ddEl) {
             targetBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -4030,6 +4452,7 @@
                     const typeLabel = mType === 3 ? 'Manuel Ay' : 'Manuel Gezegen';
                     const entered = prompt(`${typeLabel} koordinatı girin (örn: 1:234:8):`, collectorSettings.targetCoord || '1:1:1');
                     if (entered && /^\d+:\d+:\d+$/.test(entered.trim())) {
+                        collectorSettings.manualTarget = true;
                         collectorSettings.targetId = 'manual';
                         collectorSettings.targetCoord = entered.trim();
                         collectorSettings.targetType = mType;
@@ -4038,6 +4461,7 @@
                         renderCollector();
                     }
                 } else {
+                    collectorSettings.manualTarget = true;
                     collectorSettings.targetId = item.getAttribute('data-id');
                     collectorSettings.targetCoord = item.getAttribute('data-coord');
                     collectorSettings.targetType = parseInt(item.getAttribute('data-type'), 10) || 1;
@@ -4225,7 +4649,7 @@
             if (p.moon) {
                 const isTargetMoon = (collectorSettings.targetCoord === p.coords && collectorSettings.targetType === 3);
                 if (!isTargetMoon && collectorSettings.selectedItems[p.moon.id] === true) {
-                    queue.push({ id: p.moon.id, name: 'Ay', coords: p.coords, isMoon: true });
+                    queue.push({ id: p.moon.id, name: p.moon.name || `${p.name} ( Ay )`, coords: p.coords, isMoon: true });
                 }
             }
         });
@@ -4417,6 +4841,12 @@
         let metLoad = Math.min(remCap, metAvail);
         remCap -= metLoad;
 
+        const missingCargo = Math.max(0, totalCargoNeeded - totalCap);
+        const missingMet = metAvail - metLoad;
+        const missingCri = criAvail - criLoad;
+        const missingDeu = deuAvail - deuLoad;
+        const hasAnyShortage = totalCargoNeeded > 0 && (missingCargo > 0 || totalCap === 0);
+
         // Gemileri doldur
         setShipAmount(203, bnCount);
         setShipAmount(202, knCount);
@@ -4424,11 +4854,25 @@
 
         // Hedef koordinatları
         const [g, s, p] = session.targetCoord.split(':');
+        setFleetTargetCoords(g, s, p, session.targetType);
+
+        let isStepCancelled = false;
+
+        const updateCollectorBannerReady = () => {
+            const btn = document.getElementById('ls-banner-send-btn');
+            if (btn) {
+                btn.disabled = false;
+                btn.style.background = '#27ae60';
+                btn.style.color = '#fff';
+                btn.style.cursor = 'pointer';
+                btn.innerText = '🚀 Gönder (Space)';
+            }
+        };
 
         // Step 2 (Görev ve Kaynaklar) Hazırlık Fonksiyonu
         const prepareStep2 = () => {
+            if (isStepCancelled) return;
             const missionId = session.mission || 3;
-            // Sadece eksik veya yanlışsa hedefi düzelt (doğruysa change tetiklemez)
             setFleetTargetCoords(g, s, p, session.targetType);
             setFleetMission(missionId);
             fillFleetResources(metLoad, criLoad, deuLoad);
@@ -4438,53 +4882,104 @@
             window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
                 detail: { type: 'CARGO_REFRESH' }
             }));
-            setTimeout(() => {
-                setFleetMission(missionId);
+
+            let checkCount = 0;
+            const step2CheckTimer = setInterval(() => {
+                if (isStepCancelled) {
+                    clearInterval(step2CheckTimer);
+                    return;
+                }
+                checkCount++;
+                const mBtn = document.querySelector('#missionButton' + missionId + ', [data-mission="' + missionId + '"]');
+                const isMissionActive = mBtn && (mBtn.classList.contains('selected') || mBtn.classList.contains('active'));
+                if (!isMissionActive) setFleetMission(missionId);
+                fillFleetResources(metLoad, criLoad, deuLoad);
+
+                const sendBtn = findSendFleetButton();
+                const isSendBtnReady = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
+
+                if ((isMissionActive && isSendBtnReady && checkCount >= 2) || checkCount > 15) {
+                    clearInterval(step2CheckTimer);
+                    updateCollectorBannerReady();
+                }
             }, 100);
         };
 
-        // Devam butonuna tıklayıp Step 2'ye geç (Gemilerin girilmesi için 350ms ver)
-        setTimeout(() => {
-            clickDevamButton();
-            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                detail: { type: 'SUBMIT_FLEET1' }
-            }));
-
-            // Step 2'nin açılmasını ve OGame hedef doğrulamasının (inquiry) bitmesini izle
-            let step2Tries = 0;
-            const step2Interval = setInterval(() => {
-                step2Tries++;
-                const devamBtn = document.getElementById('continueToFleet2') || document.querySelector('button.continue') || document.querySelector('a.continue');
-                const isStep1StillActive = devamBtn && (devamBtn.offsetWidth > 0 || window.getComputedStyle(devamBtn).display !== 'none');
-                const sendBtn = findSendFleetButton();
-                const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
-                const isStep2Active = (!isStep1StillActive && isSendBtnVisible) || document.getElementById('fleet2');
-
-                if (isStep2Active) {
-                    const briefingText = document.querySelector('#briefing, #fleet2, #fleetdispatchcomponent')?.innerText || '';
-                    const isInquiryPending = briefingText.includes('sonsuz uzaklar') || briefingText.includes('Bu görevi başlatamazsın');
-                    const durationEl = document.getElementById('duration') || document.querySelector('.duration');
-                    const hasDuration = durationEl && durationEl.innerText && durationEl.innerText.trim() !== '-' && durationEl.innerText.trim() !== '';
-
-                    // Eğer hedef doğrulaması (inquiry) bittiyse veya 20 deneme (2 sn) dolduysa Step 2'yi hazırla
-                    if ((!isInquiryPending && hasDuration) || step2Tries > 20) {
-                        clearInterval(step2Interval);
-                        setTimeout(prepareStep2, 100);
-                    }
-                } else if (step2Tries > 35) {
-                    clearInterval(step2Interval);
-                    setTimeout(prepareStep2, 100);
+        let ensureShipsTimer = null;
+        const targetShipTotal = bnCount + knCount + rehberCount;
+        if (targetShipTotal > 0) {
+            let shipTries = 0;
+            ensureShipsTimer = setInterval(() => {
+                if (isStepCancelled) {
+                    clearInterval(ensureShipsTimer);
+                    return;
                 }
-            }, 100);
-        }, 350);
+                shipTries++;
+                const { total } = getSelectedShipsSummary();
+                if (total > 0 || shipTries > 6) {
+                    clearInterval(ensureShipsTimer);
+                    setTimeout(() => {
+                        if (isStepCancelled) return;
+                        clickDevamButton();
+                        window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                            detail: { type: 'SUBMIT_FLEET1' }
+                        }));
+
+                        let step2Tries = 0;
+                        const step2Interval = setInterval(() => {
+                            if (isStepCancelled) {
+                                clearInterval(step2Interval);
+                                return;
+                            }
+                            step2Tries++;
+                            const devamBtn = document.getElementById('continueToFleet2') || document.querySelector('button.continue') || document.querySelector('a.continue');
+                            const isStep1StillActive = devamBtn && (devamBtn.offsetWidth > 0 || window.getComputedStyle(devamBtn).display !== 'none');
+                            const sendBtn = findSendFleetButton();
+                            const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
+                            const isStep2Active = !isStep1StillActive && isSendBtnVisible;
+
+                            if (isStep2Active) {
+                                clearInterval(step2Interval);
+                                setTimeout(prepareStep2, 100);
+                            } else {
+                                if (step2Tries % 5 === 0) {
+                                    clickDevamButton();
+                                    window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                                        detail: { type: 'SUBMIT_FLEET1' }
+                                    }));
+                                }
+                                if (step2Tries > 30) {
+                                    clearInterval(step2Interval);
+                                    setTimeout(prepareStep2, 100);
+                                }
+                            }
+                        }, 100);
+                    }, 200);
+                } else {
+                    setShipAmount(203, bnCount);
+                    setShipAmount(202, knCount);
+                    setShipAmount(219, rehberCount);
+                }
+            }, 150);
+        }
 
         // Asistan Banner'ını Çiz
         renderCollectorAssistantBanner(session, currentItem, {
             bn: bnCount, kn: knCount, rehber: rehberCount,
             deu: deuLoad, cri: criLoad, met: metLoad,
             totalCap: totalCap,
+            totalCargoNeeded: totalCargoNeeded,
+            missingCargo: missingCargo,
+            missingMet: missingMet,
+            missingCri: missingCri,
+            missingDeu: missingDeu,
+            hasAnyShortage: hasAnyShortage,
             g: g, s: s, p: p,
-            prepareStep2: prepareStep2
+            prepareStep2: prepareStep2,
+            cancel: () => {
+                isStepCancelled = true;
+                if (ensureShipsTimer) clearInterval(ensureShipsTimer);
+            }
         });
     }
 
@@ -4508,29 +5003,64 @@
         const shipText = shipDesc.length > 0 ? shipDesc.join(', ') : '<span style="color:#e74c3c">Nakliye gemisi yok!</span>';
 
         const cleanTName = (session.targetName || '').replace(/^[\s\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]+/u, '').trim();
-        const displayTargetTitle = cleanTName || (session.targetType === 3 ? 'Ay' : 'Hedef');
+        let displayTargetTitle = cleanTName;
+        if (!displayTargetTitle || displayTargetTitle === 'Ay') {
+            if (session.targetType === 3) {
+                const emp = getEmpirePlanetsAndMoons();
+                const matched = emp.find(x => x.coords === session.targetCoord);
+                displayTargetTitle = matched ? `${matched.name} ( Ay )` : 'Ay ( Ay )';
+            } else {
+                displayTargetTitle = 'Hedef';
+            }
+        }
         const displayTargetIcon = session.targetType === 3 ? '🌕' : '🪐';
 
         banner.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);background:rgba(13,27,42,0.96);border:2px solid #00bcff;box-shadow:0 10px 32px rgba(0,0,0,0.85);border-radius:8px;padding:12px 18px;min-width:400px;max-width:90vw;z-index:9999999;font-family:sans-serif;color:#d1d8e0;text-align:center;box-sizing:border-box';
+
+        // Yetersiz Gemi Kapasitesi Uyarısı
+        let warningHtml = '';
+        const hasShortage = !!details.hasAnyShortage;
+        if (hasShortage) {
+            let reasons = [];
+            if (details.totalCap === 0) {
+                reasons.push('Nakliye gemisi yok!');
+            } else {
+                reasons.push(`Kargo Kapasitesi Yetersiz (${formatShort(details.missingCargo)} kargo açıkta kaldı)`);
+            }
+            if (details.missingMet > 0) reasons.push(`Metal ${formatShort(details.missingMet)} eksik`);
+            if (details.missingCri > 0) reasons.push(`Kristal ${formatShort(details.missingCri)} eksik`);
+            if (details.missingDeu > 0) reasons.push(`Deuterium ${formatShort(details.missingDeu)} eksik`);
+
+            warningHtml =
+                '<div id="ls-coll-warning-box" style="background:rgba(231,76,60,0.22);border:1px solid #e74c3c;border-radius:4px;padding:6px 8px;margin-bottom:8px;font-size:11px;color:#ff6b6b;text-align:left">' +
+                    '<div style="font-weight:bold;margin-bottom:2px">⚠️ Yetersiz Gemi Kapasitesi!</div>' +
+                    '<div style="font-size:10.5px;color:#f5b7b1;margin-bottom:6px">' + reasons.join(' · ') + '</div>' +
+                    '<div style="display:flex;gap:6px;justify-content:center">' +
+                        '<button id="ls-coll-stop-btn" style="background:#e74c3c;color:#fff;border:none;padding:4px 9px;border-radius:3px;font-weight:bold;font-size:10.5px;cursor:pointer">⏹️ Toplamayı Durdur</button>' +
+                        '<button id="ls-coll-proceed-btn" style="background:#f39c12;color:#000;border:none;padding:4px 9px;border-radius:3px;font-weight:bold;font-size:10.5px;cursor:pointer">⏩ Olduğu Kadar Gönder (Devam Et)</button>' +
+                    '</div>' +
+                '</div>';
+        }
 
         banner.innerHTML =
             '<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1a2c3f;padding-bottom:6px;margin-bottom:8px">' +
                 '<span style="font-size:12px;font-weight:bold;color:#00bcff">📦 Toplayıcı Asistanı [' + currentStep + ' / ' + totalItems + ']</span>' +
                 '<span style="font-size:11px;color:#fff">' + (currentItem.isMoon ? '🌕' : '🪐') + ' ' + escapeHtml(currentItem.name) + ' ➔ ' + displayTargetIcon + ' ' + escapeHtml(displayTargetTitle) + ' <span style="color:#ffbe3b;font-family:monospace">[' + session.targetCoord + ']</span></span>' +
             '</div>' +
+            warningHtml +
             '<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;margin-bottom:6px">' +
                 '<div><b style="color:#8899aa">Seçilen Filo:</b> <span style="font-weight:bold">' + shipText + '</span></div>' +
                 '<div style="font-size:10.5px;color:#00bcff;font-weight:bold">' + missionName + '</div>' +
             '</div>' +
             '<div style="font-size:11.5px;font-family:monospace;margin-bottom:10px">' +
                 '<b style="color:#8899aa">Taşınan:</b> ' +
-                '<span style="color:#2ecc71">' + formatShort(details.deu) + ' Deu</span> · ' +
+                '<span style="color:#ffbe3b">' + formatShort(details.met) + ' Metal</span> · ' +
                 '<span style="color:#5dade2">' + formatShort(details.cri) + ' Kristal</span> · ' +
-                '<span style="color:#ffbe3b">' + formatShort(details.met) + ' Metal</span>' +
+                '<span style="color:#2ecc71">' + formatShort(details.deu) + ' Deu</span>' +
             '</div>' +
-            '<div style="display:flex;gap:6px;justify-content:center;align-items:center">' +
+            '<div id="ls-coll-hud-controls" style="display:flex;gap:6px;justify-content:center;align-items:center;' + (hasShortage ? 'display:none;' : '') + '">' +
                 (hasShips ?
-                    '<button id="ls-banner-send-btn" style="background:#27ae60;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.5)">🚀 Gönder (Space)</button>'
+                    '<button id="ls-banner-send-btn" disabled style="background:#445566;color:#8899aa;border:none;padding:5px 12px;border-radius:4px;font-weight:bold;font-size:11px;cursor:not-allowed">⏳ Hazırlanıyor...</button>'
                     : '<button class="ls-banner-skip-btn" style="background:#f39c12;color:#000;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏭️ Atla (Space)</button>') +
                 '<button id="ls-banner-retry-btn" style="background:#e67e22;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer" title="Bu adımı ve hedef ayarlarını sıfırdan tekrarla">🔄 Tekrarla</button>' +
                 (hasShips ? '<button class="ls-banner-skip-btn" style="background:#34495e;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏭️ Atla</button>' : '') +
@@ -4538,6 +5068,9 @@
             '</div>';
 
         const sendFleet = () => {
+            const sendBtnEl = document.getElementById('ls-banner-send-btn');
+            if (sendBtnEl && sendBtnEl.disabled) return;
+
             if (document.activeElement && document.activeElement.blur) {
                 document.activeElement.blur();
             }
@@ -4555,14 +5088,12 @@
                 if (typeof details.prepareStep2 === 'function') {
                     details.prepareStep2();
                 }
-                setTimeout(() => {
-                    dispatchSendFleetButton();
-                }, 350);
             }
         };
 
         const retryCurrentStep = () => {
             window.removeEventListener('keydown', keyListener);
+            if (typeof details.cancel === 'function') details.cancel();
             if (banner) {
                 banner.innerHTML = '<div style="font-size:12px;color:#e67e22;padding:6px;font-weight:bold">🔄 Adım yeniden deneniyor...</div>';
             }
@@ -4573,10 +5104,15 @@
 
         const dispatchSendFleetButton = () => {
             window.removeEventListener('keydown', keyListener);
-            const sendBtn = findSendFleetButton();
+            if (typeof details.cancel === 'function') details.cancel();
 
-            // Önce kuyruğu derhal bir sonraki adıma geçir ve kaydet!
-            // Böylece OGame AJAX ile sayfayı yenilese bile aynı gezegen tekrar etmez.
+            // 1. Gönderilen gezegeni/ayı Collector ayarlarında uncheck yap
+            if (!collectorSettings.selectedItems) collectorSettings.selectedItems = {};
+            collectorSettings.selectedItems[currentItem.id] = false;
+            saveCollectorSettings();
+            renderCollector();
+
+            // 2. Önce kuyruğu derhal bir sonraki adıma geçir ve kaydet!
             session.currentIndex++;
             sessionStorage.setItem(KEYS.COLLECTOR_RUN, JSON.stringify(session));
 
@@ -4594,9 +5130,12 @@
                 detail: { type: 'SUBMIT_FLEET2' }
             }));
 
-            // DOM butonuna da tıkla
+            const sendBtn = findSendFleetButton();
             if (sendBtn) {
                 try {
+                    sendBtn.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, cancelable: true, view: window }));
+                    sendBtn.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
+                    sendBtn.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
                     sendBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
                     sendBtn.click();
                 } catch (e) {}
@@ -4620,6 +5159,14 @@
 
         const proceedToNext = () => {
             window.removeEventListener('keydown', keyListener);
+            if (typeof details.cancel === 'function') details.cancel();
+
+            // 1. Atlanan gezegeni/ayı Collector ayarlarında uncheck yap
+            if (!collectorSettings.selectedItems) collectorSettings.selectedItems = {};
+            collectorSettings.selectedItems[currentItem.id] = false;
+            saveCollectorSettings();
+            renderCollector();
+
             session.currentIndex++;
             sessionStorage.setItem(KEYS.COLLECTOR_RUN, JSON.stringify(session));
 
@@ -4644,6 +5191,7 @@
 
         const cancel = () => {
             window.removeEventListener('keydown', keyListener);
+            if (typeof details.cancel === 'function') details.cancel();
             LS_LOGGER.warn('COLLECTOR', 'Toplama işlemi iptal edildi.');
             sessionStorage.removeItem(KEYS.COLLECTOR_RUN);
             if (banner) banner.remove();
@@ -4658,6 +5206,12 @@
                     if (document.activeElement.id && document.activeElement.id.includes('search')) return;
                     document.activeElement.blur();
                 }
+                const wBox = document.getElementById('ls-coll-warning-box');
+                if (wBox && wBox.style.display !== 'none') return;
+
+                const sendBtnEl = document.getElementById('ls-banner-send-btn');
+                if (hasShips && sendBtnEl && sendBtnEl.disabled) return;
+
                 e.preventDefault();
                 if (hasShips) {
                     sendFleet();
@@ -4673,6 +5227,14 @@
         document.getElementById('ls-banner-retry-btn')?.addEventListener('click', retryCurrentStep);
         banner.querySelectorAll('.ls-banner-skip-btn').forEach(btn => btn.addEventListener('click', proceedToNext));
         document.getElementById('ls-banner-cancel-btn')?.addEventListener('click', cancel);
+
+        document.getElementById('ls-coll-stop-btn')?.addEventListener('click', cancel);
+        document.getElementById('ls-coll-proceed-btn')?.addEventListener('click', () => {
+            const warningBox = document.getElementById('ls-coll-warning-box');
+            if (warningBox) warningBox.style.display = 'none';
+            const controls = document.getElementById('ls-coll-hud-controls');
+            if (controls) controls.style.display = 'flex';
+        });
     }
 
     // ============================================================
@@ -4845,11 +5407,6 @@
             detail: { type: 'SELECT_TEMPLATE', id: idNum, name: targetName }
         }));
         if (targetName) return true;
-
-        const isLuckyElement = (el) => {
-            if (!el) return true;
-            return !!el.closest('#ls-panel, [id^="ls-"], .ls-custom, #ls-coll-floating-banner');
-        };
 
         const triggerFullClick = (el) => {
             if (!el) return;
@@ -5026,9 +5583,23 @@
     function setFleetHoldingTime(hours) {
         hours = parseInt(hours, 10) || 1;
         const hoursStr = String(hours);
-        let holdEls = Array.from(document.querySelectorAll('#holdingtime, select[name="holdingtime"], input[name="holdingtime"], select#holdingtime, [name*="holding" i], [id*="holding" i], select[name*="expedition" i], select[id*="expedition" i]'));
+        let holdEls = Array.from(document.querySelectorAll('#expeditiontime, select[name="expeditiontime"], #holdingtime, select[name="holdingtime"], input#holdingOrExpTime, input[name="holdingOrExpTime"], select#holdingtime, [name*="holding" i], [id*="holding" i], select[name*="expedition" i], select[id*="expedition" i]'));
+
+        // CRITICAL: Filter out any fleet template selectors!
+        holdEls = holdEls.filter(el => {
+            if (isLuckyElement(el)) return false;
+            const id = (el.id || '').toLowerCase();
+            const name = (el.name || '').toLowerCase();
+            return !id.includes('template') && !name.includes('template');
+        });
+
         if (holdEls.length === 0) {
-            const selects = Array.from(document.querySelectorAll('#fleet2 select, #briefing select, #fleetdispatchcomponent select, form select')).filter(s => !isLuckyElement(s));
+            const selects = Array.from(document.querySelectorAll('#fleet2 select, #briefing select, #fleetdispatchcomponent select, form select')).filter(s => {
+                if (isLuckyElement(s)) return false;
+                const id = (s.id || '').toLowerCase();
+                const name = (s.name || '').toLowerCase();
+                return !id.includes('template') && !name.includes('template');
+            });
             for (const s of selects) {
                 const vals = Array.from(s.options).map(o => o.value);
                 if (vals.includes('1') && (vals.includes('2') || vals.includes(hoursStr))) {
@@ -5048,7 +5619,7 @@
                     }
                 }
             } else {
-                el.value = hours;
+                el.value = hoursStr;
             }
             el.dispatchEvent(new Event('input', { bubbles: true }));
             el.dispatchEvent(new Event('change', { bubbles: true }));
@@ -5063,9 +5634,11 @@
             }
         });
 
-        const dropOptions = document.querySelectorAll(`[id*="holding"][id*="menu"] li, ul.dropdownList li[data-value="${hours}"], [rel="holdingtime"] li[data-value="${hours}"], .ui-selectmenu-menu li`);
+        const dropOptions = document.querySelectorAll(`[id*="expedition"][id*="menu"] a, [id*="expedition"][id*="menu"] li, [id*="holding"][id*="menu"] a, [id*="holding"][id*="menu"] li, ul.dropdownList a, ul.dropdownList li, .dropdownList a, .dropdownList li, [rel="holdingtime"] li[data-value="${hours}"], .ui-selectmenu-menu li, a.undefined`);
         dropOptions.forEach(opt => {
-            if (opt.textContent.trim() === hoursStr || opt.getAttribute('data-value') === hoursStr) {
+            const t = opt.textContent.trim();
+            const v = opt.getAttribute('data-value') || opt.getAttribute('rel');
+            if (t === hoursStr || v === hoursStr) {
                 try {
                     opt.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, cancelable: true, view: window }));
                     opt.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
@@ -5518,7 +6091,11 @@
 
             const applyStep2Settings = () => {
                 if (isStepCancelled) return;
-                setFleetMission(15);
+                const missionBtn = document.querySelector('#missionButton15, [data-mission="15"]');
+                const isMission15Active = missionBtn && (missionBtn.classList.contains('selected') || missionBtn.classList.contains('active'));
+                if (!isMission15Active) {
+                    setFleetMission(15);
+                }
                 setFleetHoldingTime(targetHolding);
                 setFleetSpeed(targetSpeed);
             };
@@ -5534,13 +6111,14 @@
                 }
                 step2Checks++;
 
-                applyStep2Settings();
-
-                // Kontroller:
                 const missionBtn = document.querySelector('#missionButton15, [data-mission="15"]');
                 const isMission15Active = missionBtn && (missionBtn.classList.contains('selected') || missionBtn.classList.contains('active'));
+                if (!isMission15Active) {
+                    setFleetMission(15);
+                }
 
-                const holdEl = document.querySelector('#holdingtime, select[name="holdingtime"], select#holdingtime, [name*="holding" i], [id*="holding" i]');
+                // Kontroller:
+                const holdEl = document.querySelector('#expeditiontime, select[name="expeditiontime"], #holdingtime, select[name="holdingtime"], input#holdingOrExpTime');
                 const holdVal = holdEl ? parseInt(holdEl.value, 10) : null;
                 const isHoldReady = (holdVal === targetHolding);
 
@@ -5550,7 +6128,11 @@
                 const speedBtn = document.querySelector(`[data-step="${targetSpeed}"], [data-step="${speedStep}"]`);
                 const isSpeedActive = (speedVal === targetSpeed) || (speedBtn && (speedBtn.classList.contains('selected') || speedBtn.classList.contains('active')));
 
-                if ((isMission15Active && isHoldReady && isSpeedActive && step2Checks >= 4) || step2Checks > 22) {
+                if (!isHoldReady || !isSpeedActive) {
+                    applyStep2Settings();
+                }
+
+                if ((isMission15Active && isHoldReady && isSpeedActive && step2Checks >= 2) || step2Checks > 15) {
                     clearInterval(step2Timer);
                     applyStep2Settings();
                     setTimeout(() => {
@@ -5735,7 +6317,7 @@
             }
 
             window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                detail: { type: 'SUBMIT_FLEET2' }
+                detail: { type: 'SUBMIT_FLEET2', hours: parseInt(session.holdingTime, 10) || 1 }
             }));
 
             const sendBtn = findSendFleetButton();
@@ -6011,6 +6593,15 @@
             '.ls-exp-go:hover{background:linear-gradient(180deg,#9b59b6,#7d3c98);transform:scale(1.01)}',
             '.ls-exp-go:active{transform:scale(0.99)}',
             '.ls-exp-go:disabled{opacity:0.5;cursor:not-allowed}',
+            '.ls-cart-card{background:#131d2a;border:1px solid #233446;border-radius:6px;padding:8px;margin-bottom:8px;flex-shrink:0}',
+            '.ls-cart-card-head{display:flex;align-items:center;justify-content:space-between;gap:6px;border-bottom:1px solid #1a2c3f;padding-bottom:5px;margin-bottom:6px}',
+            '.ls-cart-mbtn{background:#1a2c3f;color:#8899aa;border:1px solid #2c3e50;padding:2px 6px;border-radius:3px;cursor:pointer;font-size:9.5px;font-weight:bold;transition:all .15s;line-height:1.2}',
+            '.ls-cart-mbtn.active{background:#27ae60;color:#fff;border-color:#2ecc71}',
+            '.ls-cart-mbtn.deploy.active{background:#2980b9;color:#fff;border-color:#3498db}',
+            '.ls-cart-mbtn:hover:not(.active){background:#243a52;color:#fff}',
+            '.ls-ship-pill{background:#1a2c3f;color:#8899aa;border:1px solid #2c3e50;padding:2px 8px;border-radius:12px;cursor:pointer;font-size:10px;font-weight:bold;transition:all .15s;user-select:none;line-height:1.3}',
+            '.ls-ship-pill.active{background:#00bcff;color:#000;border-color:#00bcff;box-shadow:0 0 6px rgba(0,188,255,0.4)}',
+            '.ls-ship-pill:hover{border-color:#00bcff}',
         ].join('\n');
         document.head.appendChild(style);
 
@@ -6029,7 +6620,7 @@
         panel.id = 'ls-panel';
         panel.innerHTML =
             '<div id="ls-header">' +
-                '<span id="ls-header-title">' + boltSvg + ' LuckyStrike Helper <span style="font-size:10px;color:#8899aa;font-weight:normal;opacity:0.8">v10.2</span></span>' +
+                '<span id="ls-header-title">' + boltSvg + ' LuckyStrike Helper <span style="font-size:10px;color:#8899aa;font-weight:normal;opacity:0.8">v10.3</span></span>' +
                 '<div style="display:flex;align-items:center;gap:6px">' +
                     '<button id="ls-header-stop-btn" class="ls-btn-d ls-btn-sm" style="display:none;padding:2px 7px;font-size:10px;align-items:center;gap:3px;cursor:pointer" title="Tekrarlayan bu alarmı sustur">⏹️ Sustur</button>' +
                     '<span id="ls-close">✖</span>' +
@@ -6264,6 +6855,7 @@
                     '<div id="ls-coll-card-target" class="ls-coll-card">' +
                         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">' +
                             '<span class="ls-label">🎯 Collect To</span>' +
+                            '<button type="button" id="ls-coll-cur-btn" class="ls-btn-sm" style="background:#2c3e50;color:#00bcff;padding:2px 7px;font-size:10px;margin-left:auto;margin-right:6px;border:1px solid #334455;border-radius:3px;cursor:pointer" title="Hedefi şu an bulunduğunuz gezegen/ay yapar">Burası</button>' +
                             '<div style="display:flex;gap:4px">' +
                                 '<button type="button" id="ls-coll-mission-3" class="ls-coll-mbtn ' + (collectorSettings.mission === 3 ? 'active' : '') + '">Nakliye</button>' +
                                 '<button type="button" id="ls-coll-mission-4" class="ls-coll-mbtn ' + (collectorSettings.mission === 4 ? 'active' : '') + '">Konuşlandır</button>' +
@@ -6322,7 +6914,7 @@
                     '<div class="ls-coll-card">' +
                         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">' +
                             '<span class="ls-label" style="color:#bb86fc">🎯 Başlangıç Keşif Noktası (Slot 16)</span>' +
-                            '<button id="ls-exp-cur-btn" class="ls-btn-sm" style="background:#2c3e50;color:#00bcff;padding:2px 6px;font-size:10px" title="Şu anki gezegenin :16 slotunu yaz">📍 Mevcut Gezegen</button>' +
+                            '<button id="ls-exp-cur-btn" class="ls-btn-sm" style="background:#2c3e50;color:#00bcff;padding:2px 6px;font-size:10px" title="Şu anki gezegenin :16 slotunu yaz">Burası</button>' +
                         '</div>' +
                         '<div style="display:flex;gap:6px">' +
                             '<input type="text" id="ls-exp-start-coord" class="ls-inp" style="flex:1;font-family:monospace;font-weight:bold;color:#ffbe3b;text-align:center" placeholder="5:242:16">' +
@@ -7012,7 +7604,7 @@
             const r3 = Array.from(debugFilterState.row3).join(', ');
 
             let out = '==================================================\n' +
-                      '  LuckyStrike OGame Helper v10.2 - Log Kayıtları\n' +
+                      '  LuckyStrike OGame Helper v10.3 - Log Kayıtları\n' +
                       '  Tarih: ' + nowStr + '\n' +
                       '  URL: ' + window.location.href + '\n' +
                       '  Filtreler: [Akış: ' + r1 + '] [Kapsam: ' + r2 + '] [Seviye: ' + r3 + ']\n' +
@@ -7444,7 +8036,7 @@
     buildUI();
     setupObserver();
     setupDebrisObserver();
-    checkAndApplyFleetAutoLoad();
+    checkAndApplyCartDelivery();
     updateActivePlanetCache();
     checkAndRunCollectorAssistant();
     checkAndRunExpeditionAssistant();
