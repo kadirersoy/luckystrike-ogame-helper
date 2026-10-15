@@ -1,4 +1,4 @@
-# ⚡ LuckyStrike OGame Helper (v8.0)
+# ⚡ LuckyStrike OGame Helper (v9.0)
 
 [English](#-english-description) | [Türkçe](#-türkçe-açıklama)
 
@@ -60,7 +60,16 @@ LuckyStrike OGame Helper, **Gameforge Kullanım Şartları ve Oyun Kuralları (K
 
 ---
 
-#### 4. 🌌 Galaxy Scanner (Boş Slot & Sistem Arayıcı)
+#### 4. 🧭 Keşif Asistanı (Expedition Assistant)
+
+- **Spiral Keşif Rotası:** Belirlenen başlangıç sisteminden başlayarak yakından uzağa doğru spiral (+1, -1, +2, -2...) olarak 16. slotlara otomatik rota oluşturur.
+- **Dinamik Şablon Entegrasyonu:** OGame Filo 1 sayfasındaki "Keşif filosu" şablonlarını otomatik algılar ve doğrudan uygular.
+- **Sürat ve Süre Kontrolü:** İstenen filo hızı (%10-%100) ve bekleme süresi (1-5 saat) otomatik ayarlanır.
+- **Yüzen Bilgi Paneli & Tek Tuşla Gönderim (Space):** Filoyu 2. adıma hazırlar, `Space` tuşu veya gönder butonu ile sırayla tüm seferleri kesintisiz yola çıkarır.
+
+---
+
+#### 5. 🌌 Galaxy Scanner (Boş Slot & Sistem Arayıcı)
 
 <p align="center">
   <img src="screenshots/tab_scanner.png" width="380" alt="LuckyStrike Galaxy Scanner">
@@ -72,7 +81,7 @@ LuckyStrike OGame Helper, **Gameforge Kullanım Şartları ve Oyun Kuralları (K
 
 ---
 
-#### 5. 🔍 Player Finder (Oyuncu & Gezegen Arama)
+#### 6. 🔍 Player Finder (Oyuncu & Gezegen Arama)
 
 <p align="center">
   <img src="screenshots/tab_finder.png" width="380" alt="LuckyStrike Player Finder">
@@ -83,7 +92,7 @@ LuckyStrike OGame Helper, **Gameforge Kullanım Şartları ve Oyun Kuralları (K
 
 ---
 
-#### 6. 🚨 Saldırı & Sonda Bildirim Desteği (Threat Alert)
+#### 7. 🚨 Saldırı & Sonda Bildirim Desteği (Threat Alert)
 
 <p align="center">
   <img src="screenshots/tab_alarm.png" width="380" alt="LuckyStrike Tehdit Bildirimi">
@@ -129,14 +138,20 @@ LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Term
 - Optional audio notification for debris fields above user-selected thresholds.
 - Calculates required Recyclers on screen.
 
-#### 4. 🌌 Galaxy Scanner (Empty Slot Locator)
+#### 4. 🧭 Expedition Assistant
+- **Spiral Expedition Routing:** Automatically distributes expedition missions to slot 16 across systems expanding outward in a spiral pattern (+1, -1, +2, -2...).
+- **Dynamic Template Detection:** Detects and applies expedition fleet templates directly from the game's native fleet dispatch.
+- **Speed & Holding Time Control:** Automatically applies customized speed percentage and expedition holding duration.
+- **Step-by-Step Floating Banner:** Previews route and allows seamless progression with the `Space` key.
+
+#### 5. 🌌 Galaxy Scanner (Empty Slot Locator)
 - Analyzes official universe data to find empty slots or suitable systems for colonization/relocation.
 - Target slot filters (Slot 8, 7-8-9, etc.) for streamlined search.
 
-#### 5. 🔍 Player Finder (Colony Locator)
+#### 6. 🔍 Player Finder (Colony Locator)
 - Displays player colony lists and coordinates via official public APIs.
 
-#### 6. 🚨 In-Game Threat Alert Assistant
+#### 7. 🚨 In-Game Threat Alert Assistant
 - **Active Screen Updates Only:** Reads threat status when pages are loaded or when the game's native event header updates.
 - Provides optional audio and desktop notifications to prevent missing incoming activity while playing.
 
@@ -145,7 +160,7 @@ LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Term
 ## 🚀 Kurulum / Installation
 
 ### Chrome & Microsoft Edge
-1. İndirin / Download: [`luckystrike-ogame-helper-v8.0.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
+1. İndirin / Download: [`luckystrike-ogame-helper-v9.0.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
 2. Tarayıcıda eklentiler sayfasına gidin / Open extensions page:
    - **Chrome:** `chrome://extensions`
    - **Edge:** `edge://extensions`
@@ -155,6 +170,11 @@ LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Term
 ---
 
 ## 📝 Sürüm Geçmişi / Changelog
+
+### v9.0
+- **🧭 Keşif Asistanı (Expedition Assistant):** Spiral rota algoritması (+1, -1, +2, -2...) ile 16. slotlara otomatik rota dağıtımı, Filo 1 sayfasındaki kayıtlı keşif şablonlarını otomatik algılama ve uygulama, hız (%10-%100) ve bekleme süresi (1-5 saat) kontrolleri, yüzen HUD bilgi banner'ı ve `Space` tuşu ile adım adım güvenli filo gönderimi.
+- **🌌 Galaxy Scanner İyileştirmeleri:** Hedef slot hızlı filtreleri güncellendi (`⭐ 7, 9`, `❄️ 13-15 (Deut)`). Minimum eşzamanlı boş slot seçim listesi 1'den 15'e kadar tüm slotları (11, 13, 14 dahil) kapsayacak şekilde tamamlandı.
+- **⚡ Performans ve Stabilizasyon:** Filo 2 menüsünde hedef doğrulama, keşif saati kilitlenmesi ve hız ayarlarının stabilizasyonu sağlandı.
 
 ### v8.0
 - **📦 Maden Toplayıcı Asistanı (Resource Collector):** Tüm imparatorluk kolonilerinden (gezegen veya ay) tek bir hedef noktaya pratik maden toplama asistanı eklendi. Gezegen listesi, rezerv koruma, BN / KN / Rehber gemi dağılımı, Nakliye / Konuşlandır görev seçenekleri ve manuel hedef koordinat desteği.

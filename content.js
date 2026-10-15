@@ -2,7 +2,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v8.1 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v9.0 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -1213,7 +1213,6 @@
             }
             return;
         }
-
         const data = {
             active: true,
             m: req.m,
@@ -4071,95 +4070,346 @@
     // ============================================================
     // KEŞİF ASİSTANI (EXPEDITION ASSISTANT)
     // ============================================================
+    function getGameSelects() {
+        return Array.from(document.querySelectorAll('select')).filter(s => !s.closest('#ls-panel'));
+    }
+
+    function isValidTemplateName(txt) {
+        if (!txt) return false;
+        const t = txt.trim();
+        if (t.length === 0 || t.length > 30) return false;
+        if (t === '-' || t === '--' || t === '---') return false;
+        if (/^[-—_\s]+$/.test(t)) return false;
+        if (/^\d+$/.test(t)) return false; // Sadece rakam olan indeksler
+        if (/^\d+[\.\,]\d+$/.test(t)) return false; // Gemi sayısı (örn: 4.050, 42.922)
+        if (t.includes(':') || t.includes('[') || t.includes(']')) return false; // Koordinat veya etiketler (Görev:, FB_121[1:457:9])
+
+        const lower = t.toLowerCase();
+        const bannedExact = [
+            'keşif', 'kesif', 'keşif filosu', 'kesif filosu',
+            'standart filo', 'standard fleet', 'standart', 'standard',
+            'sonsuz uzaklar', 'görev', 'hedef', 'oyuncu adı', 'oyuncu',
+            'yeni şablon oluştur', 'yeni şablon', 'create new template',
+            'actions', 'aksiyonlar', 'isim', 'name', 'api', 'düzenle', 'sil',
+            'nakliye', 'saldırı', 'casusluk', 'koloni', 'harabe', 'filo',
+            'görev yok', 'asistan', 'luckystrike', 'sefer', 'saat', 'hız'
+        ];
+        if (bannedExact.includes(lower)) return false;
+        if (lower.includes('serbest')) return false; // "--- serbest ---"
+        if (lower.includes('lucky') || lower.includes('asistan')) return false;
+        return true;
+    }
+
     function scanAndSaveExpeditionTemplates() {
         const templates = [];
-        const selects = document.querySelectorAll('select');
-        let targetSel = null;
+        const seenNames = new Set();
 
-        for (const sel of selects) {
-            const idName = ((sel.id || '') + ' ' + (sel.name || '') + ' ' + (sel.className || '')).toLowerCase();
-            const parentText = (sel.parentElement?.innerText || '').toLowerCase();
-            if (idName.includes('expedition') || idName.includes('standard') || idName.includes('template') ||
-                parentText.includes('keşif filosu') || parentText.includes('standart filo')) {
-                targetSel = sel;
+        function addTpl(id, name) {
+            if (!isValidTemplateName(name)) return;
+            const clean = name.trim();
+            const lower = clean.toLowerCase();
+            if (!seenNames.has(lower)) {
+                seenNames.add(lower);
+                templates.push({ id: String(id || templates.length + 1), name: clean, group: 'Keşif' });
+            }
+        }
+
+        // 1. "Keşif filosu" etiketini ve satırını bul
+        const allLeafs = Array.from(document.querySelectorAll('#fleet1 *, #fleetdispatchcomponent *, body *')).filter(el => {
+            if (el.closest('#ls-panel, #menuTable, #links, #header, #siteHeader, #bar, #chatBar')) return false;
+            return el.children.length === 0 && (el.textContent || '').trim().length > 0;
+        });
+
+        let expRow = null;
+        for (const el of allLeafs) {
+            const txt = el.textContent.trim().toLowerCase();
+            if (txt === 'keşif filosu' || txt === 'kesif filosu') {
+                expRow = el.closest('tr, li, div') || el.parentElement;
                 break;
             }
         }
 
-        if (targetSel && targetSel.options) {
-            for (let i = 0; i < targetSel.options.length; i++) {
-                const opt = targetSel.options[i];
-                const val = (opt.value || '').trim();
-                const txt = (opt.textContent || '').trim();
-                if (val && val !== '0' && val !== '-1' && txt && txt !== '-' && !txt.includes('Seç')) {
-                    templates.push({ id: val, name: txt });
+        if (expRow) {
+            // A. expRow içindeki tüm <select> etiketlerinin <option>'larını tara
+            const selects = expRow.querySelectorAll('select');
+            for (const sel of selects) {
+                for (let i = 0; i < sel.options.length; i++) {
+                    const opt = sel.options[i];
+                    addTpl(opt.value || i, opt.textContent);
                 }
+            }
+
+            // B. expRow içindeki dropdown ve data öğelerini tara
+            const items = expRow.querySelectorAll('li, a, span, div, [data-value], [data-name]');
+            for (const item of items) {
+                if (item.children.length > 0) continue;
+                const val = item.getAttribute('data-value') || item.getAttribute('data-id') || item.getAttribute('data-technology');
+                addTpl(val, item.textContent);
             }
         }
 
-        if (templates.length === 0) {
-            const rows = document.querySelectorAll('.fleetTemplate, [data-template-id], .standardfleet');
-            rows.forEach(r => {
-                const id = r.getAttribute('data-template-id') || r.getAttribute('data-id');
-                const name = r.querySelector('.name, .title')?.textContent?.trim() || r.textContent?.trim();
-                if (id && name) templates.push({ id, name });
-            });
+        // 2. Yalnızca ilk öğesi '-' olan dropdown menüleri tara
+        const menus = Array.from(document.querySelectorAll('.dropdown, [class*="dropdown"], [class*="selectmenu"], [class*="popup"], .modal')).filter(c => !c.closest('#ls-panel'));
+        for (const m of menus) {
+            const leaves = Array.from(m.querySelectorAll('li, a, span, td, option')).filter(l => l.children.length === 0);
+            const hasDash = leaves.some(l => l.textContent.trim() === '-');
+            if (hasDash) {
+                for (const leaf of leaves) {
+                    const val = leaf.getAttribute('data-value') || leaf.getAttribute('data-id');
+                    addTpl(val, leaf.textContent);
+                }
+            }
         }
 
         if (templates.length > 0) {
             localStorage.setItem(KEYS.EXPEDITION_TEMPLATES, JSON.stringify(templates));
         }
+
+        // MAIN World köprüsünden de tarama iste
+        window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+            detail: { type: 'SCAN_TEMPLATES' }
+        }));
+
         return templates;
     }
 
     function getSavedExpeditionTemplates() {
         const live = scanAndSaveExpeditionTemplates();
         if (live.length > 0) return live;
-        return JSON.parse(localStorage.getItem(KEYS.EXPEDITION_TEMPLATES) || '[]');
+        const saved = JSON.parse(localStorage.getItem(KEYS.EXPEDITION_TEMPLATES) || '[]');
+        return saved.filter(t => isValidTemplateName(t.name));
     }
 
-    function findExpeditionSelect() {
-        const direct = document.querySelector('select#expeditionfleet, select[name="expeditionfleet"], select#standardfleet, select[name="standardfleet"]');
-        if (direct) return direct;
-
-        const allSelects = document.querySelectorAll('select');
-        for (const s of allSelects) {
-            const idName = ((s.id || '') + ' ' + (s.name || '') + ' ' + (s.className || '')).toLowerCase();
-            const parentText = (s.parentElement?.innerText || '').toLowerCase();
-            if (idName.includes('expedition') || idName.includes('standard') || idName.includes('template') ||
-                parentText.includes('keşif filosu') || parentText.includes('standart filo')) {
-                return s;
+    function findExpeditionDropdownTrigger() {
+        const all = Array.from(document.querySelectorAll('#fleet1 *, #fleetdispatchcomponent *')).filter(el => !el.closest('#ls-panel'));
+        for (const el of all) {
+            if (el.children.length === 0) {
+                const txt = (el.textContent || '').trim().toLowerCase();
+                if (txt === 'keşif filosu' || txt === 'kesif filosu') {
+                    const row = el.closest('tr, li, div') || el.parentElement;
+                    if (row) {
+                        const trigger = Array.from(row.querySelectorAll('.dropdown, [class*="select"], [class*="dropdown"], [class*="combobox"], a, span, div')).find(item => {
+                            if (item.classList.contains('icon') || item.querySelector('.icon')) return false;
+                            const t = (item.textContent || '').trim().toLowerCase();
+                            return t.indexOf('keşif filosu') === -1;
+                        });
+                        if (trigger && trigger.offsetHeight > 0) return trigger;
+                    }
+                    if (el.nextElementSibling && el.nextElementSibling.offsetHeight > 0) return el.nextElementSibling;
+                }
             }
         }
         return null;
     }
 
-    function applyExpeditionTemplate(templateId) {
-        if (!templateId) return false;
-        const sel = findExpeditionSelect();
-        if (sel) {
-            sel.value = templateId;
-            sel.dispatchEvent(new Event('input', { bubbles: true }));
-            sel.dispatchEvent(new Event('change', { bubbles: true }));
+    function findAndSelectExpeditionTemplate(targetIdOrIndex, targetName) {
+        const idNum = parseInt(targetIdOrIndex, 10) || 1;
+        const nameLower = (targetName || '').trim().toLowerCase();
+        let success = false;
+
+        // Seçim tamamen MAIN world (bridge.js) tarafında yapılır:
+        // gerçek <select> option metninden bulunur, OGame dropdown anchor'ı tıklanır ve doğrulanır.
+        if (!nameLower) {
+            const savedTpls = JSON.parse(localStorage.getItem(KEYS.EXPEDITION_TEMPLATES) || '[]');
+            const m = savedTpls.find(t => String(t.id) === String(targetIdOrIndex)) || savedTpls[idNum - 1];
+            if (m && m.name) targetName = m.name;
+        }
+
+        const expSel = document.querySelector('select#expeditionfleet, select[name="expeditionfleet"]') ||
+                       Array.from(document.querySelectorAll('select')).find(s => {
+                           const txt = (s.parentElement?.innerText || '').toLowerCase();
+                           return txt.includes('keşif filosu') || txt.includes('kesif filosu');
+                       });
+        if (expSel) {
+            for (let i = 0; i < expSel.options.length; i++) {
+                const optText = (expSel.options[i].text || '').trim().toLowerCase();
+                if (optText === (targetName || '').trim().toLowerCase() || expSel.options[i].value === String(idNum)) {
+                    expSel.selectedIndex = i;
+                    expSel.value = expSel.options[i].value;
+                    expSel.dispatchEvent(new Event('input', { bubbles: true }));
+                    expSel.dispatchEvent(new Event('change', { bubbles: true }));
+                    break;
+                }
+            }
         }
 
         window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-            detail: { type: 'SELECT_TEMPLATE', id: templateId }
+            detail: { type: 'SELECT_TEMPLATE', id: idNum, name: targetName }
         }));
-        return true;
+        if (targetName) return true;
+
+        const isLuckyElement = (el) => {
+            if (!el) return true;
+            return !!el.closest('#ls-panel, [id^="ls-"], .ls-custom, #ls-coll-floating-banner');
+        };
+
+        const triggerFullClick = (el) => {
+            if (!el) return;
+            const opts = { bubbles: true, cancelable: true, view: window };
+            try { el.dispatchEvent(new PointerEvent('pointerdown', opts)); } catch(e) {}
+            try { el.dispatchEvent(new MouseEvent('mousedown', opts)); } catch(e) {}
+            try { el.dispatchEvent(new PointerEvent('pointerup', opts)); } catch(e) {}
+            try { el.dispatchEvent(new MouseEvent('mouseup', opts)); } catch(e) {}
+            try { el.click(); } catch(e) {}
+
+            const parent = el.closest('li, a, [data-value]') || el.parentElement;
+            if (parent && parent !== el && !isLuckyElement(parent)) {
+                try { parent.dispatchEvent(new PointerEvent('pointerdown', opts)); } catch(e) {}
+                try { parent.dispatchEvent(new MouseEvent('mousedown', opts)); } catch(e) {}
+                try { parent.dispatchEvent(new PointerEvent('pointerup', opts)); } catch(e) {}
+                try { parent.dispatchEvent(new MouseEvent('mouseup', opts)); } catch(e) {}
+                try { parent.click(); } catch(e) {}
+            }
+        };
+
+        // 1. Sayfada halihazırda açık olan menüde hedef şablonu ara
+        if (nameLower) {
+            const openOptions = Array.from(document.querySelectorAll('.dropdown *, [class*="dropdown"] *, [class*="select"] *, #fleet1 *')).filter(el => {
+                if (isLuckyElement(el)) return false;
+                return el.children.length === 0 && el.textContent.trim().toLowerCase() === nameLower;
+            });
+            if (openOptions.length > 0) {
+                triggerFullClick(openOptions[0]);
+                success = true;
+            }
+        }
+
+        // 2. "Keşif filosu" alanını bul
+        const allLeafs = Array.from(document.querySelectorAll('#fleet1 *, #fleetdispatchcomponent *, body *')).filter(el => !isLuckyElement(el));
+        let expRow = null;
+
+        for (const el of allLeafs) {
+            if (el.children.length === 0) {
+                const txt = el.textContent.trim().toLowerCase();
+                if (txt === 'keşif filosu' || txt === 'kesif filosu') {
+                    expRow = el.closest('tr, li, div') || el.parentElement;
+                    break;
+                }
+            }
+        }
+
+        if (expRow) {
+            // A. Select varsa doğrudan güncelle
+            const sel = expRow.querySelector('select');
+            if (sel) {
+                let foundIndex = -1;
+                for (let i = 0; i < sel.options.length; i++) {
+                    const optText = (sel.options[i].textContent || '').trim().toLowerCase();
+                    if ((nameLower && optText === nameLower) || (!nameLower && i === idNum)) {
+                        foundIndex = i;
+                        break;
+                    }
+                }
+                if (foundIndex !== -1) {
+                    sel.selectedIndex = foundIndex;
+                    sel.value = sel.options[foundIndex].value;
+                } else if (sel.options && sel.options.length > idNum) {
+                    sel.selectedIndex = idNum;
+                    sel.value = sel.options[idNum].value;
+                }
+                sel.dispatchEvent(new Event('input', { bubbles: true }));
+                sel.dispatchEvent(new Event('change', { bubbles: true }));
+                success = true;
+            }
+
+            // B. Custom dropdown tetikleyicisini aç
+            const trigger = Array.from(expRow.querySelectorAll('.dropdown, [class*="select"], [class*="dropdown"], [class*="combobox"], a, span, div')).find(el => {
+                if (isLuckyElement(el) || el.classList.contains('icon') || el.querySelector('.icon')) return false;
+                const t = (el.textContent || '').trim().toLowerCase();
+                return t.indexOf('keşif filosu') === -1;
+            });
+
+            if (trigger && trigger.offsetHeight > 0) {
+                triggerFullClick(trigger);
+
+                // Menü seçeneklerini bul ve hedef şablonu tıkla
+                setTimeout(() => {
+                    const menuItems = Array.from(document.querySelectorAll('.dropdown *, [class*="dropdown"] *, #fleet1 *')).filter(el => {
+                        if (isLuckyElement(el)) return false;
+                        if (el.children.length > 0) return false;
+                        const t = (el.textContent || '').trim();
+                        return isValidTemplateName(t);
+                    });
+
+                    let targetEl = null;
+                    if (nameLower) {
+                        targetEl = menuItems.find(el => el.textContent.trim().toLowerCase() === nameLower);
+                    }
+                    if (!targetEl && menuItems.length >= idNum) {
+                        targetEl = menuItems[idNum - 1];
+                    }
+
+                    if (targetEl) {
+                        triggerFullClick(targetEl);
+                        success = true;
+                    }
+                }, 80);
+            }
+        }
+
+        // 3. MAIN World (bridge.js) üzerinden tetikle
+        window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+            detail: { type: 'SELECT_TEMPLATE', id: idNum, name: targetName }
+        }));
+
+        return success;
+    }
+
+    function applyExpeditionTemplate(templateId, templateName) {
+        return findAndSelectExpeditionTemplate(templateId, templateName);
+    }
+
+    function getSelectedShipsSummary() {
+        const ships = {};
+        let total = 0;
+        const inputs = Array.from(document.querySelectorAll('#technologies input, input[name^="am"], #fleet1 input.military, #fleet1 input.civil')).filter(inp => !inp.closest('#ls-panel'));
+
+        for (const inp of inputs) {
+            const val = parseInt(inp.value, 10);
+            if (!isNaN(val) && val > 0) {
+                let shipId = (inp.name || '').replace(/^am/, '') || inp.getAttribute('data-technology') || inp.closest('[data-technology]')?.getAttribute('data-technology');
+                if (shipId) {
+                    ships[shipId] = val;
+                    total += val;
+                }
+            }
+        }
+        return { ships, total };
     }
 
     function setFleetSpeed(speedPercent) {
         speedPercent = parseInt(speedPercent, 10) || 100;
-        const stepEl = document.querySelector(`[data-step="${speedPercent}"], [data-value="${speedPercent}"], ul.steps li[data-step="${speedPercent}"], #speedPercentage [data-step="${speedPercent}"]`);
-        if (stepEl) {
-            stepEl.click();
+        const stepVal = Math.round(speedPercent / 10);
+        const selectors = `[data-step="${speedPercent}"], [data-step="${stepVal}"], [data-value="${speedPercent}"], [data-value="${stepVal}"], ul.steps li[data-step="${speedPercent}"], ul.steps li[data-step="${stepVal}"], #speedPercentage [data-step="${speedPercent}"], #speedPercentage [data-step="${stepVal}"], #fleet1 [data-step="${speedPercent}"], #fleet1 [data-step="${stepVal}"], .steps li[data-step="${speedPercent}"], .steps li[data-step="${stepVal}"]`;
+        let stepEls = Array.from(document.querySelectorAll(selectors));
+        if (stepEls.length === 0) {
+            const container = document.querySelector('#speedPercentage, .steps, #fleet2');
+            if (container) {
+                const candidates = container.querySelectorAll('li, a, span, button, div');
+                for (const c of candidates) {
+                    if (c.children.length === 0 && (c.textContent.trim() === String(speedPercent) || c.textContent.trim() === `${speedPercent}%`)) {
+                        stepEls.push(c);
+                        break;
+                    }
+                }
+            }
         }
-        const speedInp = document.getElementById('speed') || document.querySelector('input[name="speed"]');
-        if (speedInp) {
-            speedInp.value = speedPercent;
-            speedInp.dispatchEvent(new Event('change', { bubbles: true }));
-        }
+        stepEls.forEach(el => {
+            try {
+                el.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, cancelable: true, view: window }));
+                el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
+                el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
+                el.click();
+            } catch (e) {}
+        });
+
+        const speedInps = document.querySelectorAll('input[name="speed"], #speed');
+        speedInps.forEach(inp => {
+            inp.value = speedPercent;
+            inp.dispatchEvent(new Event('input', { bubbles: true }));
+            inp.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+
         window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
             detail: { type: 'SET_SPEED', speed: speedPercent }
         }));
@@ -4167,13 +4417,56 @@
 
     function setFleetHoldingTime(hours) {
         hours = parseInt(hours, 10) || 1;
-        const holdEl = document.getElementById('holdingtime') ||
-                       document.querySelector('select[name="holdingtime"], input[name="holdingtime"], select#holdingtime, [name*="holding"]');
-        if (holdEl) {
-            holdEl.value = hours;
-            holdEl.dispatchEvent(new Event('input', { bubbles: true }));
-            holdEl.dispatchEvent(new Event('change', { bubbles: true }));
+        const hoursStr = String(hours);
+        let holdEls = Array.from(document.querySelectorAll('#holdingtime, select[name="holdingtime"], input[name="holdingtime"], select#holdingtime, [name*="holding" i], [id*="holding" i], select[name*="expedition" i], select[id*="expedition" i]'));
+        if (holdEls.length === 0) {
+            const selects = Array.from(document.querySelectorAll('#fleet2 select, #briefing select, #fleetdispatchcomponent select, form select')).filter(s => !isLuckyElement(s));
+            for (const s of selects) {
+                const vals = Array.from(s.options).map(o => o.value);
+                if (vals.includes('1') && (vals.includes('2') || vals.includes(hoursStr))) {
+                    holdEls.push(s);
+                    break;
+                }
+            }
         }
+        holdEls.forEach(el => {
+            if (el.tagName === 'SELECT') {
+                for (let i = 0; i < el.options.length; i++) {
+                    if (String(el.options[i].value) === hoursStr || el.options[i].text.trim().startsWith(hoursStr)) {
+                        el.selectedIndex = i;
+                        el.value = el.options[i].value;
+                        el.options[i].selected = true;
+                        break;
+                    }
+                }
+            } else {
+                el.value = hours;
+            }
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+
+            // Update companion jQuery UI widget text if present
+            if (el.id) {
+                const btn = document.getElementById(el.id + '-button');
+                if (btn) {
+                    const txt = btn.querySelector('.ui-selectmenu-text') || btn;
+                    txt.textContent = hoursStr;
+                }
+            }
+        });
+
+        const dropOptions = document.querySelectorAll(`[id*="holding"][id*="menu"] li, ul.dropdownList li[data-value="${hours}"], [rel="holdingtime"] li[data-value="${hours}"], .ui-selectmenu-menu li`);
+        dropOptions.forEach(opt => {
+            if (opt.textContent.trim() === hoursStr || opt.getAttribute('data-value') === hoursStr) {
+                try {
+                    opt.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, cancelable: true, view: window }));
+                    opt.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
+                    opt.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
+                    opt.click();
+                } catch (e) {}
+            }
+        });
+
         window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
             detail: { type: 'SET_HOLDING_TIME', hours: hours }
         }));
@@ -4242,6 +4535,7 @@
 
         const tplSel = document.getElementById('ls-exp-template');
         if (tplSel) {
+            scanAndSaveExpeditionTemplates();
             const tpls = getSavedExpeditionTemplates();
             tplSel.innerHTML = '';
             if (tpls.length > 0) {
@@ -4250,7 +4544,8 @@
                     const opt = document.createElement('option');
                     opt.value = t.id;
                     opt.textContent = t.name;
-                    if (String(t.id) === String(expeditionSettings.templateId)) {
+                    opt.setAttribute('data-name', t.name);
+                    if (String(t.id) === String(expeditionSettings.templateId) || (t.name && t.name === expeditionSettings.templateName)) {
                         opt.selected = true;
                     }
                     tplSel.appendChild(opt);
@@ -4344,7 +4639,7 @@
         if (tplSel) {
             tplSel.addEventListener('change', () => {
                 expeditionSettings.templateId = tplSel.value;
-                expeditionSettings.templateName = tplSel.options[tplSel.selectedIndex]?.text || '';
+                expeditionSettings.templateName = tplSel.options[tplSel.selectedIndex]?.getAttribute('data-name') || tplSel.options[tplSel.selectedIndex]?.text || '';
                 saveExpeditionSettings();
             });
         }
@@ -4352,8 +4647,13 @@
         const refreshBtn = document.getElementById('ls-exp-refresh-tpls');
         if (refreshBtn) {
             refreshBtn.addEventListener('click', () => {
-                scanAndSaveExpeditionTemplates();
+                const foundTpls = scanAndSaveExpeditionTemplates();
                 renderExpedition();
+                if (foundTpls.length > 0) {
+                    showCollectorToast(`✅ ${foundTpls.length} şablon bulundu: ` + foundTpls.map(t => t.name).join(', '), 3500);
+                } else {
+                    showCollectorToast('ℹ️ Filo sayfasında kayıtlı şablon bulunamadı. Lütfen Filo 1 sayfasına geçin.', 4000);
+                }
             });
         }
 
@@ -4379,6 +4679,39 @@
                 startExpeditionSession();
             });
         }
+
+        window.addEventListener('LS_TEMPLATES_SCANNED', (e) => {
+            if (e.detail && Array.isArray(e.detail.templates) && e.detail.templates.length > 0) {
+                const validScanned = e.detail.templates.filter(t => isValidTemplateName(t.name));
+                const rawSaved = JSON.parse(localStorage.getItem(KEYS.EXPEDITION_TEMPLATES) || '[]');
+                const saved = rawSaved.filter(t => isValidTemplateName(t.name));
+                let changed = (saved.length !== rawSaved.length);
+                for (const t of validScanned) {
+                    if (!saved.some(s => s.name.toLowerCase() === t.name.toLowerCase())) {
+                        saved.push(t);
+                        changed = true;
+                    }
+                }
+                if (changed) {
+                    localStorage.setItem(KEYS.EXPEDITION_TEMPLATES, JSON.stringify(saved));
+                    renderExpedition();
+                }
+            }
+        });
+    }
+
+    try {
+        const existingRaw = localStorage.getItem(KEYS.EXPEDITION_TEMPLATES);
+        if (existingRaw) {
+            const parsed = JSON.parse(existingRaw);
+            const cleaned = parsed.filter(t => isValidTemplateName(t.name));
+            localStorage.setItem(KEYS.EXPEDITION_TEMPLATES, JSON.stringify(cleaned));
+        }
+    } catch (e) {}
+
+    if (window.location.href.includes('component=fleetdispatch')) {
+        setTimeout(scanAndSaveExpeditionTemplates, 500);
+        setTimeout(scanAndSaveExpeditionTemplates, 1500);
     }
 
     function startExpeditionSession() {
@@ -4396,6 +4729,18 @@
             alert('Keşif için sistem listesi oluşturulamadı!');
             return;
         }
+
+        const holdingInp = document.getElementById('ls-exp-holding');
+        if (holdingInp) expeditionSettings.holdingTime = parseInt(holdingInp.value, 10) || 1;
+        const speedInp = document.getElementById('ls-exp-speed');
+        if (speedInp) expeditionSettings.speed = parseInt(speedInp.value, 10) || 100;
+        const tplInp = document.getElementById('ls-exp-template');
+        if (tplInp && tplInp.value) {
+            expeditionSettings.templateId = tplInp.value;
+            const selOpt = tplInp.options[tplInp.selectedIndex];
+            if (selOpt) expeditionSettings.templateName = selOpt.getAttribute('data-name') || selOpt.text;
+        }
+        saveExpeditionSettings();
 
         const metaCoords = document.querySelector('meta[name="ogame-planet-coordinates"]')?.getAttribute('content') || '';
         const currentPlanetName = getCurrentPlanetName() || 'Mevcut';
@@ -4421,7 +4766,12 @@
                             document.getElementById('fleetdispatchcomponent') ||
                             document.getElementById('fleet1');
 
-        if (isFleetPage) {
+        const currentSysVal = document.getElementById('system')?.value || '';
+        const currentGalVal = document.getElementById('galaxy')?.value || '';
+        const currentPosVal = document.getElementById('position')?.value || '';
+
+        // Eğer halihazırda filo sayfasındaysak VE koordinatlar hedefle birebir aynıysa doğrudan başlat
+        if (isFleetPage && currentSysVal && String(currentSysVal).trim() === String(firstItem.s).trim() && String(currentGalVal).trim() === String(firstItem.g).trim() && String(currentPosVal).trim() === '16') {
             executeExpeditionStep(session, firstItem);
         } else {
             const url = `/game/index.php?page=ingame&component=fleetdispatch&galaxy=${firstItem.g}&system=${firstItem.s}&position=16&type=1&mission=15`;
@@ -4481,62 +4831,206 @@
                 clearInterval(pollInterval);
                 setTimeout(() => {
                     executeExpeditionStep(session, currentItem);
-                }, 400);
+                }, 300);
             }
         }, 150);
     }
 
-    function executeExpeditionStep(session, currentItem) {
-        setFleetTargetCoords(currentItem.g, currentItem.s, 16, 1);
+    function setExpeditionTarget(g, s, isStep2) {
+        const galInp = document.getElementById('galaxy') || document.querySelector('input[name="galaxy"]');
+        const sysInp = document.getElementById('system') || document.querySelector('input[name="system"]');
+        const posInp = document.getElementById('position') || document.querySelector('input[name="position"]');
+        const typeInp = document.getElementById('type') || document.querySelector('input[name="type"]');
 
-        if (session.templateId) {
-            applyExpeditionTemplate(session.templateId);
-        }
-
-        const prepareStep2 = () => {
-            setFleetTargetCoords(currentItem.g, currentItem.s, 16, 1);
-            setFleetMission(15);
-            setFleetHoldingTime(session.holdingTime || 1);
-            setFleetSpeed(session.speed || 100);
-
-            setTimeout(() => {
-                setFleetMission(15);
-                setFleetHoldingTime(session.holdingTime || 1);
-                setFleetSpeed(session.speed || 100);
-            }, 120);
+        const setNative = (inp, val) => {
+            if (!inp) return;
+            const strVal = String(val);
+            try {
+                const proto = window.HTMLInputElement.prototype;
+                const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+                if (setter) setter.call(inp, strVal);
+                else inp.value = strVal;
+            } catch (e) {
+                inp.value = strVal;
+            }
         };
 
-        setTimeout(() => {
-            clickDevamButton();
-            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                detail: { type: 'SUBMIT_FLEET1' }
-            }));
+        if (galInp) setNative(galInp, g);
+        if (posInp) setNative(posInp, '16');
+        if (typeInp) setNative(typeInp, '1');
 
-            let step2Tries = 0;
-            const step2Interval = setInterval(() => {
-                step2Tries++;
-                const devamBtn = document.getElementById('continueToFleet2') || document.querySelector('button.continue') || document.querySelector('a.continue');
-                const isStep1StillActive = devamBtn && (devamBtn.offsetWidth > 0 || window.getComputedStyle(devamBtn).display !== 'none');
-                const sendBtn = findSendFleetButton();
-                const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
-                const isStep2Active = (!isStep1StillActive && isSendBtnVisible) || document.getElementById('fleet2');
+        if (sysInp) {
+            const strS = String(s);
+            const tempS = strS.length > 1 ? strS.slice(0, -1) : '1';
 
-                if (isStep2Active) {
-                    const durationEl = document.getElementById('duration') || document.querySelector('.duration');
-                    const hasDuration = durationEl && durationEl.innerText && durationEl.innerText.trim() !== '-' && durationEl.innerText.trim() !== '';
+            // Simüle et: 1 rakam eksik yazıp input ve keyup tetikle
+            setNative(sysInp, tempS);
+            try { sysInp.dispatchEvent(new Event('input', { bubbles: true })); } catch (e) {}
+            try { sysInp.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: tempS.slice(-1) })); } catch (e) {}
 
-                    if (hasDuration || step2Tries > 20) {
-                        clearInterval(step2Interval);
-                        setTimeout(prepareStep2, 100);
-                    }
-                } else if (step2Tries > 35) {
-                    clearInterval(step2Interval);
-                    setTimeout(prepareStep2, 100);
+            // Ardından tam değeri yaz ve change/input/keyup tetikle
+            setTimeout(() => {
+                setNative(sysInp, strS);
+                try { sysInp.dispatchEvent(new Event('input', { bubbles: true })); } catch (e) {}
+                try { sysInp.dispatchEvent(new Event('change', { bubbles: true })); } catch (e) {}
+                try { sysInp.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: strS.slice(-1) })); } catch (e) {}
+            }, 40);
+        }
+
+        window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+            detail: { type: 'SET_EXPEDITION_TARGET', g: g, s: s, isStep2: !!isStep2 }
+        }));
+    }
+
+    function executeExpeditionStep(session, currentItem) {
+        let isStepCancelled = false;
+
+        const updateBannerReady = () => {
+            const btn = document.getElementById('ls-exp-banner-send-btn');
+            if (btn) {
+                btn.disabled = false;
+                btn.style.background = '#27ae60';
+                btn.style.color = '#fff';
+                btn.style.cursor = 'pointer';
+                btn.innerText = '🚀 Gönder (Space)';
+            }
+        };
+
+        const prepareStep2 = () => {
+            if (isStepCancelled) return;
+
+            // 1. Hedef koordinatı (g:s:16) Step 2 olarak ata (bu updateTarget() AJAX sorgusunu tetikler)
+            setExpeditionTarget(currentItem.g, currentItem.s, true);
+
+            const targetHolding = parseInt(session.holdingTime, 10) || 1;
+            const targetSpeed = parseInt(session.speed, 10) || 100;
+
+            const applyStep2Settings = () => {
+                if (isStepCancelled) return;
+                setFleetMission(15);
+                setFleetHoldingTime(targetHolding);
+                setFleetSpeed(targetSpeed);
+            };
+
+            applyStep2Settings();
+
+            // 2. OGame'in target AJAX sorgusu dönüp briefing'i ve dropdown'ları render edene/oturtana kadar aktif takip
+            let step2Checks = 0;
+            const step2Timer = setInterval(() => {
+                if (isStepCancelled) {
+                    clearInterval(step2Timer);
+                    return;
                 }
-            }, 100);
-        }, 350);
+                step2Checks++;
 
-        renderExpeditionBanner(session, currentItem, { prepareStep2: prepareStep2 });
+                applyStep2Settings();
+
+                // Kontroller:
+                const missionBtn = document.querySelector('#missionButton15, [data-mission="15"]');
+                const isMission15Active = missionBtn && (missionBtn.classList.contains('selected') || missionBtn.classList.contains('active'));
+
+                const holdEl = document.querySelector('#holdingtime, select[name="holdingtime"], select#holdingtime, [name*="holding" i], [id*="holding" i]');
+                const holdVal = holdEl ? parseInt(holdEl.value, 10) : null;
+                const isHoldReady = (holdVal === targetHolding);
+
+                const speedInp = document.querySelector('input[name="speed"], #speed');
+                const speedVal = speedInp ? parseInt(speedInp.value, 10) : null;
+                const speedStep = Math.round(targetSpeed / 10);
+                const speedBtn = document.querySelector(`[data-step="${targetSpeed}"], [data-step="${speedStep}"]`);
+                const isSpeedActive = (speedVal === targetSpeed) || (speedBtn && (speedBtn.classList.contains('selected') || speedBtn.classList.contains('active')));
+
+                if ((isMission15Active && isHoldReady && isSpeedActive && step2Checks >= 4) || step2Checks > 22) {
+                    clearInterval(step2Timer);
+                    applyStep2Settings();
+                    setTimeout(() => {
+                        if (isStepCancelled) return;
+                        applyStep2Settings();
+                        updateBannerReady();
+                    }, 80);
+                }
+            }, 80);
+        };
+
+        // 1. Şablonu seç (Gemileri doldur)
+        if (session.templateId || session.templateName) {
+            applyExpeditionTemplate(session.templateId, session.templateName);
+        }
+
+        // 2. Step 1 koordinatlarını doğrula
+        setExpeditionTarget(currentItem.g, currentItem.s, false);
+
+        // 3. Gemilerin dolmasını izle ve Devam'a bas
+        let checkTries = 0;
+        const ensureShipsInterval = setInterval(() => {
+            if (isStepCancelled) {
+                clearInterval(ensureShipsInterval);
+                return;
+            }
+            checkTries++;
+            const { ships, total } = getSelectedShipsSummary();
+
+            if (total > 0) {
+                clearInterval(ensureShipsInterval);
+
+                setTimeout(() => {
+                    if (isStepCancelled) return;
+                    setExpeditionTarget(currentItem.g, currentItem.s, false);
+                    clickDevamButton();
+                    window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                        detail: { type: 'SUBMIT_FLEET1' }
+                    }));
+
+                    let step2Tries = 0;
+                    const step2Interval = setInterval(() => {
+                        if (isStepCancelled) {
+                            clearInterval(step2Interval);
+                            return;
+                        }
+                        step2Tries++;
+                        const devamBtn = document.getElementById('continueToFleet2') || document.querySelector('button.continue') || document.querySelector('a.continue');
+                        const isStep1StillActive = devamBtn && (devamBtn.offsetWidth > 0 || window.getComputedStyle(devamBtn).display !== 'none');
+                        const sendBtn = findSendFleetButton();
+                        const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
+                        const isStep2Active = !isStep1StillActive && isSendBtnVisible;
+
+                        if (isStep2Active) {
+                            clearInterval(step2Interval);
+                            setTimeout(prepareStep2, 100);
+                        } else {
+                            if (step2Tries % 5 === 0) {
+                                clickDevamButton();
+                                window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                                    detail: { type: 'SUBMIT_FLEET1' }
+                                }));
+                            }
+                            if (step2Tries > 30) {
+                                clearInterval(step2Interval);
+                                setTimeout(prepareStep2, 100);
+                            }
+                        }
+                    }, 100);
+                }, 200);
+            } else if (checkTries === 2 || checkTries === 5) {
+                if (session.templateId || session.templateName) {
+                    applyExpeditionTemplate(session.templateId, session.templateName);
+                }
+            } else if (checkTries > 15) {
+                clearInterval(ensureShipsInterval);
+                clickDevamButton();
+                window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                    detail: { type: 'SUBMIT_FLEET1' }
+                }));
+                setTimeout(prepareStep2, 300);
+            }
+        }, 150);
+
+        renderExpeditionBanner(session, currentItem, {
+            prepareStep2: prepareStep2,
+            cancel: () => {
+                isStepCancelled = true;
+                clearInterval(ensureShipsInterval);
+            }
+        });
     }
 
     function renderExpeditionBanner(session, currentItem, details) {
@@ -4566,48 +5060,54 @@
                 '<div><b style="color:#8899aa">Hız:</b> <span style="color:#ffbe3b;font-weight:bold">%' + session.speed + '</span> · <b style="color:#8899aa">Süre:</b> <span style="color:#ffbe3b;font-weight:bold">' + session.holdingTime + 's</span></div>' +
             '</div>' +
             '<div style="display:flex;gap:6px;justify-content:center;align-items:center">' +
-                '<button id="ls-exp-banner-send-btn" style="background:#27ae60;color:#fff;border:none;padding:5px 12px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.5)">🚀 Gönder (Space)</button>' +
+                '<button id="ls-exp-banner-send-btn" disabled style="background:#445566;color:#8899aa;border:none;padding:5px 12px;border-radius:4px;font-weight:bold;font-size:11px;cursor:not-allowed">⏳ Hazırlanıyor...</button>' +
                 '<button id="ls-exp-banner-retry-btn" style="background:#e67e22;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer" title="Bu adımı ve hedef ayarlarını sıfırdan tekrarla">🔄 Tekrarla</button>' +
                 '<button id="ls-exp-banner-skip-btn" style="background:#34495e;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏭️ Atla</button>' +
                 '<button id="ls-exp-banner-cancel-btn" style="background:#e74c3c;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏹️ İptal</button>' +
             '</div>';
 
+        let isDispatching = false;
+
         const sendExpedition = () => {
+            if (isDispatching) return;
+            const sendBtn = findSendFleetButton();
+            const isSendBtnReady = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
+
+            // Sadece Step 2 aktif ve filo gönder butonu hazır olduğunda gönder
+            if (!isSendBtnReady) {
+                return;
+            }
+
             if (document.activeElement && document.activeElement.blur) {
                 document.activeElement.blur();
             }
 
-            const sendBtn = findSendFleetButton();
-            const isSendBtnReady = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
-
-            if (isSendBtnReady) {
-                dispatchSendExpeditionFleet();
-            } else {
-                clickDevamButton();
-                window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                    detail: { type: 'SUBMIT_FLEET1' }
-                }));
-                if (typeof details.prepareStep2 === 'function') {
-                    details.prepareStep2();
-                }
-                setTimeout(() => {
-                    dispatchSendExpeditionFleet();
-                }, 350);
-            }
+            isDispatching = true;
+            dispatchSendExpeditionFleet();
         };
 
         const retryCurrentStep = () => {
+            isDispatching = false;
             window.removeEventListener('keydown', keyListener);
+            if (typeof details.cancel === 'function') details.cancel();
             if (banner) {
                 banner.innerHTML = '<div style="font-size:12px;color:#e67e22;padding:6px;font-weight:bold">🔄 Keşif adımı yeniden hazırlanıyor...</div>';
             }
             setTimeout(() => {
-                executeExpeditionStep(session, currentItem);
+                const sendBtn = findSendFleetButton();
+                const isStep2 = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
+                if (isStep2 && typeof details.prepareStep2 === 'function') {
+                    renderExpeditionBanner(session, currentItem, details);
+                    details.prepareStep2();
+                } else {
+                    executeExpeditionStep(session, currentItem);
+                }
             }, 150);
         };
 
         const dispatchSendExpeditionFleet = () => {
             window.removeEventListener('keydown', keyListener);
+
             session.currentIndex++;
             sessionStorage.setItem(KEYS.EXPEDITION_RUN, JSON.stringify(session));
 
@@ -4625,6 +5125,9 @@
             const sendBtn = findSendFleetButton();
             if (sendBtn) {
                 try {
+                    sendBtn.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, cancelable: true, view: window }));
+                    sendBtn.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
+                    sendBtn.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
                     sendBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
                     sendBtn.click();
                 } catch (e) {}
@@ -4644,7 +5147,9 @@
         };
 
         const skipCurrentStep = () => {
+            isDispatching = false;
             window.removeEventListener('keydown', keyListener);
+            if (typeof details.cancel === 'function') details.cancel();
             session.currentIndex++;
             sessionStorage.setItem(KEYS.EXPEDITION_RUN, JSON.stringify(session));
 
@@ -4666,7 +5171,9 @@
         };
 
         const cancelSession = () => {
+            isDispatching = false;
             window.removeEventListener('keydown', keyListener);
+            if (typeof details.cancel === 'function') details.cancel();
             sessionStorage.removeItem(KEYS.EXPEDITION_RUN);
             if (banner) banner.remove();
         };
@@ -4890,7 +5397,7 @@
         panel.id = 'ls-panel';
         panel.innerHTML =
             '<div id="ls-header">' +
-                '<span id="ls-header-title">' + boltSvg + ' LuckyStrike Helper</span>' +
+                '<span id="ls-header-title">' + boltSvg + ' LuckyStrike Helper <span style="font-size:10px;color:#8899aa;font-weight:normal;opacity:0.8">v9.0</span></span>' +
                 '<div style="display:flex;align-items:center;gap:6px">' +
                     '<button id="ls-header-stop-btn" class="ls-btn-d ls-btn-sm" style="display:none;padding:2px 7px;font-size:10px;align-items:center;gap:3px;cursor:pointer" title="Tekrarlayan bu alarmı sustur">⏹️ Sustur</button>' +
                     '<span id="ls-close">✖</span>' +
@@ -4929,12 +5436,12 @@
                     '</div>' +
                     '<div style="margin-bottom:6px">' +
                         '<span class="ls-label">Hedef Slotlar (virgülle ayırın)</span>' +
-                        '<input type="text" id="ls-slots" class="ls-inp" style="width:100%" placeholder="8 veya 7, 8, 9">' +
+                        '<input type="text" id="ls-slots" class="ls-inp" style="width:100%" placeholder="8 veya 7, 9">' +
                     '</div>' +
                     '<div style="margin-bottom:8px;display:flex;flex-wrap:wrap;gap:2px">' +
                         '<span class="ls-chip" data-slots="8" data-min="1">🎯 Sadece 8</span>' +
-                        '<span class="ls-chip" data-slots="7, 8, 9" data-min="1">⭐ 7, 8, 9</span>' +
-                        '<span class="ls-chip" data-slots="12, 13, 14, 15" data-min="1">❄️ 12-15 (Deut)</span>' +
+                        '<span class="ls-chip" data-slots="7, 9" data-min="1">⭐ 7, 9</span>' +
+                        '<span class="ls-chip" data-slots="13, 14, 15" data-min="1">❄️ 13-15 (Deut)</span>' +
                         '<span class="ls-chip" data-slots="1, 2, 3" data-min="1">☀️ 1-3 (Solar)</span>' +
                         '<span class="ls-chip" data-slots="1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15" data-min="15">🪐 Tamamen Boş (1-15)</span>' +
                     '</div>' +
@@ -4951,7 +5458,10 @@
                             '<option value="8">8 slot</option>' +
                             '<option value="9">9 slot</option>' +
                             '<option value="10">10 slot</option>' +
+                            '<option value="11">11 slot</option>' +
                             '<option value="12">12 slot</option>' +
+                            '<option value="13">13 slot</option>' +
+                            '<option value="14">14 slot</option>' +
                             '<option value="15">15 slot</option>' +
                         '</select>' +
                     '</div>' +
@@ -5833,6 +6343,6 @@
     checkAndRunCollectorAssistant();
     checkAndRunExpeditionAssistant();
     scanAndSaveExpeditionTemplates();
-    console.log(LS, 'LuckyStrike OGame Helper v8.1 hazır!');
+    console.log(LS, 'LuckyStrike OGame Helper v9.0 hazır!');
 
 })();
