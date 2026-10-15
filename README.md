@@ -36,7 +36,7 @@ LuckyStrike OGame Helper, **Gameforge Kullanım Şartları ve Oyun Kuralları (K
 #### 2. 📦 Maden Toplayıcı Asistanı (Resource Collector)
 
 <p align="center">
-  <img src="screenshots/tab_collector_v8.png" width="380" alt="LuckyStrike Maden Toplayıcı">
+  <img src="screenshots/tab_collector.png" width="380" alt="LuckyStrike Maden Toplayıcı">
 </p>
 
 - **İmparatorluk Çapında Pratik Toplama:** Seçilen tüm gezegen ve aylardan belirlenen merkez noktaya (gezegen, ay veya manuel koordinat) madenleri sıra sıra toplar.
@@ -61,6 +61,10 @@ LuckyStrike OGame Helper, **Gameforge Kullanım Şartları ve Oyun Kuralları (K
 ---
 
 #### 4. 🧭 Keşif Asistanı (Expedition Assistant)
+
+<p align="center">
+  <img src="screenshots/tab_expedition.png" width="380" alt="LuckyStrike Keşif Asistanı">
+</p>
 
 - **Spiral Keşif Rotası:** Belirlenen başlangıç sisteminden başlayarak yakından uzağa doğru spiral (+1, -1, +2, -2...) olarak 16. slotlara otomatik rota oluşturur.
 - **Dinamik Şablon Entegrasyonu:** OGame Filo 1 sayfasındaki "Keşif filosu" şablonlarını otomatik algılar ve doğrudan uygular.
