@@ -21,10 +21,13 @@
     }
 
     var isDebugEnabled = false;
+    var isTraceEnabled = false;
     try {
         isDebugEnabled = (localStorage.getItem('LS_DEBUG_ENABLED') === 'true');
+        isTraceEnabled = (localStorage.getItem('LS_TRACE_ENABLED') === 'true');
     } catch (e) {}
     window.LS_DEBUG_ENABLED = isDebugEnabled;
+    window.LS_TRACE_ENABLED = isTraceEnabled;
 
     function findExpeditionSelect(targetName) {
         var all = Array.prototype.slice.call(document.querySelectorAll('select')).filter(function (s) { return !isLsNode(s); });
@@ -106,7 +109,12 @@
 
             if (d.type === 'SET_DEBUG_MODE') {
                 window.LS_DEBUG_ENABLED = !!d.enabled;
-                bridgeLog('ACTION', 'BRIDGE', 'Bridge debug modu güncellendi: ' + (window.LS_DEBUG_ENABLED ? 'AÇIK' : 'KAPALI'));
+                bridgeLog('ACTION', 'BRIDGE', 'Debug Logs modu: ' + (window.LS_DEBUG_ENABLED ? 'AÇIK' : 'KAPALI'));
+                return;
+            }
+            if (d.type === 'SET_TRACE_MODE') {
+                window.LS_TRACE_ENABLED = !!d.enabled;
+                bridgeLog('ACTION', 'BRIDGE', 'Trace Logs modu: ' + (window.LS_TRACE_ENABLED ? 'AÇIK' : 'KAPALI'));
                 return;
             }
 
@@ -332,7 +340,7 @@
         } catch (e) {}
     });
 
-    // Intercept OGame AJAX when debug is enabled
+    // Intercept OGame AJAX when debug or trace is enabled
     function attachAjaxListeners() {
         if (!window.$ && !window.jQuery) {
             setTimeout(attachAjaxListeners, 200);
@@ -341,28 +349,40 @@
         var $ = window.$ || window.jQuery;
         try {
             $(document).ajaxSend(function(event, jqXHR, settings) {
-                if (window.LS_DEBUG_ENABLED && settings && settings.url) {
+                var isTrace = !!window.LS_TRACE_ENABLED;
+                var isDebug = !!window.LS_DEBUG_ENABLED;
+                if ((isTrace || isDebug) && settings && settings.url) {
                     var u = settings.url;
                     if (u.indexOf('fleetdispatch') !== -1 || u.indexOf('sendFleet') !== -1 || u.indexOf('checkTarget') !== -1 || u.indexOf('galaxy') !== -1 || u.indexOf('ajax') !== -1) {
-                        bridgeLog('INFO', 'OGAME-AJAX', 'İstek yapılıyor: ' + u.split('&_st=')[0]);
+                        var cleanUrl = u.split('&_st=')[0];
+                        if (isDebug) bridgeLog('INFO', 'OGAME-AJAX', 'İstek yapılıyor: ' + cleanUrl);
+                        if (isTrace) bridgeLog('ACTION', 'TRACE', '🌐 [SUNUCU İSTEĞİ] ' + cleanUrl);
                     }
                 }
             });
             $(document).ajaxComplete(function(event, xhr, settings) {
-                if (window.LS_DEBUG_ENABLED && settings && settings.url) {
+                var isTrace = !!window.LS_TRACE_ENABLED;
+                var isDebug = !!window.LS_DEBUG_ENABLED;
+                if ((isTrace || isDebug) && settings && settings.url) {
                     var u = settings.url;
                     if (u.indexOf('fleetdispatch') !== -1 || u.indexOf('sendFleet') !== -1 || u.indexOf('checkTarget') !== -1 || u.indexOf('galaxy') !== -1 || u.indexOf('ajax') !== -1) {
+                        var cleanUrl = u.split('&_st=')[0];
                         var snippet = '';
                         try {
                             snippet = (xhr.responseText || '').substring(0, 160);
                         } catch (e) {}
-                        bridgeLog(xhr.status === 200 ? 'INFO' : 'WARN', 'OGAME-AJAX', 'İstek yanıtı (' + xhr.status + '): ' + u.split('&_st=')[0], snippet);
+                        if (isDebug) bridgeLog(xhr.status === 200 ? 'INFO' : 'WARN', 'OGAME-AJAX', 'İstek yanıtı (' + xhr.status + '): ' + cleanUrl, snippet);
+                        if (isTrace) bridgeLog('INFO', 'TRACE', '🌐 [SUNUCU YANITI (' + xhr.status + ')] ' + cleanUrl, snippet);
                     }
                 }
             });
             $(document).ajaxError(function(event, xhr, settings, thrownError) {
-                if (window.LS_DEBUG_ENABLED && settings && settings.url) {
-                    bridgeLog('ERROR', 'OGAME-AJAX', 'İstek hatası: ' + (settings.url ? settings.url.split('&_st=')[0] : 'URL bilinmiyor') + ' | ' + thrownError);
+                var isTrace = !!window.LS_TRACE_ENABLED;
+                var isDebug = !!window.LS_DEBUG_ENABLED;
+                if (isTrace || isDebug) {
+                    var cleanUrl = (settings && settings.url) ? settings.url.split('&_st=')[0] : 'URL bilinmiyor';
+                    if (isDebug) bridgeLog('ERROR', 'OGAME-AJAX', 'İstek hatası: ' + cleanUrl + ' | ' + thrownError);
+                    if (isTrace) bridgeLog('ERROR', 'TRACE', '❌ [SUNUCU HATASI] ' + cleanUrl + ' | ' + thrownError);
                 }
             });
         } catch (e) {}

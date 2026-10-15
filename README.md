@@ -1,4 +1,4 @@
-# ⚡ LuckyStrike OGame Helper (v10.0)
+# ⚡ LuckyStrike OGame Helper (v10.1)
 
 [English](#-english-description) | [Türkçe](#-türkçe-açıklama)
 
@@ -164,7 +164,7 @@ LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Term
 ## 🚀 Kurulum / Installation
 
 ### Chrome & Microsoft Edge
-1. İndirin / Download: [`luckystrike-ogame-helper-v10.0.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
+1. İndirin / Download: [`luckystrike-ogame-helper-v10.1.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
 2. Tarayıcıda eklentiler sayfasına gidin / Open extensions page:
    - **Chrome:** `chrome://extensions`
    - **Edge:** `edge://extensions`
@@ -174,6 +174,16 @@ LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Term
 ---
 
 ## 📝 Sürüm Geçmişi / Changelog
+
+### v10.1
+- **🎯 Trace Logs (Kullanıcı Eylem & Oyun Yanıt Takibi):** Kullanıcının nereye geçtiğini, neye tıkladığını (gemi, buton, menü, gezegen), basılan tuşları (Space, Enter), form değişikliklerini ve OGame'den dönen tüm bildirim ve sunucu yanıtlarını anbean kaydeden kullanıcı akış takipçisi eklendi.
+- **🐞 Debug Logs & Trace Logs Ayrımı:**
+  - Sadece **Debug Logs** açıkken: Yalnızca uyarı ve hata kayıtları listelenir (sessiz mod).
+  - Sadece **Trace Logs** açıkken: Yalnızca kullanıcının bastığı tuşlar, tıkladığı öğeler, sayfa geçişleri ve oyun yanıtları listelenir.
+  - **İkisi de açıkken:** Tüm sistem logları ve kullanıcı akışı birleşik olarak gösterilir.
+- **🏷️ Çoklu Seçim (Multi-Select) Filtreleme:** Filtre butonları çoklu seçime uyarlandı (örneğin `🧭 Keşif` + `⚠️ Hatalar` seçildiğinde yalnızca Keşif modülündeki hatalar listelenir).
+- **🔴 Canlı Trace Rozeti:** Trace Logs etkinken ekranın sağ üst köşesinde kaydedilen eylem sayısını gösteren şık bir rozet görüntülenir.
+- **📋 Ayrı ve Biçimlendirilmiş Kopyalama:** `📋 Logları Kopyala` ve `🎯 Trace Kopyala` butonlarıyla her iki veri akışı panoya tek tıkla aktarılabilir.
 
 ### v10.0
 - **🐞 Canlı Debug & Hata Teşhis Sekmesi (Debug Tab):** Tüm sekmelerdeki eylemleri (Keşif, Toplayıcı, Sepet, Harabe, Scanner, Finder, Alarm, Bridge ve OGame sunucu/AJAX isteklerini) anbean kaydeden gelişmiş teşhis modülü eklendi.

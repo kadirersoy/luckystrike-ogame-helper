@@ -2,7 +2,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v10.0 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v10.1 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -27,31 +27,58 @@
         EXPEDITION_RUN: 'LS_EXPEDITION_RUN',
         EXPEDITION_TEMPLATES: 'LS_EXPEDITION_TEMPLATES',
         DEBUG_ENABLED: 'LS_DEBUG_ENABLED',
-        DEBUG_LOGS: 'LS_DEBUG_LOGS'
+        DEBUG_LOGS: 'LS_DEBUG_LOGS',
+        TRACE_ENABLED: 'LS_TRACE_ENABLED',
+        TRACE_LOGS: 'LS_TRACE_LOGS'
     };
 
     // ============================================================
-    // CENTRAL DEBUG LOGGER
+    // CENTRAL LOGGER & TRACER
     // ============================================================
-    let activeDebugFilter = 'ALL';
+    let activeDebugFilters = new Set(['ALL']);
     let onDebugLiveUpdate = null;
 
     const LS_LOGGER = {
-        isEnabled: function() {
+        isDebugEnabled: function() {
             try {
                 return localStorage.getItem(KEYS.DEBUG_ENABLED) === 'true';
             } catch (e) {
                 return false;
             }
         },
-        setEnabled: function(val) {
+        isTraceEnabled: function() {
+            try {
+                return localStorage.getItem(KEYS.TRACE_ENABLED) === 'true';
+            } catch (e) {
+                return false;
+            }
+        },
+        setDebugEnabled: function(val) {
             try {
                 localStorage.setItem(KEYS.DEBUG_ENABLED, val ? 'true' : 'false');
                 window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
                     detail: { type: 'SET_DEBUG_MODE', enabled: !!val }
                 }));
             } catch (e) {}
-            this.log('ACTION', 'SYSTEM', `Debug modu ${val ? 'AÇILDI' : 'KAPATILDI'}.`);
+            this.log('ACTION', 'SYSTEM', `Debug Logs ${val ? 'AÇILDI' : 'KAPATILDI'}.`);
+        },
+        setTraceEnabled: function(val) {
+            try {
+                localStorage.setItem(KEYS.TRACE_ENABLED, val ? 'true' : 'false');
+                window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                    detail: { type: 'SET_TRACE_MODE', enabled: !!val }
+                }));
+            } catch (e) {}
+            LS_TRACER.updateIndicator();
+            if (val) {
+                LS_TRACER.record('TRACE_DURUMU', 'Trace Logs AÇILDI. Kullanıcı eylem ve yanıt takibi başladı.', {
+                    url: window.location.href,
+                    timestamp: new Date().toISOString()
+                });
+                LS_TRACER.snapshotPage('SAYFA_DURUMU', 'Trace Logs başlangıcında aktif sayfa kaydedildi.');
+            } else {
+                LS_TRACER.record('TRACE_DURUMU', 'Trace Logs KAPATILDI.');
+            }
         },
         getLogs: function() {
             try {
@@ -66,7 +93,27 @@
             } catch (e) {}
         },
         log: function(level, cat, msg, data) {
-            if (!this.isEnabled()) return;
+            const debugOn = this.isDebugEnabled();
+            const traceOn = this.isTraceEnabled();
+
+            // Hiçbiri açık değilse hiçbir şey kaydetme (Sıfır yük)
+            if (!debugOn && !traceOn) return;
+
+            const isWarnOrErr = (level === 'ERROR' || level === 'WARN');
+            const isTraceCat = (cat === 'TRACE');
+
+            // Kullanıcı kuralı:
+            // 1. Sadece debug log açıkken: SADECE uyarı ve hatalar gelsin
+            // 2. Sadece trace açıkken: SADECE nereye geçtim neye tıkladım ne döndü gelsin
+            // 3. İkisi de açıkken: İkisi birden gelsin
+            if (debugOn && traceOn) {
+                // İkisi de açık -> her şey kabul
+            } else if (debugOn && !traceOn) {
+                if (!isWarnOrErr) return;
+            } else if (!debugOn && traceOn) {
+                if (!isTraceCat) return;
+            }
+
             try {
                 const logs = this.getLogs();
                 const now = new Date();
@@ -92,7 +139,7 @@
                 sessionStorage.setItem(KEYS.DEBUG_LOGS, JSON.stringify(logs));
 
                 try {
-                    console.log(`%c[LS-DEBUG] [${timeStr}] [${entry.cat}] [${entry.level}]`, 'color:#00bcff;font-weight:bold', entry.msg, entry.data || '');
+                    console.log(`%c[LS-${entry.cat}] [${timeStr}] [${entry.level}]`, 'color:#00bcff;font-weight:bold', entry.msg, entry.data || '');
                 } catch(e) {}
 
                 if (typeof onDebugLiveUpdate === 'function') {
@@ -107,6 +154,285 @@
         error: function(cat, msg, data) { this.log('ERROR', cat, msg, data); }
     };
 
+    // ============================================================
+    // USER ACTION TRACER (TRACE LOGS MODÜLÜ)
+    // ============================================================
+    const LS_TRACER = {
+        isEnabled: function() {
+            try {
+                return localStorage.getItem(KEYS.TRACE_ENABLED) === 'true';
+            } catch (e) {
+                return false;
+            }
+        },
+        getTraces: function() {
+            try {
+                return JSON.parse(sessionStorage.getItem(KEYS.TRACE_LOGS) || '[]');
+            } catch (e) {
+                return [];
+            }
+        },
+        clearTraces: function() {
+            try {
+                sessionStorage.removeItem(KEYS.TRACE_LOGS);
+            } catch (e) {}
+            this.updateIndicator();
+        },
+        record: function(type, summary, details) {
+            if (!this.isEnabled() && type !== 'TRACE_DURUMU') return;
+            try {
+                const traces = this.getTraces();
+                const now = new Date();
+                const timeStr = [
+                    String(now.getHours()).padStart(2, '0'),
+                    String(now.getMinutes()).padStart(2, '0'),
+                    String(now.getSeconds()).padStart(2, '0')
+                ].join(':') + '.' + String(now.getMilliseconds()).padStart(3, '0');
+
+                const entry = {
+                    id: Date.now() + Math.random().toString(36).substring(2, 6),
+                    time: timeStr,
+                    type: type || 'EYLEM',
+                    summary: summary || '',
+                    details: details || null,
+                    url: window.location.href
+                };
+
+                traces.push(entry);
+                if (traces.length > 500) {
+                    traces.splice(0, traces.length - 500);
+                }
+                sessionStorage.setItem(KEYS.TRACE_LOGS, JSON.stringify(traces));
+
+                // Merkezi LS_LOGGER'a TRACE kategorisiyle gönder
+                const detailStr = details ? (typeof details === 'object' ? JSON.stringify(details) : String(details)) : null;
+                LS_LOGGER.log('ACTION', 'TRACE', `[${type}] ${summary}`, detailStr);
+
+                this.updateIndicator();
+            } catch (e) {}
+        },
+        updateIndicator: function() {
+            try {
+                let badge = document.getElementById('ls-trace-badge');
+                const enabled = this.isEnabled();
+                if (!enabled) {
+                    if (badge) badge.remove();
+                    return;
+                }
+                const traces = this.getTraces();
+                if (!badge) {
+                    badge = document.createElement('div');
+                    badge.id = 'ls-trace-badge';
+                    badge.style.cssText = 'position:fixed;top:8px;right:75px;z-index:999999;background:rgba(20,24,35,0.94);border:1px solid #ff5722;color:#fff;padding:4px 10px;border-radius:14px;font-size:11px;font-weight:bold;display:flex;align-items:center;gap:6px;box-shadow:0 2px 10px rgba(255,87,34,0.4);cursor:pointer;user-select:none;font-family:sans-serif;transition:all .2s';
+                    badge.title = 'Trace Logs Aktif! Tıklayarak Debug sekmesine gidebilirsiniz.';
+                    badge.addEventListener('click', () => {
+                        const panelEl = document.getElementById('ls-panel');
+                        if (panelEl) {
+                            panelEl.style.display = 'flex';
+                            const dbgTab = document.querySelector('.ls-tab[data-tab="debug"]');
+                            if (dbgTab) dbgTab.click();
+                        }
+                    });
+                    document.body.appendChild(badge);
+                }
+                badge.innerHTML = '<span style="display:inline-block;width:8px;height:8px;background:#ff3d00;border-radius:50%;animation:ls-pulse 1.2s infinite"></span>' +
+                                  '<span style="color:#ff7043">🔴 TRACE LOGS</span>' +
+                                  '<span style="background:rgba(255,255,255,0.12);padding:1px 6px;border-radius:8px;font-size:10px;color:#fff">' + traces.length + '</span>';
+            } catch (e) {}
+        },
+        snapshotPage: function(tag, note) {
+            try {
+                const u = new URL(window.location.href);
+                const component = u.searchParams.get('component') || u.searchParams.get('page') || 'genel';
+                const activePlanetEl = document.querySelector('#planetList .selected, .smallplanet.selected, .planetlink.active');
+                let planetName = '';
+                let planetCoord = '';
+                if (activePlanetEl) {
+                    const nameEl = activePlanetEl.querySelector('.planet-name, .titlePlanet');
+                    const coordEl = activePlanetEl.querySelector('.planet-koords, .coordinates');
+                    planetName = nameEl ? nameEl.textContent.trim() : '';
+                    planetCoord = coordEl ? coordEl.textContent.trim() : '';
+                }
+                const resM = (document.getElementById('resources_metal') || {}).textContent || '';
+                const resC = (document.getElementById('resources_crystal') || {}).textContent || '';
+                const resD = (document.getElementById('resources_deuterium') || {}).textContent || '';
+
+                this.record(tag || 'SAYFA_DURUMU', `${note || 'Sayfa'} [${component}] ${planetName} ${planetCoord}`.trim(), {
+                    url: window.location.href,
+                    component: component,
+                    planet: `${planetName} ${planetCoord}`.trim(),
+                    resources: `M: ${resM.trim()} | C: ${resC.trim()} | D: ${resD.trim()}`
+                });
+            } catch (e) {}
+        }
+    };
+
+    function describeElement(rawEl) {
+        let el = rawEl;
+        if (!el) return { summary: 'Bilinmeyen Öğe', details: {} };
+        if (el.nodeType === 3) el = el.parentElement;
+        if (!el || !el.tagName) return { summary: 'Bilinmeyen Öğe', details: {} };
+
+        // LuckyStrike paneli içi tıklamalar
+        if (el.closest && el.closest('#ls-panel')) {
+            const panelBtn = el.closest('button, .ls-tab, a, input, select') || el;
+            const pText = (panelBtn.innerText || panelBtn.value || panelBtn.title || panelBtn.id || '').trim().replace(/\s+/g, ' ').substring(0, 40);
+            return {
+                summary: `[LuckyStrike UI] <${(panelBtn.tagName||'').toLowerCase()}#${panelBtn.id||''}> "${pText}"`,
+                details: { target: 'LuckyStrike', id: panelBtn.id, tag: panelBtn.tagName, text: pText }
+            };
+        }
+
+        // Tıklanan öğenin en yakın etkileşimli ata elemanı
+        const interactive = el.closest ? el.closest('button, a, input, select, textarea, li.shipImage, [data-mission], [data-technology], .planetlink, .smallplanet, .menubutton') : null;
+        if (interactive) {
+            el = interactive;
+        }
+
+        const tag = (el.tagName || '').toLowerCase();
+        const id = el.id ? '#' + el.id : '';
+        const cls = el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\s+/).slice(0, 3).join('.') : '';
+        const text = (el.innerText || el.value || el.getAttribute('title') || el.getAttribute('aria-label') || '').trim().replace(/\s+/g, ' ').substring(0, 45);
+
+        // OGame'e özel öğeler
+        if (id === '#sendFleet') {
+            return {
+                summary: `🚀 Filo Gönder Butonu (#sendFleet)`,
+                details: { tag, id, class: cls, text }
+            };
+        }
+        if (id === '#continueToFleet2' || id === '#continueToFleet3' || (cls && cls.includes('continue'))) {
+            return {
+                summary: `➡️ Devam Butonu (${id || cls})`,
+                details: { tag, id, class: cls, text }
+            };
+        }
+        if (el.getAttribute('data-mission')) {
+            const mId = el.getAttribute('data-mission');
+            const mMappings = { '1':'Saldırı', '3':'Nakliye', '4':'Konuşlandır', '6':'Casusluk', '7':'Sömürgeleştir', '8':'Geri Dönüşüm', '15':'Keşif' };
+            const mName = mMappings[mId] || text || `Görev ${mId}`;
+            return {
+                summary: `🎯 Görev Seçimi: ${mName} (ID: ${mId})`,
+                details: { missionId: mId, id, class: cls, text }
+            };
+        }
+        if (el.getAttribute('data-technology')) {
+            const techId = el.getAttribute('data-technology');
+            return {
+                summary: `🛸 Gemi/Teknoloji Seçimi: ${text || ('Tech ID ' + techId)}`,
+                details: { techId: techId, id, class: cls, text }
+            };
+        }
+        if (el.closest && el.closest('#planetList, .smallplanet, .planetlink')) {
+            const planetEl = el.closest('#planetList li, .smallplanet, .planetlink');
+            const nameEl = planetEl ? planetEl.querySelector('.planet-name, .titlePlanet') : null;
+            const coordEl = planetEl ? planetEl.querySelector('.planet-koords, .coordinates') : null;
+            const pName = nameEl ? nameEl.textContent.trim() : '';
+            const pCoord = coordEl ? coordEl.textContent.trim() : '';
+            return {
+                summary: `🪐 Gezegen Listesinden Seçim: ${pName} ${pCoord}`,
+                details: { planetName: pName, coordinates: pCoord, id, class: cls }
+            };
+        }
+
+        return {
+            summary: `<${tag}${id}${cls ? ' ' + cls : ''}> "${text}"`,
+            details: { tag, id, class: cls, text }
+        };
+    }
+
+    function initOgameNotificationObserver() {
+        try {
+            const observer = new MutationObserver(function(mutations) {
+                if (!LS_TRACER.isEnabled()) return;
+                for (let i = 0; i < mutations.length; i++) {
+                    const m = mutations[i];
+                    for (let j = 0; j < m.addedNodes.length; j++) {
+                        const node = m.addedNodes[j];
+                        if (node && node.nodeType === 1) {
+                            const el = node;
+                            const cls = (el.className || '').toString();
+                            const id = el.id || '';
+                            if (cls.includes('notify') || cls.includes('toast') || cls.includes('fadeBox') || id === 'message_box' || cls.includes('alert') || cls.includes('error') || cls.includes('success')) {
+                                const txt = (el.innerText || el.textContent || '').trim().replace(/\s+/g, ' ');
+                                if (txt && txt.length > 3 && txt.length < 300) {
+                                    const isError = cls.includes('error') || txt.toLowerCase().includes('hata') || txt.toLowerCase().includes('ne yazık ki');
+                                    const isSuccess = cls.includes('success') || txt.toLowerCase().includes('başarıyla');
+                                    const icon = isError ? '❌' : (isSuccess ? '✔' : '🔔');
+                                    LS_TRACER.record('OGAME_YANIT', `${icon} OGame Bildirimi: "${txt}"`, {
+                                        id: id,
+                                        class: cls,
+                                        text: txt
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            observer.observe(document.body || document.documentElement, {
+                childList: true,
+                subtree: true
+            });
+        } catch (e) {}
+    }
+
+    // Capture User Actions (Click, Keydown, Change) for Trace Logs
+    document.addEventListener('click', function(e) {
+        if (!LS_TRACER.isEnabled()) return;
+        try {
+            const target = e.target;
+            if (!target) return;
+            if (target.closest && (target.closest('#tc-debug') || target.closest('#ls-trace-badge'))) return;
+
+            const desc = describeElement(target);
+            LS_TRACER.record('KLİK', desc.summary, desc.details);
+        } catch (err) {}
+    }, true);
+
+    document.addEventListener('keydown', function(e) {
+        if (!LS_TRACER.isEnabled()) return;
+        try {
+            const code = e.code;
+            const key = e.key;
+            const isSpecialKey = ['Space', 'Enter', 'Escape', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Backspace'].includes(code);
+            const isCombo = e.ctrlKey || e.altKey || e.metaKey;
+
+            if (!isSpecialKey && !isCombo) return;
+
+            const target = e.target;
+            const targetDesc = target ? (target.id ? '#' + target.id : (target.tagName || '')) : '';
+            const keyLabel = (e.ctrlKey ? 'Ctrl+' : '') + (e.altKey ? 'Alt+' : '') + (e.shiftKey ? 'Shift+' : '') + (code || key);
+
+            LS_TRACER.record('TUŞ', `Tuş Basıldı: [${keyLabel}] (Hedef: ${targetDesc})`, {
+                code: code,
+                key: key,
+                target: targetDesc
+            });
+        } catch (err) {}
+    }, true);
+
+    document.addEventListener('change', function(e) {
+        if (!LS_TRACER.isEnabled()) return;
+        try {
+            const target = e.target;
+            if (!target) return;
+            if (target.closest && (target.closest('#tc-debug') || target.closest('#ls-panel'))) return;
+
+            const name = target.name || target.id || target.className || target.tagName;
+            let val = target.value;
+            if (target.type === 'checkbox' || target.type === 'radio') {
+                val = target.checked ? 'SEÇİLİ' : 'SEÇİLİ DEĞİL';
+            }
+            LS_TRACER.record('GİRDİ_DEĞİŞİMİ', `Alan Değişti: [${name}] = "${val}"`, {
+                id: target.id,
+                name: target.name,
+                value: val,
+                type: target.type
+            });
+        } catch (err) {}
+    }, true);
+
     window.addEventListener('LS_BRIDGE_LOG', function(e) {
         if (e && e.detail) {
             LS_LOGGER.log(e.detail.level, e.detail.cat, e.detail.msg, e.detail.data);
@@ -114,20 +440,22 @@
     });
 
     window.addEventListener('error', function(e) {
-        if (LS_LOGGER.isEnabled()) {
+        if (LS_LOGGER.isDebugEnabled()) {
             LS_LOGGER.error('WINDOW', e.message || 'Window Error', (e.filename || '') + ':' + (e.lineno || ''));
         }
     });
 
     window.addEventListener('unhandledrejection', function(e) {
-        if (LS_LOGGER.isEnabled()) {
+        if (LS_LOGGER.isDebugEnabled()) {
             LS_LOGGER.error('PROMISE', e.reason ? (e.reason.message || String(e.reason)) : 'Unhandled Promise Rejection');
         }
     });
 
-    try {
-        LS_LOGGER.info('SYSTEM', 'Sayfa başlatıldı: ' + window.location.search);
-    } catch (e) {}
+    if (LS_TRACER.isEnabled()) {
+        LS_TRACER.updateIndicator();
+        LS_TRACER.snapshotPage('SAYFA_YÜKLENDİ', 'Yeni sayfa açıldı / yönlendirildi.');
+    }
+    initOgameNotificationObserver();
 
     let cart = JSON.parse(localStorage.getItem(KEYS.CART) || '[]');
     let activeTab = localStorage.getItem(KEYS.TAB) || 'cart';
@@ -5373,13 +5701,18 @@
             '.ls-tabs-stacked .ls-tab-icon{font-size:12px}',
             '.ls-tabs-stacked .ls-tab-label{font-size:8.5px}',
 
-            '.ls-debug-slider{position:relative;display:inline-block;width:32px;height:18px;background-color:#2c3e50;border-radius:18px;transition:.3s;border:1px solid #34495e}',
-            '.ls-debug-slider:before{position:absolute;content:"";height:12px;width:12px;left:2px;bottom:2px;background-color:#fff;border-radius:50%;transition:.3s}',
+            '.ls-debug-slider{position:relative;display:inline-block;width:28px;height:16px;background-color:#2c3e50;border-radius:16px;transition:.3s;border:1px solid #34495e}',
+            '.ls-debug-slider:before{position:absolute;content:"";height:10px;width:10px;left:2px;bottom:2px;background-color:#fff;border-radius:50%;transition:.3s}',
             '#ls-debug-toggle:checked + .ls-debug-slider{background-color:#2ecc71;border-color:#27ae60}',
-            '#ls-debug-toggle:checked + .ls-debug-slider:before{transform:translateX(14px)}',
-            '.ls-debug-filter{background:rgba(255,255,255,0.05);border:1px solid #1a2c3f;color:#8899aa;font-size:9.5px;padding:2px 6px;border-radius:3px;cursor:pointer;user-select:none}',
+            '#ls-debug-toggle:checked + .ls-debug-slider:before{transform:translateX(12px)}',
+            '#ls-trace-toggle:checked + .ls-debug-slider{background-color:#ff5722;border-color:#e64a19}',
+            '#ls-trace-toggle:checked + .ls-debug-slider:before{transform:translateX(12px)}',
+            '@keyframes ls-pulse{0%{opacity:0.6;transform:scale(0.9)}50%{opacity:1;transform:scale(1.15)}100%{opacity:0.6;transform:scale(0.9)}}',
+            '.ls-debug-filter{background:rgba(255,255,255,0.05);border:1px solid #1a2c3f;color:#8899aa;font-size:9.5px;padding:2px 6px;border-radius:3px;cursor:pointer;user-select:none;transition:all .15s}',
             '.ls-debug-filter:hover{background:rgba(0,188,255,0.15);color:#fff}',
             '.ls-debug-filter.active{background:#00bcff;color:#000;font-weight:bold;border-color:#00bcff}',
+            '.ls-debug-filter[data-filter="TRACE"].active{background:#ff5722;color:#fff;border-color:#ff5722}',
+            '.ls-debug-filter[data-filter="ERROR"].active{background:#e74c3c;color:#fff;border-color:#e74c3c}',
 
             '#ls-body{padding:10px;overflow-y:auto;overflow-x:hidden !important;flex:1;min-height:0;display:flex;flex-direction:column}',
             '.ls-tc{display:none;width:100%;overflow-x:hidden}.ls-tc.active{display:flex;flex-direction:column;flex:1;min-height:0;width:100%}',
@@ -5888,39 +6221,68 @@
 
                 // DEBUG TAB
                 '<div id="tc-debug" class="ls-tc">' +
-                    '<div style="background:rgba(255,255,255,0.03);border:1px solid #1a2c3f;border-radius:6px;padding:8px;margin-bottom:8px">' +
-                        '<div style="display:flex;justify-content:space-between;align-items:center">' +
-                            '<span style="font-weight:bold;color:#00bcff;font-size:11.5px;display:flex;align-items:center;gap:5px">' +
-                                '🐞 Debug Modu (Kayıt)' +
-                            '</span>' +
-                            '<label style="position:relative;display:inline-block;width:32px;height:18px;margin:0;cursor:pointer">' +
-                                '<input type="checkbox" id="ls-debug-toggle" style="opacity:0;width:0;height:0">' +
-                                '<span class="ls-debug-slider"></span>' +
-                            '</label>' +
+                    // 2-COLUMN HEADER: DEBUG LOGS (LEFT) & TRACE LOGS (RIGHT)
+                    '<div style="display:flex;gap:6px;margin-bottom:6px;flex-shrink:0">' +
+                        // SOL KART: DEBUG LOGS
+                        '<div style="flex:1;background:rgba(255,255,255,0.03);border:1px solid #1a2c3f;border-radius:6px;padding:6px 8px">' +
+                            '<div style="display:flex;justify-content:space-between;align-items:center">' +
+                                '<span style="font-weight:bold;color:#00bcff;font-size:11px;display:flex;align-items:center;gap:4px">' +
+                                    '🐞 Debug Logs' +
+                                '</span>' +
+                                '<label style="position:relative;display:inline-block;width:28px;height:16px;margin:0;cursor:pointer" title="Debug Logs aç/kapat (Uyarı ve Hatalar)">' +
+                                    '<input type="checkbox" id="ls-debug-toggle" style="opacity:0;width:0;height:0">' +
+                                    '<span class="ls-debug-slider"></span>' +
+                                '</label>' +
+                            '</div>' +
+                            '<div style="font-size:9px;color:#8899aa;margin-top:3px;line-height:1.2">' +
+                                'Sistem uyarı & hata kayıtları' +
+                            '</div>' +
                         '</div>' +
-                        '<div style="font-size:10px;color:#8899aa;margin-top:4px;line-height:1.3">' +
-                            'Açıldığında tüm sekmelerdeki eylemleri, OGame sunucu isteklerini ve hataları kaydeder.' +
+
+                        // SAĞ KART: TRACE LOGS
+                        '<div style="flex:1;background:rgba(255,255,255,0.03);border:1px solid #1a2c3f;border-radius:6px;padding:6px 8px">' +
+                            '<div style="display:flex;justify-content:space-between;align-items:center">' +
+                                '<span style="font-weight:bold;color:#ff7043;font-size:11px;display:flex;align-items:center;gap:4px">' +
+                                    '🎯 Trace Logs' +
+                                '</span>' +
+                                '<label style="position:relative;display:inline-block;width:28px;height:16px;margin:0;cursor:pointer" title="Trace Logs aç/kapat (Tıklama, sayfa, tuş & yanıtlar)">' +
+                                    '<input type="checkbox" id="ls-trace-toggle" style="opacity:0;width:0;height:0">' +
+                                    '<span class="ls-debug-slider"></span>' +
+                                '</label>' +
+                            '</div>' +
+                            '<div style="font-size:9px;color:#8899aa;margin-top:3px;line-height:1.2">' +
+                                'Tıklama, tuş & yanıt takibi' +
+                            '</div>' +
                         '</div>' +
                     '</div>' +
 
+                    // BUTONLAR: LOGLARI KOPYALA | TRACE KOPYALA | TEMİZLE | YENİLE
                     '<div style="display:flex;gap:4px;margin-bottom:6px;flex-shrink:0">' +
-                        '<button id="ls-debug-copy" class="ls-btn" style="flex:1;display:flex;align-items:center;justify-content:center;gap:3px;font-size:10.5px;padding:4px 6px">📋 Logları Kopyala</button>' +
-                        '<button id="ls-debug-clear" class="ls-btn ls-btn-d" style="flex:1;display:flex;align-items:center;justify-content:center;gap:3px;font-size:10.5px;padding:4px 6px">🗑️ Temizle</button>' +
-                        '<button id="ls-debug-refresh" class="ls-btn" style="width:30px;display:flex;align-items:center;justify-content:center;font-size:10px;padding:4px" title="Yenile">🔄</button>' +
+                        '<button id="ls-debug-copy" class="ls-btn" style="flex:1.1;display:flex;align-items:center;justify-content:center;gap:2px;font-size:10px;padding:4px 4px" title="Filtrelenmiş debug loglarını panoya kopyalar">📋 Logları Kopyala</button>' +
+                        '<button id="ls-trace-copy" class="ls-btn" style="flex:1.1;background:#ff5722;color:#fff;display:flex;align-items:center;justify-content:center;gap:2px;font-size:10px;padding:4px 4px" title="Kullanıcı eylem akışını (Trace Logs) panoya kopyalar">🎯 Trace Kopyala</button>' +
+                        '<button id="ls-debug-clear" class="ls-btn ls-btn-d" style="width:30px;display:flex;align-items:center;justify-content:center;font-size:10px;padding:4px 0" title="Tüm log ve trace kayıtlarını temizler">🗑️</button>' +
+                        '<button id="ls-debug-refresh" class="ls-btn" style="width:26px;display:flex;align-items:center;justify-content:center;font-size:10px;padding:4px 0" title="Yenile">🔄</button>' +
                     '</div>' +
 
+                    // MULTI-SELECT FİLTRELER
                     '<div style="display:flex;gap:3px;margin-bottom:6px;flex-wrap:wrap;flex-shrink:0" id="ls-debug-filters">' +
-                        '<span class="ls-debug-filter active" data-filter="ALL">Tümü</span>' +
-                        '<span class="ls-debug-filter" data-filter="EXPEDITION">🧭 Keşif</span>' +
-                        '<span class="ls-debug-filter" data-filter="COLLECTOR">📦 Toplayıcı</span>' +
-                        '<span class="ls-debug-filter" data-filter="OGAME-AJAX">🌐 Sunucu/Ajax</span>' +
-                        '<span class="ls-debug-filter" data-filter="BRIDGE">⚡ Bridge</span>' +
-                        '<span class="ls-debug-filter" data-filter="ERROR">⚠️ Hatalar</span>' +
+                        '<span class="ls-debug-filter active" data-filter="ALL" title="Tüm kayıtları göster">Tümü</span>' +
+                        '<span class="ls-debug-filter" data-filter="TRACE" title="Kullanıcı eylem ve yanıt takibi">🎯 Trace</span>' +
+                        '<span class="ls-debug-filter" data-filter="EXPEDITION" title="Keşif modülü kayıtları">🧭 Keşif</span>' +
+                        '<span class="ls-debug-filter" data-filter="COLLECTOR" title="Maden toplayıcı modülü kayıtları">📦 Toplayıcı</span>' +
+                        '<span class="ls-debug-filter" data-filter="OGAME-AJAX" title="OGame sunucu & AJAX istekleri">🌐 Sunucu/Ajax</span>' +
+                        '<span class="ls-debug-filter" data-filter="BRIDGE" title="Oyun içi bridge olayları">⚡ Bridge</span>' +
+                        '<span class="ls-debug-filter" data-filter="ERROR" title="Hatalar ve uyarılar">⚠️ Hatalar</span>' +
                     '</div>' +
 
+                    // DURUM & SAYAÇ
                     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-size:9.5px;color:#8899aa">' +
                         '<span id="ls-debug-count">0 kayıt</span>' +
-                        '<span id="ls-debug-status" style="font-weight:bold">○ Kapalı</span>' +
+                        '<div style="display:flex;gap:6px;align-items:center">' +
+                            '<span id="ls-debug-status">○ Debug: Kapalı</span>' +
+                            '<span style="color:#334455">|</span>' +
+                            '<span id="ls-trace-status">○ Trace: Kapalı</span>' +
+                        '</div>' +
                     '</div>' +
 
                     '<div id="ls-debug-console" style="background:#0a0e17;border:1px solid #1a2c3f;border-radius:6px;padding:8px;flex:1;min-height:160px;max-height:300px;overflow-y:auto;overflow-x:hidden;font-family:\'Consolas\',\'Courier New\',monospace;font-size:10px;line-height:1.45;color:#c9d1d9;white-space:pre-wrap;word-break:break-word">' +
@@ -6394,44 +6756,107 @@
         } catch (e) {}
 
         // ============================================================
-        // DEBUG TAB LOGIC & CONTROLS
+        // DEBUG & TRACE LOGS LOGIC & CONTROLS
         // ============================================================
+        function matchesFilters(entry) {
+            if (!activeDebugFilters || activeDebugFilters.size === 0 || activeDebugFilters.has('ALL')) {
+                return true;
+            }
+
+            const hasErrorFilter = activeDebugFilters.has('ERROR');
+            const categoryFilters = [];
+            activeDebugFilters.forEach(f => {
+                if (f !== 'ERROR' && f !== 'ALL') {
+                    categoryFilters.push(f);
+                }
+            });
+
+            const isErrorOrWarn = (entry.level === 'ERROR' || entry.level === 'WARN');
+
+            if (categoryFilters.length > 0 && hasErrorFilter) {
+                // Örn: Keşif + Hata -> Kategorisi Keşif olan VE seviyesi Hata/Uyarı olan kayıtlar
+                return categoryFilters.includes(entry.cat) && isErrorOrWarn;
+            } else if (categoryFilters.length > 0) {
+                // Seçilen kategorilerden birine uyan kayıtlar
+                return categoryFilters.includes(entry.cat);
+            } else if (hasErrorFilter) {
+                // Yalnızca hata veya uyarı olan tüm kayıtlar
+                return isErrorOrWarn;
+            }
+
+            return true;
+        }
+
+        function copyTextToClipboard(text, onSuccess, onError) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(onSuccess).catch(() => fallback(text));
+            } else {
+                fallback(text);
+            }
+
+            function fallback(t) {
+                const ta = document.createElement('textarea');
+                ta.value = t;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                try {
+                    document.execCommand('copy');
+                    if (typeof onSuccess === 'function') onSuccess();
+                } catch (e) {
+                    if (typeof onError === 'function') onError();
+                }
+                document.body.removeChild(ta);
+            }
+        }
+
         function renderDebugLogs() {
             const consoleEl = document.getElementById('ls-debug-console');
             const countEl = document.getElementById('ls-debug-count');
-            const statusEl = document.getElementById('ls-debug-status');
-            const toggleEl = document.getElementById('ls-debug-toggle');
+            const debugStatusEl = document.getElementById('ls-debug-status');
+            const traceStatusEl = document.getElementById('ls-trace-status');
+            const debugToggleEl = document.getElementById('ls-debug-toggle');
+            const traceToggleEl = document.getElementById('ls-trace-toggle');
             if (!consoleEl) return;
 
-            const enabled = LS_LOGGER.isEnabled();
-            if (toggleEl) toggleEl.checked = enabled;
-            if (statusEl) {
-                statusEl.textContent = enabled ? '● Kayıt Açık' : '○ Kapalı';
-                statusEl.style.color = enabled ? '#2ecc71' : '#8899aa';
+            const debugOn = LS_LOGGER.isDebugEnabled();
+            const traceOn = LS_LOGGER.isTraceEnabled();
+
+            if (debugToggleEl) debugToggleEl.checked = debugOn;
+            if (traceToggleEl) traceToggleEl.checked = traceOn;
+
+            if (debugStatusEl) {
+                debugStatusEl.textContent = debugOn ? '● Debug: Açık' : '○ Debug: Kapalı';
+                debugStatusEl.style.color = debugOn ? '#2ecc71' : '#8899aa';
+            }
+            if (traceStatusEl) {
+                traceStatusEl.textContent = traceOn ? '● Trace: Açık' : '○ Trace: Kapalı';
+                traceStatusEl.style.color = traceOn ? '#ff7043' : '#8899aa';
             }
 
             const allLogs = LS_LOGGER.getLogs();
-            let filteredLogs = allLogs;
-            if (activeDebugFilter && activeDebugFilter !== 'ALL') {
-                if (activeDebugFilter === 'ERROR') {
-                    filteredLogs = allLogs.filter(l => l.level === 'ERROR' || l.level === 'WARN');
-                } else {
-                    filteredLogs = allLogs.filter(l => l.cat === activeDebugFilter);
-                }
-            }
+            const filteredLogs = allLogs.filter(matchesFilters);
 
             if (countEl) {
                 countEl.textContent = `${filteredLogs.length} / ${allLogs.length} kayıt`;
             }
 
             if (allLogs.length === 0) {
-                consoleEl.innerHTML = '<div style="color:#6e7681;padding:15px;text-align:center;font-style:italic">' +
-                    (enabled ? 'Henüz kaydedilmiş bir eylem yok. Eklentiyi kullanırken loglar burada listelenecektir.' : 'Debug modu kapalı.<br>Yukarıdaki switch\'i açarak tüm sekmelerdeki hareketleri ve hataları kaydetmeye başlayabilirsiniz.') +
-                    '</div>';
+                let emptyMsg = 'Debug ve Trace modları kapalı.<br>Yukarıdaki switch\'leri açarak hareketleri, tıklamaları ve hataları anbean kaydetmeye başlayabilirsiniz.';
+                if (debugOn && traceOn) {
+                    emptyMsg = 'Debug ve Trace açık. Eklentiyi veya oyunu kullanırken tüm hareketler burada listelenecektir.';
+                } else if (debugOn) {
+                    emptyMsg = 'Sadece Debug Logs açık. Yalnızca hata ve uyarı kayıtları listelenecektir.';
+                } else if (traceOn) {
+                    emptyMsg = 'Sadece Trace Logs açık. Tıklama, tuş, sayfa geçişleri ve oyun yanıtları listelenecektir.';
+                }
+                consoleEl.innerHTML = `<div style="color:#6e7681;padding:15px;text-align:center;font-style:italic">${emptyMsg}</div>`;
                 return;
             }
 
             const catColors = {
+                'TRACE': '#ff7043',
                 'EXPEDITION': '#bb86fc',
                 'COLLECTOR': '#00bcff',
                 'OGAME-AJAX': '#2ecc71',
@@ -6473,9 +6898,18 @@
 
         const debugToggleEl = document.getElementById('ls-debug-toggle');
         if (debugToggleEl) {
-            debugToggleEl.checked = LS_LOGGER.isEnabled();
+            debugToggleEl.checked = LS_LOGGER.isDebugEnabled();
             debugToggleEl.addEventListener('change', () => {
-                LS_LOGGER.setEnabled(debugToggleEl.checked);
+                LS_LOGGER.setDebugEnabled(debugToggleEl.checked);
+                renderDebugLogs();
+            });
+        }
+
+        const traceToggleEl = document.getElementById('ls-trace-toggle');
+        if (traceToggleEl) {
+            traceToggleEl.checked = LS_LOGGER.isTraceEnabled();
+            traceToggleEl.addEventListener('change', () => {
+                LS_LOGGER.setTraceEnabled(traceToggleEl.checked);
                 renderDebugLogs();
             });
         }
@@ -6484,6 +6918,7 @@
         if (debugClearBtn) {
             debugClearBtn.addEventListener('click', () => {
                 LS_LOGGER.clearLogs();
+                LS_TRACER.clearTraces();
                 renderDebugLogs();
             });
         }
@@ -6498,7 +6933,7 @@
         const debugCopyBtn = document.getElementById('ls-debug-copy');
         if (debugCopyBtn) {
             debugCopyBtn.addEventListener('click', () => {
-                const logs = LS_LOGGER.getLogs();
+                const logs = LS_LOGGER.getLogs().filter(matchesFilters);
                 if (!logs || logs.length === 0) {
                     debugCopyBtn.textContent = '⚠️ Log Yok';
                     setTimeout(() => { debugCopyBtn.textContent = '📋 Logları Kopyala'; }, 1500);
@@ -6507,9 +6942,10 @@
                 const now = new Date();
                 const nowStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
                 let out = '==================================================\n' +
-                          '  LuckyStrike OGame Helper v10.0 - Debug Log\n' +
+                          '  LuckyStrike OGame Helper v10.1 - Debug Logs\n' +
                           '  Tarih: ' + nowStr + '\n' +
                           '  URL: ' + window.location.href + '\n' +
+                          '  Filtre: ' + Array.from(activeDebugFilters).join(', ') + '\n' +
                           '  Toplam Kayıt: ' + logs.length + '\n' +
                           '==================================================\n\n';
                 logs.forEach(l => {
@@ -6520,39 +6956,86 @@
                        '  Log Sonu\n' +
                        '==================================================\n';
 
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(out).then(() => {
-                        debugCopyBtn.textContent = '✅ Kopyalandı!';
-                        setTimeout(() => { debugCopyBtn.textContent = '📋 Logları Kopyala'; }, 2000);
-                    }).catch(() => fallbackCopy(out));
-                } else {
-                    fallbackCopy(out);
-                }
-
-                function fallbackCopy(text) {
-                    const ta = document.createElement('textarea');
-                    ta.value = text;
-                    ta.style.position = 'fixed';
-                    ta.style.opacity = '0';
-                    document.body.appendChild(ta);
-                    ta.select();
-                    try {
-                        document.execCommand('copy');
-                        debugCopyBtn.textContent = '✅ Kopyalandı!';
-                    } catch (e) {
-                        debugCopyBtn.textContent = '❌ Başarısız';
-                    }
-                    document.body.removeChild(ta);
+                copyTextToClipboard(out, () => {
+                    debugCopyBtn.textContent = '✅ Kopyalandı!';
                     setTimeout(() => { debugCopyBtn.textContent = '📋 Logları Kopyala'; }, 2000);
-                }
+                }, () => {
+                    debugCopyBtn.textContent = '❌ Başarısız';
+                    setTimeout(() => { debugCopyBtn.textContent = '📋 Logları Kopyala'; }, 2000);
+                });
             });
         }
 
+        const traceCopyBtn = document.getElementById('ls-trace-copy');
+        if (traceCopyBtn) {
+            traceCopyBtn.addEventListener('click', () => {
+                const traces = LS_TRACER.getTraces();
+                if (!traces || traces.length === 0) {
+                    traceCopyBtn.textContent = '⚠️ Trace Yok';
+                    setTimeout(() => { traceCopyBtn.textContent = '🎯 Trace Kopyala'; }, 1500);
+                    return;
+                }
+                const now = new Date();
+                const nowStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
+                let out = '==================================================\n' +
+                          '  🎯 LuckyStrike OGame Helper v10.1 - Trace Logs\n' +
+                          '  (Kullanıcı Eylem & Oyun Yanıt Akışı)\n' +
+                          '  Tarih: ' + nowStr + '\n' +
+                          '  URL: ' + window.location.href + '\n' +
+                          '  Toplam Eylem: ' + traces.length + '\n' +
+                          '==================================================\n\n';
+                traces.forEach(t => {
+                    out += `[${t.time}] [${t.type}] ${t.summary}\n`;
+                    if (t.details) {
+                        const dStr = typeof t.details === 'object' ? JSON.stringify(t.details, null, 2) : String(t.details);
+                        out += `  Detay: ${dStr.split('\n').join('\n  ')}\n`;
+                    }
+                    out += '\n';
+                });
+                out += '==================================================\n' +
+                       '  Trace Sonu\n' +
+                       '==================================================\n';
+
+                copyTextToClipboard(out, () => {
+                    traceCopyBtn.textContent = '✅ Kopyalandı!';
+                    setTimeout(() => { traceCopyBtn.textContent = '🎯 Trace Kopyala'; }, 2000);
+                }, () => {
+                    traceCopyBtn.textContent = '❌ Başarısız';
+                    setTimeout(() => { traceCopyBtn.textContent = '🎯 Trace Kopyala'; }, 2000);
+                });
+            });
+        }
+
+        // Multi-Select Filter Listeners
         document.querySelectorAll('#ls-debug-filters .ls-debug-filter').forEach(f => {
             f.addEventListener('click', () => {
-                document.querySelectorAll('#ls-debug-filters .ls-debug-filter').forEach(el => el.classList.remove('active'));
-                f.classList.add('active');
-                activeDebugFilter = f.getAttribute('data-filter') || 'ALL';
+                const filterTag = f.getAttribute('data-filter') || 'ALL';
+
+                if (filterTag === 'ALL') {
+                    activeDebugFilters.clear();
+                    activeDebugFilters.add('ALL');
+                } else {
+                    activeDebugFilters.delete('ALL');
+                    if (activeDebugFilters.has(filterTag)) {
+                        activeDebugFilters.delete(filterTag);
+                    } else {
+                        activeDebugFilters.add(filterTag);
+                    }
+                    if (activeDebugFilters.size === 0) {
+                        activeDebugFilters.add('ALL');
+                    }
+                }
+
+                // Butonların görsel aktiflik durumunu güncelle
+                document.querySelectorAll('#ls-debug-filters .ls-debug-filter').forEach(el => {
+                    const tag = el.getAttribute('data-filter') || 'ALL';
+                    if (activeDebugFilters.has(tag)) {
+                        el.classList.add('active');
+                    } else {
+                        el.classList.remove('active');
+                    }
+                });
+
                 renderDebugLogs();
             });
         });
