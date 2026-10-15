@@ -92,27 +92,21 @@
                 sessionStorage.removeItem(KEYS.DEBUG_LOGS);
             } catch (e) {}
         },
-        log: function(level, cat, msg, data) {
+        log: function(level, cat, msg, data, stream) {
             const debugOn = this.isDebugEnabled();
             const traceOn = this.isTraceEnabled();
 
             // Hiçbiri açık değilse hiçbir şey kaydetme (Sıfır yük)
             if (!debugOn && !traceOn) return;
 
-            const isWarnOrErr = (level === 'ERROR' || level === 'WARN');
-            const isTraceCat = (cat === 'TRACE');
+            const entryStream = stream || (cat === 'TRACE' ? 'TRACE' : 'DEBUG');
 
-            // Kullanıcı kuralı:
-            // 1. Sadece debug log açıkken: SADECE uyarı ve hatalar gelsin
-            // 2. Sadece trace açıkken: SADECE nereye geçtim neye tıkladım ne döndü gelsin
-            // 3. İkisi de açıkken: İkisi birden gelsin
-            if (debugOn && traceOn) {
-                // İkisi de açık -> her şey kabul
-            } else if (debugOn && !traceOn) {
-                if (!isWarnOrErr) return;
-            } else if (!debugOn && traceOn) {
-                if (!isTraceCat) return;
-            }
+            // Kullanıcı kuralları:
+            // 1. Sadece Debug Logs açıkken: Bizim uygulamanın attığı istekler, OGame sunucu yanıtları, köprü olayları ve hatalar (DEBUG)
+            // 2. Sadece Trace Logs açıkken: Kullanıcının manual browser hareketleri, tıklamaları, tuşları ve bildirimleri (TRACE)
+            // 3. İkisi de açıkken: Her iki akış birleşik kaydedilir ve başına [DEBUG] / [TRACE] eklenir.
+            if (!debugOn && entryStream === 'DEBUG') return;
+            if (!traceOn && entryStream === 'TRACE') return;
 
             try {
                 const logs = this.getLogs();
@@ -125,6 +119,7 @@
 
                 const entry = {
                     id: Date.now() + Math.random().toString(36).substring(2, 6),
+                    stream: entryStream,
                     time: timeStr,
                     level: level || 'INFO',
                     cat: (cat || 'GENERAL').toUpperCase(),
@@ -139,7 +134,8 @@
                 sessionStorage.setItem(KEYS.DEBUG_LOGS, JSON.stringify(logs));
 
                 try {
-                    console.log(`%c[LS-${entry.cat}] [${timeStr}] [${entry.level}]`, 'color:#00bcff;font-weight:bold', entry.msg, entry.data || '');
+                    const tagStyle = entry.stream === 'TRACE' ? 'color:#ff7043;font-weight:bold' : 'color:#00bcff;font-weight:bold';
+                    console.log(`%c[${entry.stream}] [${timeStr}] [${entry.cat}] [${entry.level}]`, tagStyle, entry.msg, entry.data || '');
                 } catch(e) {}
 
                 if (typeof onDebugLiveUpdate === 'function') {
@@ -147,11 +143,11 @@
                 }
             } catch (e) {}
         },
-        info: function(cat, msg, data) { this.log('INFO', cat, msg, data); },
-        action: function(cat, msg, data) { this.log('ACTION', cat, msg, data); },
-        dispatch: function(cat, msg, data) { this.log('DISPATCH', cat, msg, data); },
-        warn: function(cat, msg, data) { this.log('WARN', cat, msg, data); },
-        error: function(cat, msg, data) { this.log('ERROR', cat, msg, data); }
+        info: function(cat, msg, data) { this.log('INFO', cat, msg, data, 'DEBUG'); },
+        action: function(cat, msg, data) { this.log('ACTION', cat, msg, data, 'DEBUG'); },
+        dispatch: function(cat, msg, data) { this.log('DISPATCH', cat, msg, data, 'DEBUG'); },
+        warn: function(cat, msg, data) { this.log('WARN', cat, msg, data, 'DEBUG'); },
+        error: function(cat, msg, data) { this.log('ERROR', cat, msg, data, 'DEBUG'); }
     };
 
     // ============================================================
@@ -206,7 +202,7 @@
 
                 // Merkezi LS_LOGGER'a TRACE kategorisiyle gönder
                 const detailStr = details ? (typeof details === 'object' ? JSON.stringify(details) : String(details)) : null;
-                LS_LOGGER.log('ACTION', 'TRACE', `[${type}] ${summary}`, detailStr);
+                LS_LOGGER.log('ACTION', 'TRACE', `[${type}] ${summary}`, detailStr, 'TRACE');
 
                 this.updateIndicator();
             } catch (e) {}
@@ -344,7 +340,9 @@
     function initOgameNotificationObserver() {
         try {
             const observer = new MutationObserver(function(mutations) {
-                if (!LS_TRACER.isEnabled()) return;
+                const debugOn = LS_LOGGER.isDebugEnabled();
+                const traceOn = LS_TRACER.isEnabled();
+                if (!debugOn && !traceOn) return;
                 for (let i = 0; i < mutations.length; i++) {
                     const m = mutations[i];
                     for (let j = 0; j < m.addedNodes.length; j++) {
@@ -359,11 +357,16 @@
                                     const isError = cls.includes('error') || txt.toLowerCase().includes('hata') || txt.toLowerCase().includes('ne yazık ki');
                                     const isSuccess = cls.includes('success') || txt.toLowerCase().includes('başarıyla');
                                     const icon = isError ? '❌' : (isSuccess ? '✔' : '🔔');
-                                    LS_TRACER.record('OGAME_YANIT', `${icon} OGame Bildirimi: "${txt}"`, {
-                                        id: id,
-                                        class: cls,
-                                        text: txt
-                                    });
+                                    if (traceOn) {
+                                        LS_TRACER.record('OGAME_YANIT', `${icon} OGame Bildirimi: "${txt}"`, {
+                                            id: id,
+                                            class: cls,
+                                            text: txt
+                                        });
+                                    }
+                                    if (debugOn) {
+                                        LS_LOGGER.log(isError ? 'ERROR' : 'INFO', 'OGAME-YANIT', `OGame Bildirimi: "${txt}"`, { id: id, class: cls, text: txt }, 'DEBUG');
+                                    }
                                 }
                             }
                         }
@@ -6879,11 +6882,13 @@
             };
 
             const html = filteredLogs.map(entry => {
+                const streamTag = entry.stream || (entry.cat === 'TRACE' ? 'TRACE' : 'DEBUG');
+                const streamColor = streamTag === 'TRACE' ? '#ff7043' : '#00bcff';
                 const catColor = catColors[entry.cat] || '#8899aa';
                 const lvlColor = levelColors[entry.level] || '#c9d1d9';
                 const escapedMsg = escapeHtml(entry.msg);
                 const dataPart = entry.data ? `<div style="color:#8b949e;margin-left:14px;font-size:9.5px;white-space:pre-wrap;word-break:break-all">${escapeHtml(entry.data)}</div>` : '';
-                return `<div style="margin-bottom:3px;padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.03)"><span style="color:#6e7681">[${entry.time}]</span> <span style="color:${catColor};font-weight:bold">[${entry.cat}]</span> <span style="color:${lvlColor};font-weight:bold">[${entry.level}]</span> <span style="color:#e6edf3">${escapedMsg}</span>${dataPart}</div>`;
+                return `<div style="margin-bottom:3px;padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.03)"><span style="color:${streamColor};font-weight:bold">[${streamTag}]</span> <span style="color:#6e7681">[${entry.time}]</span> <span style="color:${catColor};font-weight:bold">[${entry.cat}]</span> <span style="color:${lvlColor};font-weight:bold">[${entry.level}]</span> <span style="color:#e6edf3">${escapedMsg}</span>${dataPart}</div>`;
             }).join('');
 
             consoleEl.innerHTML = html;
@@ -6942,14 +6947,15 @@
                 const now = new Date();
                 const nowStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
                 let out = '==================================================\n' +
-                          '  LuckyStrike OGame Helper v10.1 - Debug Logs\n' +
+                          '  LuckyStrike OGame Helper v10.1 - Sistem & Eylem Logları\n' +
                           '  Tarih: ' + nowStr + '\n' +
                           '  URL: ' + window.location.href + '\n' +
                           '  Filtre: ' + Array.from(activeDebugFilters).join(', ') + '\n' +
                           '  Toplam Kayıt: ' + logs.length + '\n' +
                           '==================================================\n\n';
                 logs.forEach(l => {
-                    out += `[${l.time}] [${l.cat}] [${l.level}] ${l.msg}\n`;
+                    const sTag = l.stream || (l.cat === 'TRACE' ? 'TRACE' : 'DEBUG');
+                    out += `[${sTag}] [${l.time}] [${l.cat}] [${l.level}] ${l.msg}\n`;
                     if (l.data) out += `    Data: ${l.data}\n`;
                 });
                 out += '\n==================================================\n' +
@@ -6985,7 +6991,7 @@
                           '  Toplam Eylem: ' + traces.length + '\n' +
                           '==================================================\n\n';
                 traces.forEach(t => {
-                    out += `[${t.time}] [${t.type}] ${t.summary}\n`;
+                    out += `[TRACE] [${t.time}] [${t.type}] ${t.summary}\n`;
                     if (t.details) {
                         const dStr = typeof t.details === 'object' ? JSON.stringify(t.details, null, 2) : String(t.details);
                         out += `  Detay: ${dStr.split('\n').join('\n  ')}\n`;
