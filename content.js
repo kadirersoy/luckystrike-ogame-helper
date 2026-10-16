@@ -653,9 +653,7 @@
         startCoord: '',
         count: 1,
         templateId: '',
-        templateName: '',
-        holdingTime: 1,
-        speed: 100
+        templateName: ''
     }, JSON.parse(localStorage.getItem('LS_EXPEDITION_SETTINGS') || '{}'));
 
     function saveExpeditionSettings() {
@@ -5542,129 +5540,6 @@
         return { ships, total };
     }
 
-    function setFleetSpeed(speedPercent) {
-        speedPercent = parseInt(speedPercent, 10) || 100;
-        const stepVal = Math.round(speedPercent / 10);
-        
-        // SADECE hız kontrol alanını (#speedPercentage veya .steps) hedefle!
-        // Asla tüm sayfayı tarama, asla gemi teknolojilerine (Azrail vb.) veya bekleme süresine dokunma!
-        const speedContainer = document.querySelector('#speedPercentage, #fleet2 #speedPercentage, #fleet2 .steps, .steps');
-        let stepEls = [];
-        if (speedContainer) {
-            const selectors = `[data-step="${speedPercent}"], [data-step="${stepVal}"], li[data-step="${speedPercent}"], li[data-step="${stepVal}"]`;
-            stepEls = Array.from(speedContainer.querySelectorAll(selectors)).filter(el => {
-                return !el.closest('[data-technology], #expeditiontime-menu, #holdingtime-menu, select, form');
-            });
-
-            if (stepEls.length === 0) {
-                const candidates = speedContainer.querySelectorAll('li, a, span, button, div');
-                for (const c of candidates) {
-                    if (c.children.length === 0 && !c.closest('[data-technology], select, form')) {
-                        const txt = c.textContent.trim();
-                        if (txt === String(speedPercent) || txt === `${speedPercent}%`) {
-                            stepEls.push(c);
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        stepEls.forEach(el => {
-            try {
-                el.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, cancelable: true, view: window }));
-                el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
-                el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
-                el.click();
-            } catch (e) {}
-        });
-
-        const speedInps = document.querySelectorAll('#speedPercentage input[name="speed"], input#speed, #fleet2 input[name="speed"]');
-        speedInps.forEach(inp => {
-            if (isLuckyElement(inp) || inp.closest('[data-technology]')) return;
-            inp.value = speedPercent;
-            inp.dispatchEvent(new Event('input', { bubbles: true }));
-            inp.dispatchEvent(new Event('change', { bubbles: true }));
-        });
-
-        window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-            detail: { type: 'SET_SPEED', speed: speedPercent }
-        }));
-    }
-
-    function setFleetHoldingTime(hours) {
-        hours = parseInt(hours, 10) || 1;
-        const hoursStr = String(hours);
-        let holdEls = Array.from(document.querySelectorAll('#expeditiontime, select[name="expeditiontime"], #holdingtime, select[name="holdingtime"], input#holdingOrExpTime, input[name="holdingOrExpTime"], select#holdingtime, [name*="holding" i], [id*="holding" i], select[name*="expedition" i], select[id*="expedition" i]'));
-
-        // CRITICAL: Filter out any fleet template selectors!
-        holdEls = holdEls.filter(el => {
-            if (isLuckyElement(el)) return false;
-            const id = (el.id || '').toLowerCase();
-            const name = (el.name || '').toLowerCase();
-            return !id.includes('template') && !name.includes('template');
-        });
-
-        if (holdEls.length === 0) {
-            const selects = Array.from(document.querySelectorAll('#fleet2 select, #briefing select, #fleetdispatchcomponent select, form select')).filter(s => {
-                if (isLuckyElement(s)) return false;
-                const id = (s.id || '').toLowerCase();
-                const name = (s.name || '').toLowerCase();
-                return !id.includes('template') && !name.includes('template');
-            });
-            for (const s of selects) {
-                const vals = Array.from(s.options).map(o => o.value);
-                if (vals.includes('1') && (vals.includes('2') || vals.includes(hoursStr))) {
-                    holdEls.push(s);
-                    break;
-                }
-            }
-        }
-        holdEls.forEach(el => {
-            if (el.tagName === 'SELECT') {
-                for (let i = 0; i < el.options.length; i++) {
-                    if (String(el.options[i].value) === hoursStr || el.options[i].text.trim().startsWith(hoursStr)) {
-                        el.selectedIndex = i;
-                        el.value = el.options[i].value;
-                        el.options[i].selected = true;
-                        break;
-                    }
-                }
-            } else {
-                el.value = hoursStr;
-            }
-            el.dispatchEvent(new Event('input', { bubbles: true }));
-            el.dispatchEvent(new Event('change', { bubbles: true }));
-
-            // Update companion jQuery UI widget text if present
-            if (el.id) {
-                const btn = document.getElementById(el.id + '-button');
-                if (btn) {
-                    const txt = btn.querySelector('.ui-selectmenu-text') || btn;
-                    txt.textContent = hoursStr;
-                }
-            }
-        });
-
-        const dropOptions = document.querySelectorAll(`[id*="expedition"][id*="menu"] a, [id*="expedition"][id*="menu"] li, [id*="holding"][id*="menu"] a, [id*="holding"][id*="menu"] li, #expeditiontime-menu a, #expeditiontime-menu li, #holdingtime-menu a, #holdingtime-menu li, #briefing [rel="holdingtime"] li[data-value="${hours}"]`);
-        dropOptions.forEach(opt => {
-            if (isLuckyElement(opt) || opt.closest('[data-technology], #speedPercentage')) return;
-            const t = opt.textContent.trim();
-            const v = opt.getAttribute('data-value') || opt.getAttribute('rel');
-            if (t === hoursStr || v === hoursStr) {
-                try {
-                    opt.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, cancelable: true, view: window }));
-                    opt.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
-                    opt.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
-                    opt.click();
-                } catch (e) {}
-            }
-        });
-
-        window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-            detail: { type: 'SET_HOLDING_TIME', hours: hours }
-        }));
-    }
 
     function generateExpeditionQueue(galaxy, startSystem, count) {
         const queue = [];
@@ -5720,12 +5595,6 @@
 
         const countInp = document.getElementById('ls-exp-count');
         if (countInp) countInp.value = expeditionSettings.count || 1;
-
-        const holdingSel = document.getElementById('ls-exp-holding');
-        if (holdingSel) holdingSel.value = String(expeditionSettings.holdingTime || 1);
-
-        const speedSel = document.getElementById('ls-exp-speed');
-        if (speedSel) speedSel.value = String(expeditionSettings.speed || 100);
 
         const tplSel = document.getElementById('ls-exp-template');
         if (tplSel) {
@@ -5851,21 +5720,6 @@
             });
         }
 
-        const holdingSel = document.getElementById('ls-exp-holding');
-        if (holdingSel) {
-            holdingSel.addEventListener('change', () => {
-                expeditionSettings.holdingTime = parseInt(holdingSel.value, 10) || 1;
-                saveExpeditionSettings();
-            });
-        }
-
-        const speedSel = document.getElementById('ls-exp-speed');
-        if (speedSel) {
-            speedSel.addEventListener('change', () => {
-                expeditionSettings.speed = parseInt(speedSel.value, 10) || 100;
-                saveExpeditionSettings();
-            });
-        }
 
         const startBtn = document.getElementById('ls-exp-start-btn');
         if (startBtn) {
@@ -5924,10 +5778,6 @@
             return;
         }
 
-        const holdingInp = document.getElementById('ls-exp-holding');
-        if (holdingInp) expeditionSettings.holdingTime = parseInt(holdingInp.value, 10) || 1;
-        const speedInp = document.getElementById('ls-exp-speed');
-        if (speedInp) expeditionSettings.speed = parseInt(speedInp.value, 10) || 100;
         const tplInp = document.getElementById('ls-exp-template');
         if (tplInp && tplInp.value) {
             expeditionSettings.templateId = tplInp.value;
@@ -5948,8 +5798,6 @@
             departureName: currentPlanetName,
             templateId: expeditionSettings.templateId,
             templateName: expeditionSettings.templateName,
-            holdingTime: expeditionSettings.holdingTime || 1,
-            speed: expeditionSettings.speed || 100,
             startedAt: Date.now()
         };
 
@@ -6039,6 +5887,7 @@
         const setNative = (inp, val) => {
             if (!inp) return;
             const strVal = String(val);
+            if (String(inp.value).trim() === strVal) return;
             try {
                 const proto = window.HTMLInputElement.prototype;
                 const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
@@ -6053,22 +5902,10 @@
         if (posInp) setNative(posInp, '16');
         if (typeInp) setNative(typeInp, '1');
 
-        if (sysInp) {
-            const strS = String(s);
-            const tempS = strS.length > 1 ? strS.slice(0, -1) : '1';
-
-            // Simüle et: 1 rakam eksik yazıp input ve keyup tetikle
-            setNative(sysInp, tempS);
+        if (sysInp && String(sysInp.value).trim() !== String(s).trim()) {
+            setNative(sysInp, s);
             try { sysInp.dispatchEvent(new Event('input', { bubbles: true })); } catch (e) {}
-            try { sysInp.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: tempS.slice(-1) })); } catch (e) {}
-
-            // Ardından tam değeri yaz ve change/input/keyup tetikle
-            setTimeout(() => {
-                setNative(sysInp, strS);
-                try { sysInp.dispatchEvent(new Event('input', { bubbles: true })); } catch (e) {}
-                try { sysInp.dispatchEvent(new Event('change', { bubbles: true })); } catch (e) {}
-                try { sysInp.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: strS.slice(-1) })); } catch (e) {}
-            }, 40);
+            try { sysInp.dispatchEvent(new Event('change', { bubbles: true })); } catch (e) {}
         }
 
         window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
@@ -6094,28 +5931,23 @@
         const prepareStep2 = () => {
             if (isStepCancelled) return;
 
-            // 1. Hedef koordinatı (g:s:16) Step 2 olarak ata (bu updateTarget() AJAX sorgusunu tetikler)
+            // 1. Hedef koordinatı (g:s:16) Step 2 olarak ata
             setExpeditionTarget(currentItem.g, currentItem.s, true);
 
-            const targetHolding = parseInt(session.holdingTime, 10) || 1;
-            const targetSpeed = parseInt(session.speed, 10) || 100;
+            LS_LOGGER.info('EXPEDITION', `Step 2 parametreleri hazırlanıyor: Hedef [${currentItem.g}:${currentItem.s}:16]`);
 
-            LS_LOGGER.info('EXPEDITION', `Step 2 parametreleri hazırlanıyor: Hız=%${targetSpeed}, Süre=${targetHolding}s, Hedef [${currentItem.g}:${currentItem.s}:16]`);
-
-            const applyStep2Settings = () => {
+            const ensureMission15 = () => {
                 if (isStepCancelled) return;
                 const missionBtn = document.querySelector('#missionButton15, [data-mission="15"]');
                 const isMission15Active = missionBtn && (missionBtn.classList.contains('selected') || missionBtn.classList.contains('active'));
                 if (!isMission15Active) {
                     setFleetMission(15);
                 }
-                setFleetHoldingTime(targetHolding);
-                setFleetSpeed(targetSpeed);
             };
 
-            applyStep2Settings();
+            ensureMission15();
 
-            // 2. OGame'in target AJAX sorgusu dönüp briefing'i ve dropdown'ları render edene/oturtana kadar aktif takip
+            // 2. Mission 15 ve gönder butonunun hazır olmasını bekle
             let step2Checks = 0;
             const step2Timer = setInterval(() => {
                 if (isStepCancelled) {
@@ -6127,29 +5959,17 @@
                 const missionBtn = document.querySelector('#missionButton15, [data-mission="15"]');
                 const isMission15Active = missionBtn && (missionBtn.classList.contains('selected') || missionBtn.classList.contains('active'));
                 if (!isMission15Active) {
-                    setFleetMission(15);
+                    ensureMission15();
                 }
 
-                // Kontroller:
-                const holdEl = document.querySelector('#expeditiontime, select[name="expeditiontime"], #holdingtime, select[name="holdingtime"], input#holdingOrExpTime');
-                const holdVal = holdEl ? parseInt(holdEl.value, 10) : null;
-                const isHoldReady = (holdVal === targetHolding);
+                const sendBtn = findSendFleetButton();
+                const isSendBtnReady = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
 
-                const speedInp = document.querySelector('#speedPercentage input[name="speed"], input#speed, #fleet2 input[name="speed"]');
-                const speedVal = speedInp ? parseInt(speedInp.value, 10) : null;
-                const speedStep = Math.round(targetSpeed / 10);
-                const speedBtn = document.querySelector(`#speedPercentage [data-step="${targetSpeed}"], #speedPercentage [data-step="${speedStep}"]`);
-                const isSpeedActive = (speedVal === targetSpeed) || (speedBtn && (speedBtn.classList.contains('selected') || speedBtn.classList.contains('active')));
-
-                if (!isHoldReady || !isSpeedActive) {
-                    applyStep2Settings();
-                }
-
-                if ((isMission15Active && isHoldReady && isSpeedActive && step2Checks >= 2) || step2Checks > 15) {
+                if ((isMission15Active && isSendBtnReady && step2Checks >= 2) || step2Checks > 10) {
                     clearInterval(step2Timer);
                     updateBannerReady();
                 }
-            }, 80);
+            }, 60);
         };
 
         // 1. Şablonu seç (Gemileri doldur)
@@ -6212,7 +6032,7 @@
                             }
                         }
                     }, 100);
-                }, 200);
+                }, 150);
             } else if (checkTries === 2 || checkTries === 5) {
                 if (session.templateId || session.templateName) {
                     applyExpeditionTemplate(session.templateId, session.templateName);
@@ -6223,12 +6043,19 @@
                 window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
                     detail: { type: 'SUBMIT_FLEET1' }
                 }));
-                setTimeout(prepareStep2, 300);
+                setTimeout(prepareStep2, 200);
             }
         }, 150);
 
         renderExpeditionBanner(session, currentItem, {
             prepareStep2: prepareStep2,
+            retry: () => {
+                isStepCancelled = true;
+                clearInterval(ensureShipsInterval);
+                setTimeout(() => {
+                    executeExpeditionStep(session, currentItem);
+                }, 100);
+            },
             cancel: () => {
                 isStepCancelled = true;
                 clearInterval(ensureShipsInterval);
@@ -6260,7 +6087,6 @@
             '<div style="display:flex;justify-content:space-between;align-items:center;font-size:11.5px;margin-bottom:8px">' +
                 '<div><b style="color:#8899aa">Hedef Rota:</b> <span style="color:#00bcff;font-weight:bold">' + offsetText + '</span></div>' +
                 '<div><b style="color:#8899aa">Şablon:</b> <span style="color:#2ecc71;font-weight:bold">' + escapeHtml(templateName) + '</span></div>' +
-                '<div><b style="color:#8899aa">Hız:</b> <span style="color:#ffbe3b;font-weight:bold">%' + session.speed + '</span> · <b style="color:#8899aa">Süre:</b> <span style="color:#ffbe3b;font-weight:bold">' + session.holdingTime + 's</span></div>' +
             '</div>' +
             '<div style="display:flex;gap:6px;justify-content:center;align-items:center">' +
                 '<button id="ls-exp-banner-send-btn" disabled style="background:#445566;color:#8899aa;border:none;padding:5px 12px;border-radius:4px;font-weight:bold;font-size:11px;cursor:not-allowed">⏳ Hazırlanıyor...</button>' +
@@ -6293,20 +6119,16 @@
         const retryCurrentStep = () => {
             isDispatching = false;
             window.removeEventListener('keydown', keyListener);
-            if (typeof details.cancel === 'function') details.cancel();
             if (banner) {
-                banner.innerHTML = '<div style="font-size:12px;color:#e67e22;padding:6px;font-weight:bold">🔄 Keşif adımı yeniden hazırlanıyor...</div>';
+                banner.innerHTML = '<div style="font-size:12px;color:#e67e22;padding:6px;font-weight:bold">🔄 Keşif adımı yeniden deneniyor...</div>';
             }
-            setTimeout(() => {
-                const sendBtn = findSendFleetButton();
-                const isStep2 = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
-                if (isStep2 && typeof details.prepareStep2 === 'function') {
-                    renderExpeditionBanner(session, currentItem, details);
-                    details.prepareStep2();
-                } else {
+            if (typeof details.retry === 'function') {
+                details.retry();
+            } else {
+                setTimeout(() => {
                     executeExpeditionStep(session, currentItem);
-                }
-            }, 150);
+                }, 100);
+            }
         };
 
         const dispatchSendExpeditionFleet = () => {
@@ -6326,9 +6148,7 @@
 
             window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
                 detail: {
-                    type: 'SUBMIT_FLEET2',
-                    hours: parseInt(session.holdingTime, 10) || 1,
-                    speed: parseInt(session.speed, 10) || 100
+                    type: 'SUBMIT_FLEET2'
                 }
             }));
 
@@ -6632,7 +6452,7 @@
         panel.id = 'ls-panel';
         panel.innerHTML =
             '<div id="ls-header">' +
-                '<span id="ls-header-title">' + boltSvg + ' LuckyStrike Helper <span style="font-size:10px;color:#8899aa;font-weight:normal;opacity:0.8">v10.3</span></span>' +
+                '<span id="ls-header-title">' + boltSvg + ' LuckyStrike Helper <span style="font-size:10px;color:#8899aa;font-weight:normal;opacity:0.8">v10.4</span></span>' +
                 '<div style="display:flex;align-items:center;gap:6px">' +
                     '<button id="ls-header-stop-btn" class="ls-btn-d ls-btn-sm" style="display:none;padding:2px 7px;font-size:10px;align-items:center;gap:3px;cursor:pointer" title="Tekrarlayan bu alarmı sustur">⏹️ Sustur</button>' +
                     '<span id="ls-close">✖</span>' +
@@ -6937,7 +6757,7 @@
                     '</div>' +
 
                     '<div class="ls-coll-card">' +
-                        '<div style="display:flex;gap:8px;margin-bottom:8px">' +
+                        '<div style="display:flex;gap:8px">' +
                             '<div style="flex:1">' +
                                 '<span class="ls-label">🔢 Sefer Sayısı</span>' +
                                 '<input type="number" id="ls-exp-count" class="ls-inp" min="1" max="50" style="width:100%;font-weight:bold;color:#00bcff;text-align:center" value="1">' +
@@ -6949,30 +6769,6 @@
                                 '</div>' +
                                 '<select id="ls-exp-template" class="ls-inp" style="width:100%;font-size:11px">' +
                                     '<option value="">-- Şablon Yükleniyor... --</option>' +
-                                '</select>' +
-                            '</div>' +
-                        '</div>' +
-
-                        '<div style="display:flex;gap:8px">' +
-                            '<div style="flex:1">' +
-                                '<span class="ls-label">⏱️ Keşif Saati</span>' +
-                                '<select id="ls-exp-holding" class="ls-inp" style="width:100%">' +
-                                    '<option value="1">1 Saat</option>' +
-                                    '<option value="2">2 Saat</option>' +
-                                    '<option value="3">3 Saat</option>' +
-                                    '<option value="4">4 Saat</option>' +
-                                    '<option value="5">5 Saat</option>' +
-                                '</select>' +
-                            '</div>' +
-                            '<div style="flex:1">' +
-                                '<span class="ls-label">⚡ Sürat (Hız)</span>' +
-                                '<select id="ls-exp-speed" class="ls-inp" style="width:100%">' +
-                                    '<option value="100">%100</option>' +
-                                    '<option value="90">%90</option>' +
-                                    '<option value="80">%80</option>' +
-                                    '<option value="70">%70</option>' +
-                                    '<option value="60">%60</option>' +
-                                    '<option value="50">%50</option>' +
                                 '</select>' +
                             '</div>' +
                         '</div>' +
@@ -7616,7 +7412,7 @@
             const r3 = Array.from(debugFilterState.row3).join(', ');
 
             let out = '==================================================\n' +
-                      '  LuckyStrike OGame Helper v10.3 - Log Kayıtları\n' +
+                      '  LuckyStrike OGame Helper v10.4 - Log Kayıtları\n' +
                       '  Tarih: ' + nowStr + '\n' +
                       '  URL: ' + window.location.href + '\n' +
                       '  Filtreler: [Akış: ' + r1 + '] [Kapsam: ' + r2 + '] [Seviye: ' + r3 + ']\n' +

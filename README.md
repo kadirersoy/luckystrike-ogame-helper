@@ -1,4 +1,4 @@
-# ⚡ LuckyStrike OGame Helper (v10.2)
+# ⚡ LuckyStrike OGame Helper (v10.4)
 
 [English](#-english-description) | [Türkçe](#-türkçe-açıklama)
 
@@ -164,7 +164,7 @@ LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Term
 ## 🚀 Kurulum / Installation
 
 ### Chrome & Microsoft Edge
-1. İndirin / Download: [`luckystrike-ogame-helper-v10.2.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
+1. İndirin / Download: [`luckystrike-ogame-helper-v10.4.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
 2. Tarayıcıda eklentiler sayfasına gidin / Open extensions page:
    - **Chrome:** `chrome://extensions`
    - **Edge:** `edge://extensions`
@@ -174,6 +174,20 @@ LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Term
 ---
 
 ## 📝 Sürüm Geçmişi / Changelog
+
+### v10.4
+- **🧭 Keşif Asistanı Sadeleştirmesi & Doğal Şablon Desteği:**
+  - Keşif arayüzündeki manuel Keşif Saati ve Sürat (Hız) kontrolleri kaldırıldı.
+  - OGame filo şablonlarının kayıtlı hız ve keşif süresi ayarlarını doğal (native) olarak koruması sağlandı.
+  - Sayfadaki gemi kartlarına veya hız çubuklarına hatalı metin ("1 s") yazılmasına neden olan DOM müdahaleleri tamamen temizlendi.
+  - Step 2 hazırlık ve kontrol akışı optimize edilerek bekleme süresi minimuma indirildi.
+- **🔄 Keşif Adım Tekrarlama İyileştirmesi:**
+  - Keşif Asistanı yüzen banner'ındaki `🔄 Tekrarla` butonu, takılma durumlarında mevcut adımı sıfırdan ve pürüzsüzce yeniden başlatacak şekilde güçlendirildi.
+
+### v10.3
+- **🧭 Keşif Şablon Algılama & Boşluk Yönetimi:**
+  - Filo 1 sayfasındaki şablon isimlerinin boş veya tanımsız görünmesi engellendi.
+  - Şablon algılama ve kayıt mekanizması iyileştirildi.
 
 ### v10.2
 - **🎛️ 3 Satırlı Gelişmiş Multi-Filtre (AND Mantığı):**
