@@ -5545,20 +5545,31 @@
     function setFleetSpeed(speedPercent) {
         speedPercent = parseInt(speedPercent, 10) || 100;
         const stepVal = Math.round(speedPercent / 10);
-        const selectors = `[data-step="${speedPercent}"], [data-step="${stepVal}"], [data-value="${speedPercent}"], [data-value="${stepVal}"], ul.steps li[data-step="${speedPercent}"], ul.steps li[data-step="${stepVal}"], #speedPercentage [data-step="${speedPercent}"], #speedPercentage [data-step="${stepVal}"], #fleet1 [data-step="${speedPercent}"], #fleet1 [data-step="${stepVal}"], .steps li[data-step="${speedPercent}"], .steps li[data-step="${stepVal}"]`;
-        let stepEls = Array.from(document.querySelectorAll(selectors));
-        if (stepEls.length === 0) {
-            const container = document.querySelector('#speedPercentage, .steps, #fleet2');
-            if (container) {
-                const candidates = container.querySelectorAll('li, a, span, button, div');
+        
+        // SADECE hız kontrol alanını (#speedPercentage veya .steps) hedefle!
+        // Asla tüm sayfayı tarama, asla gemi teknolojilerine (Azrail vb.) veya bekleme süresine dokunma!
+        const speedContainer = document.querySelector('#speedPercentage, #fleet2 #speedPercentage, #fleet2 .steps, .steps');
+        let stepEls = [];
+        if (speedContainer) {
+            const selectors = `[data-step="${speedPercent}"], [data-step="${stepVal}"], li[data-step="${speedPercent}"], li[data-step="${stepVal}"]`;
+            stepEls = Array.from(speedContainer.querySelectorAll(selectors)).filter(el => {
+                return !el.closest('[data-technology], #expeditiontime-menu, #holdingtime-menu, select, form');
+            });
+
+            if (stepEls.length === 0) {
+                const candidates = speedContainer.querySelectorAll('li, a, span, button, div');
                 for (const c of candidates) {
-                    if (c.children.length === 0 && (c.textContent.trim() === String(speedPercent) || c.textContent.trim() === `${speedPercent}%`)) {
-                        stepEls.push(c);
-                        break;
+                    if (c.children.length === 0 && !c.closest('[data-technology], select, form')) {
+                        const txt = c.textContent.trim();
+                        if (txt === String(speedPercent) || txt === `${speedPercent}%`) {
+                            stepEls.push(c);
+                            break;
+                        }
                     }
                 }
             }
         }
+
         stepEls.forEach(el => {
             try {
                 el.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, cancelable: true, view: window }));
@@ -5568,8 +5579,9 @@
             } catch (e) {}
         });
 
-        const speedInps = document.querySelectorAll('input[name="speed"], #speed');
+        const speedInps = document.querySelectorAll('#speedPercentage input[name="speed"], input#speed, #fleet2 input[name="speed"]');
         speedInps.forEach(inp => {
+            if (isLuckyElement(inp) || inp.closest('[data-technology]')) return;
             inp.value = speedPercent;
             inp.dispatchEvent(new Event('input', { bubbles: true }));
             inp.dispatchEvent(new Event('change', { bubbles: true }));
@@ -5634,8 +5646,9 @@
             }
         });
 
-        const dropOptions = document.querySelectorAll(`[id*="expedition"][id*="menu"] a, [id*="expedition"][id*="menu"] li, [id*="holding"][id*="menu"] a, [id*="holding"][id*="menu"] li, ul.dropdownList a, ul.dropdownList li, .dropdownList a, .dropdownList li, [rel="holdingtime"] li[data-value="${hours}"], .ui-selectmenu-menu li, a.undefined`);
+        const dropOptions = document.querySelectorAll(`[id*="expedition"][id*="menu"] a, [id*="expedition"][id*="menu"] li, [id*="holding"][id*="menu"] a, [id*="holding"][id*="menu"] li, #expeditiontime-menu a, #expeditiontime-menu li, #holdingtime-menu a, #holdingtime-menu li, #briefing [rel="holdingtime"] li[data-value="${hours}"]`);
         dropOptions.forEach(opt => {
+            if (isLuckyElement(opt) || opt.closest('[data-technology], #speedPercentage')) return;
             const t = opt.textContent.trim();
             const v = opt.getAttribute('data-value') || opt.getAttribute('rel');
             if (t === hoursStr || v === hoursStr) {
@@ -6122,10 +6135,10 @@
                 const holdVal = holdEl ? parseInt(holdEl.value, 10) : null;
                 const isHoldReady = (holdVal === targetHolding);
 
-                const speedInp = document.querySelector('input[name="speed"], #speed');
+                const speedInp = document.querySelector('#speedPercentage input[name="speed"], input#speed, #fleet2 input[name="speed"]');
                 const speedVal = speedInp ? parseInt(speedInp.value, 10) : null;
                 const speedStep = Math.round(targetSpeed / 10);
-                const speedBtn = document.querySelector(`[data-step="${targetSpeed}"], [data-step="${speedStep}"]`);
+                const speedBtn = document.querySelector(`#speedPercentage [data-step="${targetSpeed}"], #speedPercentage [data-step="${speedStep}"]`);
                 const isSpeedActive = (speedVal === targetSpeed) || (speedBtn && (speedBtn.classList.contains('selected') || speedBtn.classList.contains('active')));
 
                 if (!isHoldReady || !isSpeedActive) {
@@ -6134,12 +6147,7 @@
 
                 if ((isMission15Active && isHoldReady && isSpeedActive && step2Checks >= 2) || step2Checks > 15) {
                     clearInterval(step2Timer);
-                    applyStep2Settings();
-                    setTimeout(() => {
-                        if (isStepCancelled) return;
-                        applyStep2Settings();
-                        updateBannerReady();
-                    }, 80);
+                    updateBannerReady();
                 }
             }, 80);
         };
@@ -6317,7 +6325,11 @@
             }
 
             window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                detail: { type: 'SUBMIT_FLEET2', hours: parseInt(session.holdingTime, 10) || 1 }
+                detail: {
+                    type: 'SUBMIT_FLEET2',
+                    hours: parseInt(session.holdingTime, 10) || 1,
+                    speed: parseInt(session.speed, 10) || 100
+                }
             }));
 
             const sendBtn = findSendFleetButton();

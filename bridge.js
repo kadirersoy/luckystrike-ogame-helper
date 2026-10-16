@@ -214,6 +214,15 @@
                         }
                     }
                 }
+                if (d.speed) {
+                    var finalSp = parseInt(d.speed, 10) || 100;
+                    if (window.fleetDispatcher) {
+                        try { window.fleetDispatcher.speed = finalSp; } catch(e) {}
+                        if (typeof window.fleetDispatcher.setSpeed === 'function') {
+                            try { window.fleetDispatcher.setSpeed(finalSp); } catch(e) {}
+                        }
+                    }
+                }
                 var submitted = false;
                 if (window.fleetDispatcher) {
                     if (typeof window.fleetDispatcher.trySubmitFleet2 === 'function') {
@@ -271,9 +280,10 @@
                     try { window.fleetDispatcher.speed = speedVal; } catch(e) {}
                 }
                 if (window.$) {
-                    var $step = $('#speedPercentage [data-step="' + speedVal + '"], #speedPercentage [data-step="' + stepVal + '"], .steps [data-step="' + speedVal + '"], .steps [data-step="' + stepVal + '"], [data-step="' + speedVal + '"], [data-step="' + stepVal + '"], [data-value="' + speedVal + '"], [data-value="' + stepVal + '"]');
-                    if (!$step.length) {
-                        $('#speedPercentage *, .steps *, #fleet2 *').filter(function() {
+                    var $container = $('#speedPercentage, #fleet2 #speedPercentage, #fleet2 .steps, .steps');
+                    var $step = $container.find('[data-step="' + speedVal + '"], [data-step="' + stepVal + '"], li[data-step="' + speedVal + '"], li[data-step="' + stepVal + '"]').not('[data-technology], select, form');
+                    if (!$step.length && $container.length) {
+                        $container.find('*').not('[data-technology], select, form').filter(function() {
                             return $(this).children().length === 0 && ($(this).text().trim() === '' + speedVal || $(this).text().trim() === speedVal + '%');
                         }).each(function() {
                             $step = $(this);
@@ -283,7 +293,7 @@
                     if ($step.length) {
                         $step.trigger('mouseover').trigger('mousedown').trigger('mouseup').trigger('click');
                     }
-                    var $sp = $('#speed, input[name="speed"]');
+                    var $sp = $('#speedPercentage input[name="speed"], input#speed, #fleet2 input[name="speed"]');
                     if ($sp.length) $sp.val(speedVal).trigger('input').trigger('change');
                 }
             } else if (d.type === 'SET_HOLDING_TIME') {
@@ -359,7 +369,7 @@
                     $('#expeditiontime-button .ui-selectmenu-text, #holdingtime-button .ui-selectmenu-text').text(hTimeStr);
 
                     // OGame özel dropdown menü linklerini tıkla (<a> ve <li>)
-                    $('ul.dropdownList a, ul.dropdownList li, .dropdownList a, .dropdownList li, [id*="expedition"][id*="menu"] a, [id*="expedition"][id*="menu"] li, [id*="holding"][id*="menu"] a, [id*="holding"][id*="menu"] li, .ui-selectmenu-menu li, a.undefined').filter(function() {
+                    $('#expeditiontime-menu a, #expeditiontime-menu li, #holdingtime-menu a, #holdingtime-menu li, [id*="expedition"][id*="menu"] a, [id*="expedition"][id*="menu"] li, [id*="holding"][id*="menu"] a, [id*="holding"][id*="menu"] li, #briefing [rel="holdingtime"] li').not('[data-technology], #speedPercentage *').filter(function() {
                         var t = $(this).text().trim();
                         var v = $(this).attr('data-value') || $(this).attr('rel') || $(this).data('value');
                         return t === hTimeStr || String(v) === hTimeStr;
