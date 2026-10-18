@@ -225,6 +225,40 @@
                     if (typeof window.fleetDispatcher.cargoCalculation === 'function') window.fleetDispatcher.cargoCalculation();
                     if (typeof window.fleetDispatcher.refresh === 'function') window.fleetDispatcher.refresh();
                 }
+            } else if (d.type === 'SCAN_TEMPLATES') {
+                var templates = [];
+                try {
+                    var selects = Array.prototype.slice.call(document.querySelectorAll('select#expeditionfleet, select[name="expeditionfleet"], select')).filter(function(s) { return !isLsNode(s); });
+                    selects.forEach(function(sel) {
+                        for (var i = 0; i < sel.options.length; i++) {
+                            var opt = sel.options[i];
+                            var txt = (opt.text || opt.textContent || '').trim();
+                            var val = opt.value || i;
+                            if (txt && txt !== '-' && txt !== '0' && txt !== '--' && txt.toLowerCase() !== 'seçiniz' && txt.toLowerCase() !== 'standart filo' && txt.toLowerCase() !== 'keşif filosu') {
+                                if (!templates.some(function(t) { return t.name.toLowerCase() === txt.toLowerCase(); })) {
+                                    templates.push({ id: val, name: txt });
+                                }
+                            }
+                        }
+                    });
+                    if (window.$) {
+                        $('.dropdownList a, ul.ui-selectmenu-menu li, .ui-selectmenu-button').each(function() {
+                            var txt = $(this).text().trim();
+                            var val = $(this).data('value') || $(this).attr('data-id') || $(this).attr('id');
+                            if (txt && txt !== '-' && txt !== '0' && txt.length > 1 && txt.indexOf('(') === -1) {
+                                if (!templates.some(function(t) { return t.name.toLowerCase() === txt.toLowerCase(); })) {
+                                    templates.push({ id: val || txt, name: txt });
+                                }
+                            }
+                        });
+                    }
+                } catch (e) {}
+                if (templates.length > 0) {
+                    bridgeLog('INFO', 'BRIDGE', 'Şablonlar MAIN world köprüsünden tarandı (' + templates.length + ' adet).');
+                    window.dispatchEvent(new CustomEvent('LS_TEMPLATES_SCANNED', {
+                        detail: { templates: templates }
+                    }));
+                }
             } else if (d.type === 'SELECT_TEMPLATE') {
                 bridgeLog('ACTION', 'BRIDGE', 'Şablon seçiliyor: ' + (d.name || d.id));
                 selectExpeditionTemplateMain(d);
@@ -279,6 +313,13 @@
         }
         var $ = window.$ || window.jQuery;
         try {
+            // OGame jQuery UI selectmenu değişikliklerini yerel DOM eventine ilet
+            $(document).on('selectmenuchange selectmenuselect', 'select', function(e) {
+                if (isLsNode(this)) {
+                    this.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            });
+
             $(document).ajaxSend(function(event, jqXHR, settings) {
                 var isTrace = !!window.LS_TRACE_ENABLED;
                 var isDebug = !!window.LS_DEBUG_ENABLED;

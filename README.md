@@ -1,4 +1,4 @@
-# ⚡ LuckyStrike OGame Helper (v10.5)
+# ⚡ LuckyStrike OGame Helper (v10.6)
 
 [English](#-english-description) | [Türkçe](#-türkçe-açıklama)
 
@@ -174,6 +174,17 @@ LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Term
 ---
 
 ## 📝 Sürüm Geçmişi / Changelog
+
+### v10.6
+- **🔄 Birleşik Evren & Oyuncu Önbellek Senkronizasyonu (Unified Universe & Player Cache):**
+  - **Arama (Player Finder) Sekmesine Akıllı Önbellek & Güncelleme Butonu:** Oyuncu ve gezegen arama modülü, her aramada sunucuya gitmek yerine 24 saatlik akıllı yerel önbellek üzerinden çalışacak şekilde optimize edildi.
+  - **Tek Hamlede Çift Veri İndirme:** Hem Tarayıcı hem de Arama sekmesindeki `🔄 Güncelle` butonları birleştirildi. Herhangi birinden güncellendiğinde `universe.xml` ve `players.xml` tek seferde paralel olarak indirilip kaydedilir; sunucuya mükerrer istek gönderilmesi önlenir.
+  - **Senkronize 60 Saniye Kilidi (Shared Cooldown):** Güncelleme tetiklendiğinde iki sekmedeki güncelleme butonları da aynı anda kilitlenir ve 60 saniyelik geri sayım sayacı (`⏳ 59s` ... `⏳ 1s`) iki sekmede de ortak çalışır.
+  - **Gelişmiş Önbellek Durum Bilgisi:** Arama ve Tarayıcı sekmelerinde son güncelleme zamanı ile toplam kayıtlı gezegen ve oyuncu sayıları anlık olarak görüntülenir.
+- **👁️ Ayarlanabilir Panel Saydamlığı (Opacity Slider):**
+  - Ayarlar sekmesine %20 ile %100 arasında 5'lik adımlarla çalışan saydamlık kaydırıcısı eklendi. Panel yarı saydam yapılarak arkasında kalan oyun ekranının rahatça okunabilmesi sağlandı.
+- **🎯 Fare Focus Özelliği (Hover to Focus - %100 Görünürlük):**
+  - Saydamlık ayarının yanına eklenen "Fare Üzerindeyken %100 Yap" seçeneğiyle, panel saydam olsa bile fare üzerine geldiğinde akıcı bir geçişle tam görünür (%100) olur; fare çekildiğinde eski saydamlık seviyesine geri döner.
 
 ### v10.5
 - **🌌 Galaxy Scanner Akıllı Önbellek (Cache) & Sıfır Sunucu Yükü:**

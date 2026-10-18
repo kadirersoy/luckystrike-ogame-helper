@@ -2,7 +2,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v10.5 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v10.6 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -34,8 +34,569 @@
         CART_PLANET_PREFS: 'LS_CART_PLANET_PREFS',
         CART_QUEUE: 'LS_CART_QUEUE',
         UNIVERSE_CACHE: 'LS_UNIVERSE_CACHE',
-        UNIVERSE_LAST_REFRESH: 'LS_UNIVERSE_LAST_REFRESH'
+        UNIVERSE_LAST_REFRESH: 'LS_UNIVERSE_LAST_REFRESH',
+        LANG: 'LS_LANGUAGE',
+        THEME: 'LS_THEME',
+        OPACITY: 'LS_PANEL_OPACITY',
+        HOVER_FOCUS: 'LS_HOVER_FOCUS'
     };
+
+    // ============================================================
+    // I18N / DİL YÖNETİMİ (TR & EN)
+    // ============================================================
+    let currentLang = localStorage.getItem('LS_LANGUAGE') || 'tr';
+
+    const I18N = {
+        tr: {
+            // Tabs
+            tab_cart: 'Maliyet',
+            tab_collector: 'Toplayıcı',
+            tab_debris: 'Harabe',
+            tab_expedition: 'Keşif',
+            tab_scanner: 'Tarayıcı',
+            tab_finder: 'Arama',
+            tab_alarm: 'Alarm',
+            tab_settings: 'Ayarlar',
+
+            // Header
+            header_title: 'LuckyStrike Helper',
+            stop_alarm: '⏹️ Sustur',
+            stop_alarm_title: 'Tekrarlayan bu alarmı sustur',
+
+            // Cart Tab
+            cart_copy: '📋 Panoya Kopyala',
+            cart_clear: '🗑️ Temizle',
+            cart_empty: 'Sepet boş.<br><span style="font-size:10px;color:#555">Bina veya teknoloji detayından "Sepete Ekle" diyerek ekleyebilirsiniz.</span>',
+            cart_copied: '✓ Kopyalandı!',
+            cart_deploy: '🚀 Konuşlandır',
+            cart_deploy_title: 'Konuşlandır: Hedefte kalır',
+            cart_transport: '🚚 Nakliye',
+            cart_transport_title: 'Nakliye: Boş geri döner',
+            cart_net_deficit: 'Net İhtiyaç:',
+            cart_cargo_needed: '🔴 Toplam Kargo:',
+            cart_total: 'Toplam:',
+            cart_deduct_planet: '📉 Bu Gezegenin Canlı Kaynağını Düş',
+            cart_deduct_title: 'Şu an bu gezegendeyseniz eldeki kaynakları sepetten mahsup eder',
+            cart_ships_sc: 'KN',
+            cart_ships_lc: 'BN',
+            cart_ships_pathfinder: 'Rehber',
+            cart_ships_auto: 'Otomatik',
+            cart_include_calc: 'Bu kalemi hesaplamaya dahil et',
+            cart_include_batch: 'Toplu dağıtıma dahil et',
+            cart_remove_item: 'Sepetten Kaldır',
+            cart_remove_planet: 'Bu gezegenin tüm sepetini kaldır',
+            cart_single_send: '⚡ Gönder',
+            cart_single_send_title: 'Sadece bu gezegene filo gönder',
+            cart_enough_res: 'Yeterli Kaynak Var ✓',
+            cart_no_ships: 'Gemi seçilmedi',
+            cart_grand_total: '📊 Seçili Gezegenler Genel Toplamı:',
+            cart_metal: '🟡 Metal:',
+            cart_crystal: '🔵 Kristal:',
+            cart_deuterium: '🟢 Deuterium:',
+            cart_ship_pref_hint: 'Gemi Tercihi (Öncelik: Rehber > KN > BN):',
+            cart_bulk_distribute: '⚡ SEÇİLİ GEZEGENLERE SIRAYLA DAĞIT',
+            cart_copy_hint: 'Kopyala',
+            cart_btn_add: 'Sepete Ekle',
+            cart_stepper_down_title: 'Kademe azalt',
+            cart_stepper_up_title: 'Kademe artır',
+
+            // Collector Tab
+            coll_target_head: '🎯 Toplama Hedefi',
+            coll_here: 'Burası',
+            coll_here_title: 'Hedefi şu an bulunduğunuz gezegen/ay yapar',
+            coll_transport: 'Nakliye',
+            coll_deploy: 'Konuşlandır',
+            coll_ships: '🚀 Gemi',
+            coll_bn: 'BN',
+            coll_kn: 'KN',
+            coll_rehber: 'Rehber',
+            coll_resources: '💎 Kaynak',
+            coll_deut: 'Deuterium',
+            coll_crys: 'Kristal',
+            coll_met: 'Metal',
+            coll_sel_all: 'Tümü',
+            coll_sel_planets: '🪐 Gezegenler',
+            coll_sel_moons: '🌕 Aylar',
+            coll_sel_none: '✖ Kaldır',
+            coll_planets_moons: '🪐 Gezegenler & Aylar',
+            coll_reserve_col: 'Deu Rezerv',
+            coll_start_btn: '🚀 Toplamayı Başlat',
+            coll_collecting: 'Toplama Başlatılıyor...',
+            coll_loading: 'Yükleniyor...',
+            coll_target_point: 'Toplama noktası',
+            coll_no_selection: 'Toplanacak gezegen veya ay seçilmedi!',
+            coll_planet_name: 'Gezegen',
+            coll_moon_name: 'Ay',
+            coll_manual_planet: 'Manuel Gezegen...',
+            coll_manual_moon: 'Manuel Ay...',
+            coll_reserve_hint: 'Deu Rezerv (Korumalı miktar)',
+            coll_jump_hint: 'Gezegene geç',
+            coll_jump_moon_hint: 'Aya geç',
+            coll_planets_count: 'gezegen',
+            coll_moons_count: 'ay',
+
+            // Collector Floating HUD
+            coll_hud_title: 'Maden Toplayıcı',
+            coll_hud_send: 'Filoyu Gönder',
+            coll_hud_retry: 'Tekrarla',
+            coll_hud_skip: 'Atla',
+            coll_hud_cancel: 'İptal',
+            coll_hud_no_ships: 'Nakliye gemisi yok!',
+            coll_hud_shortage_title: '⚠️ Yetersiz Gemi Kapasitesi!',
+            coll_hud_stop_btn: '⏹️ Toplamayı Durdur',
+            coll_hud_proceed_btn: '⏩ Olduğu Kadar Gönder (Devam Et)',
+            coll_hud_selected_fleet: 'Seçilen Filo:',
+            coll_hud_transported: 'Taşınan:',
+            coll_hud_cap_shortage: 'Kargo Kapasitesi Yetersiz',
+            cart_hud_shortage_title: '⚠️ Yetersiz Kaynak veya Gemi Kapasitesi!',
+            cart_hud_stop_btn: '⏹️ Dağıtımı Durdur',
+            cart_hud_proceed_btn: '⏩ Olduğu Kadar Gönder (Devam Et)',
+            cart_hud_title: 'Maliyet Dağıtımı',
+            exp_own_system: 'Kendi Sistemi',
+            exp_system_offset: 'Sistem',
+            exp_deep_space: 'Sonsuz Uzaklar',
+            exp_hud_retrying: 'Keşif adımı yeniden deneniyor...',
+            find_min_chars: 'En az 2 karakter giriniz.',
+            find_active: 'aktif',
+            find_owner: 'Sahip',
+            find_no_results: 'Sonuç bulunamadı.',
+
+            // Debris Tab
+            deb_status_active: 'Harabe Avcısı Aktif · Galaksi İzleniyor',
+            deb_status_inactive: 'Harabe Avcısı Kapalı',
+            deb_toggle_title: 'Harabe izlemeyi aç/kapat',
+            deb_threshold_label: '⚡ Min. Harabe Eşiği (Toplam Kaynak):',
+            deb_sound_label: '🎵 Uyarı Sesi:',
+            deb_test_sound: '🔊 Harabe Sesini Test Et',
+            deb_found_title: '🛰️ Bulunan Harabeler',
+            deb_clear_btn: '🗑️ Listeyi Temizle',
+            deb_clear_title: 'Tüm harabeleri listeden temizle',
+            deb_no_debris: '🪐 Henüz harabe tespit edilmedi.<br><span style="font-size:10px;color:#5c7080;margin-top:4px;display:inline-block">Galakside gezdikçe belirlediğiniz eşiğin üzerindeki harabeler otomatik listelenir.</span>',
+            deb_jump: '🚀 Git',
+
+            // Expedition Tab
+            exp_start_slot16: '🎯 Başlangıç Keşif Noktası (Slot 16)',
+            exp_here: 'Burası',
+            exp_here_title: 'Şu anki gezegenin :16 slotunu yaz',
+            exp_desc: 'Keşifler bu sistemden başlayarak yakından uzağa doğru spiral (+1, -1, +2, -2...) dağıtılır.',
+            exp_count: '🔢 Sefer Sayısı',
+            exp_template: '📋 Keşif Şablonu',
+            exp_refresh_tpls_title: 'Şablonları yenile',
+            exp_loading_tpl: '-- Şablon Yükleniyor... --',
+            exp_preview_title: '🧭 Rota Dağılımı Önizlemesi:',
+            exp_preview_placeholder: '(Başlangıç koordinatı ve sefer sayısını girin)',
+            exp_start_btn: '🚀 Keşifleri Başlat (Adım Adım)',
+            exp_missions_count: 'Sefer',
+            exp_hud_title: '🧭 Keşif Asistanı',
+            exp_hud_route: 'Hedef Rota:',
+            exp_hud_template: 'Şablon:',
+            exp_hud_send: 'Keşif Gönder',
+            exp_hud_retry: 'Tekrarla',
+            exp_hud_skip: 'Atla',
+            exp_hud_cancel: 'İptal',
+            exp_hud_preparing: '⏳ Hazırlanıyor...',
+
+            // Scanner Tab
+            scan_g_start: 'Galaksi Başlangıç',
+            scan_g_end: 'Galaksi Bitiş',
+            scan_s_start: 'Sistem Başlangıç',
+            scan_s_end: 'Sistem Bitiş',
+            scan_slots_label: 'Hedef Slotlar (virgülle ayırın)',
+            scan_slots_ph: '8 veya 7, 9',
+            scan_chip_8: '🎯 Sadece 8',
+            scan_chip_7_9: '⭐ 7, 9',
+            scan_chip_13_15: '❄️ 13-15 (Deut)',
+            scan_chip_1_3: '☀️ 1-3 (Solar)',
+            scan_chip_empty: '🪐 Tamamen Boş (1-15)',
+            scan_min_empty: '👥 Min. Eşzamanlı Boş Slot:',
+            scan_start_btn: '🔍 Taramayı Başlat',
+            scan_refresh_btn: '🔄 Güncelle',
+            scan_refresh_title: 'Evren verisini (universe.xml) sunucudan zorla yenile',
+            scan_copy_coords: '📋 Koordinatları Kopyala',
+            scan_scanning: '⏳ Taranıyor...',
+            scan_cached: 'Önbellek',
+            scan_no_data: 'Henüz evren verisi indirilmedi',
+            scan_found: 'sonuç bulundu.',
+            scan_planets: 'gezegen',
+
+            // Finder Tab
+            find_desc: 'Evrendeki tüm oyuncuları ve gezegenlerini bulun.',
+            find_ph: 'Oyuncu veya gezegen adı...',
+            find_player: 'Oyuncu Adı',
+            find_planet: 'Gezegen Adı',
+            find_btn: '🔍 Ara',
+            find_searching: 'Aranıyor...',
+
+            // Alarm Tab
+            alarm_status_active_safe: 'Gözcü Aktif · Tehdit Yok',
+            alarm_status_silenced: '⏹️ Sustur',
+            alarm_att_title: '🚨 Saldırı Alarmı',
+            alarm_sound_type: '🎵 Ses Tipi:',
+            alarm_att_test: '🔊 Saldırı Sesini Test Et',
+            alarm_esp_title: '📡 Sonda / Casusluk Uyarısı',
+            alarm_esp_test: '🔊 Sonda Sesini Test Et',
+            alarm_desktop_title: '🖥️ Masaüstü Bildirimi',
+            alarm_desktop_desc: 'Sekme arka plandayken bildirim gönder',
+            alarm_volume_label: '🔊 Ses Seviyesi:',
+            alarm_repeat_label: '⏱️ Tekrar Sıklığı:',
+            alarm_repeat_once: 'Sadece 1 kez çal',
+            alarm_repeat_5s: 'Her 5 saniyede bir',
+            alarm_repeat_10s: 'Her 10 saniyede bir',
+            alarm_repeat_15s: 'Her 15 saniyede bir',
+            alarm_repeat_30s: 'Her 30 saniyede bir',
+            alarm_repeat_60s: 'Her 60 saniyede bir',
+            alarm_sound_klaxon: 'Taktiksel Klakson (Varsayılan)',
+            alarm_sound_siren: 'Kırmızı Alarm Sireni',
+            alarm_sound_pulse: 'Acil Durum Nabzı',
+            alarm_sound_sonar_deep: 'Derin Deniz Sonarı (Klasik Ping)',
+            alarm_sound_sonar_hunter: 'Aktif Avcı Sonarı (Yüksek Ping)',
+            alarm_sound_sonar_echo: 'Taktik Yankı Sonarı (Çift Eko)',
+
+            // Settings Tab (Ayarlar)
+            settings_general: 'Genel Tercihler',
+            settings_lang: '🌐 Dil / Language:',
+            settings_theme: '🎨 Görünüm / Skin:',
+            settings_theme_dark: '🌌 Uzay Karanlığı (Varsayılan)',
+            settings_theme_light: '☀️ Aydınlık (Çok Yakında)',
+            settings_theme_aero: '💎 Aero Glass (Çok Yakında)',
+            settings_diag_divider: '🛠️ Sistem & Teşhis Günlükleri',
+            settings_debug_title: '🐞 Debug Logs',
+            settings_debug_toggle_title: 'Debug Logs aç/kapat (Uyarı ve Hatalar)',
+            settings_debug_desc: 'Uygulama logları',
+            settings_trace_title: '🎯 Trace Logs',
+            settings_trace_toggle_title: 'Trace Logs aç/kapat (Tıklama, sayfa, tuş & yanıtlar)',
+            settings_trace_desc: 'İzleme kayıtları',
+            settings_copy_logs: '📋 Logları Kopyala',
+            settings_copy_logs_title: 'Filtrelenmiş logları panoya kopyalar',
+            settings_clear_logs: '🗑️ Logları Temizle',
+            settings_clear_logs_title: 'Filtrelenmiş logları temizler',
+            settings_export_logs: '💾 Logları Çıkar',
+            settings_export_logs_title: 'Filtrelenmiş logları .txt dosyası olarak masaüstüne çıkarır',
+            settings_stream: 'Akış:',
+            settings_scope: 'Kapsam:',
+            settings_level: 'Seviye:',
+            settings_all: 'Tümü',
+            settings_req: '📤 Giden İstekler',
+            settings_resp: '📥 Gelen Yanıtlar',
+            settings_records: 'kayıt',
+            settings_debug_off: '○ Debug: Kapalı',
+            settings_debug_on: '● Debug: Açık',
+            settings_trace_off: '○ Trace: Kapalı',
+            settings_trace_on: '● Trace: Açık',
+            settings_opacity: '👁️ Saydamlık / Opacity:',
+            settings_hover_focus: '🎯 Fare Üzerindeyken %100 Yap (Focus)',
+            settings_hover_focus_title: 'Fare panelin üzerine geldiğinde otomatik olarak %100 görünür yapar',
+            find_refresh_title: 'Evren ve oyuncu verisini sunucudan zorla yenile',
+            find_cached: 'Önbellek',
+            find_no_cache: 'Henüz evren/oyuncu verisi indirilmedi'
+        },
+        en: {
+            // Tabs
+            tab_cart: 'Cost Cart',
+            tab_collector: 'Collector',
+            tab_debris: 'Debris',
+            tab_expedition: 'Expedition',
+            tab_scanner: 'Scanner',
+            tab_finder: 'Finder',
+            tab_alarm: 'Alarm',
+            tab_settings: 'Settings',
+
+            // Header
+            header_title: 'LuckyStrike Helper',
+            stop_alarm: '⏹️ Silence',
+            stop_alarm_title: 'Silence this recurring alarm',
+
+            // Cart Tab
+            cart_copy: '📋 Copy to Clipboard',
+            cart_clear: '🗑️ Clear',
+            cart_empty: 'Cart is empty.<br><span style="font-size:10px;color:#555">You can add items by clicking "Add to Cart" in building or tech details.</span>',
+            cart_copied: '✓ Copied!',
+            cart_deploy: '🚀 Deploy',
+            cart_deploy_title: 'Deploy: Remains at destination',
+            cart_transport: '🚚 Transport',
+            cart_transport_title: 'Transport: Returns empty',
+            cart_net_deficit: 'Net Deficit:',
+            cart_cargo_needed: '🔴 Cargo Needed:',
+            cart_total: 'Total:',
+            cart_deduct_planet: '📉 Deduct Live Planet Resources',
+            cart_deduct_title: 'If currently on this planet, deducts available resources from cart',
+            cart_ships_sc: 'SC',
+            cart_ships_lc: 'LC',
+            cart_ships_pathfinder: 'Pathfinder',
+            cart_ships_auto: 'Auto',
+            cart_include_calc: 'Include this item in calculation',
+            cart_include_batch: 'Include in batch delivery',
+            cart_remove_item: 'Remove from cart',
+            cart_remove_planet: 'Remove all items for this planet',
+            cart_single_send: '⚡ Send',
+            cart_single_send_title: 'Send fleet to this planet only',
+            cart_enough_res: 'Sufficient Resources ✓',
+            cart_no_ships: 'No ships selected',
+            cart_grand_total: '📊 Selected Planets Grand Total:',
+            cart_metal: '🟡 Metal:',
+            cart_crystal: '🔵 Crystal:',
+            cart_deuterium: '🟢 Deuterium:',
+            cart_ship_pref_hint: 'Ship Preference (Priority: Pathfinder > SC > LC):',
+            cart_bulk_distribute: '⚡ DISTRIBUTE TO SELECTED PLANETS',
+            cart_copy_hint: 'Copy',
+            cart_btn_add: 'Add to Cart',
+            cart_stepper_down_title: 'Decrease level',
+            cart_stepper_up_title: 'Increase level',
+
+            // Collector Tab
+            coll_target_head: '🎯 Target Destination',
+            coll_here: 'Current',
+            coll_here_title: 'Sets destination to your current planet/moon',
+            coll_transport: 'Transport',
+            coll_deploy: 'Deploy',
+            coll_ships: '🚀 Ships',
+            coll_bn: 'LC',
+            coll_kn: 'SC',
+            coll_rehber: 'Pathfinder',
+            coll_resources: '💎 Resources',
+            coll_deut: 'Deuterium',
+            coll_crys: 'Crystal',
+            coll_met: 'Metal',
+            coll_sel_all: 'All',
+            coll_sel_planets: '🪐 Planets',
+            coll_sel_moons: '🌕 Moons',
+            coll_sel_none: '✖ Clear',
+            coll_planets_moons: '🪐 Planets & Moons',
+            coll_reserve_col: 'Deut Reserve',
+            coll_start_btn: '🚀 Start Collecting',
+            coll_collecting: 'Starting Collection...',
+            coll_loading: 'Loading...',
+            coll_target_point: 'Target destination',
+            coll_no_selection: 'No planet or moon selected!',
+            coll_planet_name: 'Planet',
+            coll_moon_name: 'Moon',
+            coll_manual_planet: 'Manual Planet...',
+            coll_manual_moon: 'Manual Moon...',
+            coll_reserve_hint: 'Deut Reserve (Protected amount)',
+            coll_jump_hint: 'Switch to planet',
+            coll_jump_moon_hint: 'Switch to moon',
+            coll_planets_count: 'planets',
+            coll_moons_count: 'moons',
+
+            // Collector Floating HUD
+            coll_hud_title: 'Resource Collector',
+            coll_hud_send: 'Send Fleet',
+            coll_hud_retry: 'Retry',
+            coll_hud_skip: 'Skip',
+            coll_hud_cancel: 'Cancel',
+            coll_hud_no_ships: 'No cargo ships available!',
+            coll_hud_shortage_title: '⚠️ Insufficient Cargo Capacity!',
+            coll_hud_stop_btn: '⏹️ Stop Collection',
+            coll_hud_proceed_btn: '⏩ Send Partial Cargo (Continue)',
+            coll_hud_selected_fleet: 'Selected Fleet:',
+            coll_hud_transported: 'Carrying:',
+            coll_hud_cap_shortage: 'Insufficient Cargo Capacity',
+            cart_hud_shortage_title: '⚠️ Insufficient Resources or Cargo Capacity!',
+            cart_hud_stop_btn: '⏹️ Stop Distribution',
+            cart_hud_proceed_btn: '⏩ Send Partial Fleet (Proceed)',
+            cart_hud_title: 'Cost Distribution',
+            exp_own_system: 'Own System',
+            exp_system_offset: 'System',
+            exp_deep_space: 'Deep Space',
+            exp_hud_retrying: 'Retrying expedition step...',
+            find_min_chars: 'Enter at least 2 characters.',
+            find_active: 'active',
+            find_owner: 'Owner',
+            find_no_results: 'No results found.',
+
+            // Debris Tab
+            deb_status_active: 'Debris Hunter Active · Monitoring Galaxy',
+            deb_status_inactive: 'Debris Hunter Inactive',
+            deb_toggle_title: 'Toggle debris monitoring',
+            deb_threshold_label: '⚡ Min. Debris Threshold (Total):',
+            deb_sound_label: '🎵 Alert Sound:',
+            deb_test_sound: '🔊 Test Debris Sound',
+            deb_found_title: '🛰️ Detected Debris',
+            deb_clear_btn: '🗑️ Clear List',
+            deb_clear_title: 'Clear all debris from list',
+            deb_no_debris: '🪐 No debris detected yet.<br><span style="font-size:10px;color:#5c7080;margin-top:4px;display:inline-block">Debris above your threshold will appear automatically as you browse galaxy view.</span>',
+            deb_jump: '🚀 Go',
+
+            // Expedition Tab
+            exp_start_slot16: '🎯 Starting Expedition Point (Slot 16)',
+            exp_here: 'Current',
+            exp_here_title: 'Fill with current planet :16 slot',
+            exp_desc: 'Expeditions are dispatched spiraling outward from this system (+1, -1, +2, -2...).',
+            exp_count: '🔢 Expedition Count',
+            exp_template: '📋 Expedition Template',
+            exp_refresh_tpls_title: 'Refresh templates',
+            exp_loading_tpl: '-- Loading Templates... --',
+            exp_preview_title: '🧭 Route Distribution Preview:',
+            exp_preview_placeholder: '(Enter starting coordinates and mission count)',
+            exp_start_btn: '🚀 Start Expeditions (Step by Step)',
+            exp_missions_count: 'Missions',
+            exp_hud_title: '🧭 Expedition Assistant',
+            exp_hud_route: 'Target Route:',
+            exp_hud_template: 'Template:',
+            exp_hud_send: 'Send Expedition',
+            exp_hud_retry: 'Retry',
+            exp_hud_skip: 'Skip',
+            exp_hud_cancel: 'Cancel',
+            exp_hud_preparing: '⏳ Preparing...',
+
+            // Scanner Tab
+            scan_g_start: 'Galaxy Start',
+            scan_g_end: 'Galaxy End',
+            scan_s_start: 'System Start',
+            scan_s_end: 'System End',
+            scan_slots_label: 'Target Slots (comma separated)',
+            scan_slots_ph: '8 or 7, 9',
+            scan_chip_8: '🎯 Slot 8 only',
+            scan_chip_7_9: '⭐ 7, 9',
+            scan_chip_13_15: '❄️ 13-15 (Deut)',
+            scan_chip_1_3: '☀️ 1-3 (Solar)',
+            scan_chip_empty: '🪐 Completely Empty (1-15)',
+            scan_min_empty: '👥 Min. Concurrent Empty Slots:',
+            scan_start_btn: '🔍 Start Scan',
+            scan_refresh_btn: '🔄 Update',
+            scan_refresh_title: 'Force refresh universe data (universe.xml) from server',
+            scan_copy_coords: '📋 Copy Coordinates',
+            scan_scanning: '⏳ Scanning...',
+            scan_cached: 'Cache',
+            scan_no_data: 'Universe data not yet downloaded',
+            scan_found: 'results found.',
+            scan_planets: 'planets',
+
+            // Finder Tab
+            find_desc: 'Find all players and planets across the universe.',
+            find_ph: 'Player or planet name...',
+            find_player: 'Player Name',
+            find_planet: 'Planet Name',
+            find_btn: '🔍 Search',
+            find_searching: 'Searching...',
+
+            // Alarm Tab
+            alarm_status_active_safe: 'Watcher Active · No Threat',
+            alarm_status_silenced: '⏹️ Silence',
+            alarm_att_title: '🚨 Attack Alarm',
+            alarm_sound_type: '🎵 Sound Type:',
+            alarm_att_test: '🔊 Test Attack Sound',
+            alarm_esp_title: '📡 Probe / Espionage Alert',
+            alarm_esp_test: '🔊 Test Espionage Sound',
+            alarm_desktop_title: '🖥️ Desktop Notification',
+            alarm_desktop_desc: 'Send notifications when tab is in background',
+            alarm_volume_label: '🔊 Volume:',
+            alarm_repeat_label: '⏱️ Repeat Interval:',
+            alarm_repeat_once: 'Play once only',
+            alarm_repeat_5s: 'Every 5 seconds',
+            alarm_repeat_10s: 'Every 10 seconds',
+            alarm_repeat_15s: 'Every 15 seconds',
+            alarm_repeat_30s: 'Every 30 seconds',
+            alarm_repeat_60s: 'Every 60 seconds',
+            alarm_sound_klaxon: 'Tactical Klaxon (Default)',
+            alarm_sound_siren: 'Red Alert Siren',
+            alarm_sound_pulse: 'Emergency Pulse',
+            alarm_sound_sonar_deep: 'Deep Sea Sonar (Classic Ping)',
+            alarm_sound_sonar_hunter: 'Active Hunter Sonar (High Ping)',
+            alarm_sound_sonar_echo: 'Tactical Echo Sonar (Double Echo)',
+
+            // Settings Tab (Ayarlar)
+            settings_general: 'General Preferences',
+            settings_lang: '🌐 Dil / Language:',
+            settings_theme: '🎨 Görünüm / Skin:',
+            settings_theme_dark: '🌌 Deep Space (Default)',
+            settings_theme_light: '☀️ Light (Coming Soon)',
+            settings_theme_aero: '💎 Aero Glass (Coming Soon)',
+            settings_diag_divider: '🛠️ System & Diagnostic Logs',
+            settings_debug_title: '🐞 Debug Logs',
+            settings_debug_toggle_title: 'Toggle Debug Logs (Warnings & Errors)',
+            settings_debug_desc: 'Application logs',
+            settings_trace_title: '🎯 Trace Logs',
+            settings_trace_toggle_title: 'Toggle Trace Logs (Clicks, page events, keys & responses)',
+            settings_trace_desc: 'Activity trace records',
+            settings_copy_logs: '📋 Copy Logs',
+            settings_copy_logs_title: 'Copies filtered logs to clipboard',
+            settings_clear_logs: '🗑️ Clear Logs',
+            settings_clear_logs_title: 'Clears filtered logs',
+            settings_export_logs: '💾 Export Logs',
+            settings_export_logs_title: 'Exports filtered logs as a .txt file',
+            settings_stream: 'Stream:',
+            settings_scope: 'Scope:',
+            settings_level: 'Level:',
+            settings_all: 'All',
+            settings_req: '📤 Outgoing Requests',
+            settings_resp: '📥 Incoming Responses',
+            settings_records: 'records',
+            settings_debug_off: '○ Debug: Off',
+            settings_debug_on: '● Debug: On',
+            settings_trace_off: '○ Trace: Off',
+            settings_trace_on: '● Trace: On',
+            settings_opacity: '👁️ Opacity / Saydamlık:',
+            settings_hover_focus: '🎯 Hover to Focus (100% Opacity)',
+            settings_hover_focus_title: 'Automatically restore 100% opacity when mouse hovers over panel',
+            find_refresh_title: 'Force refresh universe and player data from server',
+            find_cached: 'Cache',
+            find_no_cache: 'Universe/player data not downloaded yet'
+        }
+    };
+
+    function t(key, fallback) {
+        const lang = currentLang || 'tr';
+        if (I18N[lang] && I18N[lang][key] !== undefined) return I18N[lang][key];
+        if (I18N['tr'] && I18N['tr'][key] !== undefined) return I18N['tr'][key];
+        return fallback !== undefined ? fallback : key;
+    }
+
+    function applyTranslations() {
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const k = el.getAttribute('data-i18n');
+            if (k) el.textContent = t(k);
+        });
+        document.querySelectorAll('[data-i18n-title]').forEach(el => {
+            const k = el.getAttribute('data-i18n-title');
+            if (k) el.title = t(k);
+        });
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+            const k = el.getAttribute('data-i18n-placeholder');
+            if (k) el.placeholder = t(k);
+        });
+
+        // Tab etiketleri
+        const tabMap = {
+            cart: 'tab_cart',
+            collector: 'tab_collector',
+            debris: 'tab_debris',
+            expedition: 'tab_expedition',
+            scanner: 'tab_scanner',
+            finder: 'tab_finder',
+            alarm: 'tab_alarm',
+            settings: 'tab_settings',
+            debug: 'tab_settings'
+        };
+        document.querySelectorAll('.ls-tab').forEach(tab => {
+            const tKey = tab.getAttribute('data-tab');
+            const lblEl = tab.querySelector('.ls-tab-label');
+            if (lblEl && tabMap[tKey]) {
+                lblEl.textContent = t(tabMap[tKey]);
+            }
+        });
+
+        // Dinamik alt bileşenleri tazele
+        try { if (typeof renderCart === 'function') renderCart(); } catch (e) {}
+        try { if (typeof renderCollector === 'function') renderCollector(); } catch (e) {}
+        try { if (typeof renderDebrisList === 'function') renderDebrisList(); } catch (e) {}
+        try { if (typeof renderExpedition === 'function') renderExpedition(); } catch (e) {}
+        try { if (typeof updateScanStatusInfo === 'function') updateScanStatusInfo(); } catch (e) {}
+        try { if (typeof updateFinderStatusInfo === 'function') updateFinderStatusInfo(); } catch (e) {}
+        try { if (typeof updateRefreshButtonCooldown === 'function') updateRefreshButtonCooldown(); } catch (e) {}
+        try { if (typeof renderDebugLogs === 'function') renderDebugLogs(); } catch (e) {}
+        try { if (typeof applyPanelOpacity === 'function') applyPanelOpacity(); } catch (e) {}
+
+        const langBtnText = document.querySelector('#ls-setting-lang-button .ui-selectmenu-status, #ls-setting-lang-button .ui-selectmenu-text');
+        if (langBtnText) {
+            langBtnText.textContent = (currentLang === 'en') ? '🇬🇧 English' : '🇹🇷 Türkçe';
+        }
+        const themeBtnText = document.querySelector('#ls-setting-theme-button .ui-selectmenu-status, #ls-setting-theme-button .ui-selectmenu-text');
+        if (themeBtnText) {
+            const curTheme = localStorage.getItem(KEYS.THEME) || 'dark';
+            themeBtnText.textContent = (curTheme === 'dark') ? t('settings_theme_dark') : (curTheme === 'light' ? t('settings_theme_light') : t('settings_theme_aero'));
+        }
+    }
 
     // ============================================================
     // CENTRAL LOGGER & TRACER
@@ -250,7 +811,7 @@
                         const panelEl = document.getElementById('ls-panel');
                         if (panelEl) {
                             panelEl.style.display = 'flex';
-                            const dbgTab = document.querySelector('.ls-tab[data-tab="debug"]');
+                            const dbgTab = document.querySelector('.ls-tab[data-tab="settings"]') || document.querySelector('.ls-tab[data-tab="debug"]');
                             if (dbgTab) dbgTab.click();
                         }
                     });
@@ -505,10 +1066,10 @@
         try {
             const target = e.target;
             if (!target) return;
-            // Ignore clicks inside debug console/controls to avoid feedback loops
-            if (target.closest && (target.closest('#tc-debug') || target.closest('#ls-trace-badge'))) return;
+            // Ignore clicks inside debug/settings console and controls to avoid feedback loops
+            if (target.closest && (target.closest('#tc-settings') || target.closest('#tc-debug') || target.closest('#ls-trace-badge') || target.closest('[id^="ls-setting-"]'))) return;
 
-            const isInsideLs = !!(target.closest && (target.closest('#ls-panel') || target.closest('[id^="ls-banner"]') || target.closest('#ls-coll-floating-banner') || target.closest('#ls-exp-floating-banner') || target.closest('#ls-cart-floating-banner') || target.closest('#ls-fab')));
+            const isInsideLs = !!(target.closest && (target.closest('#ls-panel') || target.closest('[id^="ls-"]') || target.closest('#ls-fab')));
 
             if (isInsideLs) {
                 const desc = describeLsUiElement(target);
@@ -572,7 +1133,7 @@
         try {
             const target = e.target;
             if (!target) return;
-            if (target.closest && (target.closest('#tc-debug') || target.closest('#ls-trace-badge'))) return;
+            if (target.closest && (target.closest('#tc-settings') || target.closest('#tc-debug') || target.closest('#ls-trace-badge') || target.closest('[id^="ls-setting-"]'))) return;
 
             const isInsideLs = !!(target.closest && target.closest('#ls-panel'));
             const name = target.name || target.id || target.className || target.tagName;
@@ -630,7 +1191,31 @@
 
     let cart = JSON.parse(localStorage.getItem(KEYS.CART) || '[]');
     let activeTab = localStorage.getItem(KEYS.TAB) || 'cart';
+    if (activeTab === 'debug') activeTab = 'settings';
     let isPanelOpen = localStorage.getItem(KEYS.OPEN) === 'true';
+
+    let generalSettings = {
+        lang: localStorage.getItem(KEYS.LANG) || 'tr',
+        theme: localStorage.getItem(KEYS.THEME) || 'dark',
+        opacity: parseInt(localStorage.getItem(KEYS.OPACITY) || '100', 10),
+        hoverFocus: localStorage.getItem(KEYS.HOVER_FOCUS) === 'true'
+    };
+    if (isNaN(generalSettings.opacity) || generalSettings.opacity < 20 || generalSettings.opacity > 100) {
+        generalSettings.opacity = 100;
+    }
+
+    let isPanelHovered = false;
+
+    function applyPanelOpacity() {
+        const panel = document.getElementById('ls-panel');
+        if (!panel) return;
+        const targetOpacity = (generalSettings.opacity ?? 100) / 100;
+        if (generalSettings.hoverFocus && isPanelHovered) {
+            panel.style.opacity = '1';
+        } else {
+            panel.style.opacity = String(targetOpacity);
+        }
+    }
     let scanSettings = JSON.parse(localStorage.getItem(KEYS.SCAN) || '{}');
     scanSettings = Object.assign({ gStart: 1, gEnd: 9, sStart: 1, sEnd: 499, slots: '8', minEmpty: 1 }, scanSettings);
 
@@ -1315,20 +1900,22 @@
         const curType = isMoon ? 3 : 1;
 
         if (targetCoords && (metaCoords !== targetCoords || curType !== (targetType || 1))) {
-            alert(`⚠️ Bu gezegenin canlı kaynaklarını düşmek için önce ${targetName || 'Hedef'} [${targetCoords}] gezegenine/ayına geçmelisiniz!`);
+            alert(currentLang === 'tr'
+                ? `⚠️ Bu gezegenin canlı kaynaklarını düşmek için önce ${targetName || 'Hedef'} [${targetCoords}] gezegenine/ayına geçmelisiniz!`
+                : `⚠️ To deduct live resources, first switch to ${targetName || 'Target'} [${targetCoords}] planet/moon!`);
             return;
         }
 
         if (live.metal === 0 && live.crystal === 0 && live.deuterium === 0) {
-            alert('Bu gezegende kaynak bulunamadı veya okunamadı.');
+            alert(currentLang === 'tr' ? 'Bu gezegende kaynak bulunamadı veya okunamadı.' : 'No resources found or readable on this planet/moon.');
             return;
         }
 
         cart.push({
             id: Date.now() + Math.random().toString(36).substring(2, 6),
-            name: `Mevcut Kaynak`,
+            name: (currentLang === 'tr' ? 'Mevcut Kaynak' : 'Available Resources'),
             level: null,
-            planet: pName || (isMoon ? 'Ay' : 'Gezegen'),
+            planet: pName || (isMoon ? t('coll_moon_name') : t('coll_planet_name')),
             coords: metaCoords,
             type: curType,
             metal: -live.metal,
@@ -1973,11 +2560,11 @@
         if (mode === 'single') {
             const target = groups.find(g => g.key === targetKey);
             if (!target) {
-                alert('Hedef gezegen sepeti bulunamadı.');
+                alert(currentLang === 'tr' ? 'Hedef gezegen sepeti bulunamadı.' : 'Target planet cart not found.');
                 return;
             }
             if (target.totalCargoNeeded <= 0) {
-                alert('Bu gezegen için taşınacak kaynak ihtiyacı bulunmuyor!');
+                alert(currentLang === 'tr' ? 'Bu gezegen için taşınacak kaynak ihtiyacı bulunmuyor!' : 'No transport resources needed for this planet!');
                 return;
             }
             queue = [target];
@@ -1985,14 +2572,14 @@
             // mode === 'bulk'
             queue = groups.filter(g => g.selected && g.totalCargoNeeded > 0);
             if (queue.length === 0) {
-                alert('Lütfen gönderim yapılacak en az bir gezegen seçin!');
+                alert(currentLang === 'tr' ? 'Lütfen gönderim yapılacak en az bir gezegen seçin!' : 'Please select at least one planet to distribute to!');
                 return;
             }
         }
 
         const shipPrefs = getCartShipPrefs();
         if (!shipPrefs.rehber && !shipPrefs.kn && !shipPrefs.bn) {
-            alert('Lütfen en az bir gemi türünü (Rehber, KN veya BN) aktif yapın!');
+            alert(currentLang === 'tr' ? 'Lütfen en az bir gemi türünü (Rehber, KN veya BN) aktif yapın!' : 'Please activate at least one ship type (Pathfinder, SC or LC)!');
             return;
         }
 
@@ -2194,7 +2781,7 @@
         const currentStep = session.currentIndex + 1;
         const currentMetaType = document.querySelector('meta[name="ogame-planet-type"]')?.getAttribute('content');
         const currentIcon = (currentMetaType === 'moon') ? '🌕' : '🪐';
-        const currentName = getCurrentPlanetName() || 'Mevcut';
+        const currentName = getCurrentPlanetName() || t('exp_here');
 
         const targetIcon = (currentItem.type === 3) ? '🌕' : '🪐';
         const cleanTName = (currentItem.name || '').replace(/^[\s\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]+/u, '').trim();
@@ -2203,19 +2790,19 @@
             if (currentItem.type === 3) {
                 const emp = getEmpirePlanetsAndMoons();
                 const matched = emp.find(x => x.coords === currentItem.coords);
-                displayTargetTitle = matched ? `${matched.name} ( Ay )` : 'Ay ( Ay )';
+                displayTargetTitle = matched ? `${matched.name} ( ${t('coll_moon_name')} )` : `${t('coll_moon_name')} ( ${t('coll_moon_name')} )`;
             } else {
-                displayTargetTitle = 'Hedef';
+                displayTargetTitle = (currentLang === 'tr' ? 'Hedef' : 'Target');
             }
         }
 
         let shipDesc = [];
-        if (details.shipCounts.bn > 0) shipDesc.push(details.shipCounts.bn + ' BN');
-        if (details.shipCounts.kn > 0) shipDesc.push(details.shipCounts.kn + ' KN');
-        if (details.shipCounts.rehber > 0) shipDesc.push(details.shipCounts.rehber + ' Rehber');
-        const shipText = shipDesc.length > 0 ? shipDesc.join(', ') : '<span style="color:#e74c3c">Nakliye gemisi yok!</span>';
+        if (details.shipCounts.bn > 0) shipDesc.push(details.shipCounts.bn + ' ' + t('cart_ships_lc'));
+        if (details.shipCounts.kn > 0) shipDesc.push(details.shipCounts.kn + ' ' + t('cart_ships_sc'));
+        if (details.shipCounts.rehber > 0) shipDesc.push(details.shipCounts.rehber + ' ' + t('cart_ships_pathfinder'));
+        const shipText = shipDesc.length > 0 ? shipDesc.join(', ') : '<span style="color:#e74c3c">' + t('coll_hud_no_ships') + '</span>';
 
-        const missionName = (currentItem.mission === 4 ? '🚀 Konuşlandır' : '🚚 Nakliye');
+        const missionName = (currentItem.mission === 4 ? '🚀 ' + t('cart_deploy') : '🚚 ' + t('cart_transport'));
         const missionColor = (currentItem.mission === 4 ? '#2980b9' : '#2ecc71');
 
         banner.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);background:rgba(13,27,42,0.96);border:2px solid #2ecc71;box-shadow:0 10px 32px rgba(0,0,0,0.85);border-radius:8px;padding:12px 18px;min-width:420px;max-width:90vw;z-index:9999999;font-family:sans-serif;color:#d1d8e0;text-align:center;box-sizing:border-box';
@@ -2228,44 +2815,44 @@
         if (hasAnyShortage) {
             let reasons = [];
             if (details.hasShipShortage) {
-                reasons.push(`Gemi Kapasitesi Yetersiz (${formatShort(details.shipCounts.missingCargo)} kargo açıkta kaldı)`);
+                reasons.push(`${t('coll_hud_cap_shortage')} (${formatShort(details.shipCounts.missingCargo)})`);
             }
-            if (details.missingM > 0) reasons.push(`Metal ${formatShort(details.missingM)} eksik`);
-            if (details.missingC > 0) reasons.push(`Kristal ${formatShort(details.missingC)} eksik`);
-            if (details.missingD > 0) reasons.push(`Deuterium ${formatShort(details.missingD)} eksik`);
+            if (details.missingM > 0) reasons.push(`${t('coll_met')} ${formatShort(details.missingM)}`);
+            if (details.missingC > 0) reasons.push(`${t('coll_crys')} ${formatShort(details.missingC)}`);
+            if (details.missingD > 0) reasons.push(`${t('coll_deut')} ${formatShort(details.missingD)}`);
 
             warningHtml =
                 '<div id="ls-cart-warning-box" style="background:rgba(231,76,60,0.22);border:1px solid #e74c3c;border-radius:4px;padding:6px 8px;margin-bottom:8px;font-size:11px;color:#ff6b6b;text-align:left">' +
-                    '<div style="font-weight:bold;margin-bottom:2px">⚠️ Yetersiz Kaynak veya Gemi Kapasitesi!</div>' +
+                    '<div style="font-weight:bold;margin-bottom:2px">' + t('cart_hud_shortage_title') + '</div>' +
                     '<div style="font-size:10.5px;color:#f5b7b1;margin-bottom:6px">' + reasons.join(' · ') + '</div>' +
                     '<div style="display:flex;gap:6px;justify-content:center">' +
-                        '<button id="ls-cart-stop-btn" style="background:#e74c3c;color:#fff;border:none;padding:4px 9px;border-radius:3px;font-weight:bold;font-size:10.5px;cursor:pointer">⏹️ Dağıtımı Durdur</button>' +
-                        '<button id="ls-cart-proceed-btn" style="background:#f39c12;color:#000;border:none;padding:4px 9px;border-radius:3px;font-weight:bold;font-size:10.5px;cursor:pointer">⏩ Olduğu Kadar Gönder (Devam Et)</button>' +
+                        '<button id="ls-cart-stop-btn" style="background:#e74c3c;color:#fff;border:none;padding:4px 9px;border-radius:3px;font-weight:bold;font-size:10.5px;cursor:pointer">' + t('cart_hud_stop_btn') + '</button>' +
+                        '<button id="ls-cart-proceed-btn" style="background:#f39c12;color:#000;border:none;padding:4px 9px;border-radius:3px;font-weight:bold;font-size:10.5px;cursor:pointer">' + t('cart_hud_proceed_btn') + '</button>' +
                     '</div>' +
                 '</div>';
         }
 
         banner.innerHTML =
             '<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1a2c3f;padding-bottom:6px;margin-bottom:8px">' +
-                '<span style="font-size:12px;font-weight:bold;color:#2ecc71">🛒 Maliyet Dağıtımı [' + currentStep + ' / ' + totalItems + ']</span>' +
+                '<span style="font-size:12px;font-weight:bold;color:#2ecc71">🛒 ' + t('cart_hud_title') + ' [' + currentStep + ' / ' + totalItems + ']</span>' +
                 '<span style="font-size:11px;color:#fff">' + currentIcon + ' ' + escapeHtml(currentName) + ' ➔ ' + targetIcon + ' ' + escapeHtml(displayTargetTitle) + coordText + '</span>' +
             '</div>' +
             warningHtml +
             '<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;margin-bottom:6px">' +
-                '<div><b style="color:#8899aa">Seçilen Filo:</b> <span style="font-weight:bold">' + shipText + '</span></div>' +
+                '<div><b style="color:#8899aa">' + t('coll_hud_selected_fleet') + '</b> <span style="font-weight:bold">' + shipText + '</span></div>' +
                 '<div style="font-size:10.5px;color:' + missionColor + ';font-weight:bold">' + missionName + '</div>' +
             '</div>' +
             '<div style="font-size:11.5px;font-family:monospace;margin-bottom:10px">' +
-                '<b style="color:#8899aa">Yüklenen:</b> ' +
-                '<span style="color:#ffbe3b">' + formatShort(details.metLoad) + ' Metal</span> · ' +
-                '<span style="color:#5dade2">' + formatShort(details.criLoad) + ' Kristal</span> · ' +
-                '<span style="color:#2ecc71">' + formatShort(details.deuLoad) + ' Deu</span>' +
+                '<b style="color:#8899aa">' + t('coll_hud_transported') + '</b> ' +
+                '<span style="color:#ffbe3b">' + formatShort(details.metLoad) + ' ' + t('coll_met') + '</span> · ' +
+                '<span style="color:#5dade2">' + formatShort(details.criLoad) + ' ' + t('coll_crys') + '</span> · ' +
+                '<span style="color:#2ecc71">' + formatShort(details.deuLoad) + ' ' + t('coll_deut') + '</span>' +
             '</div>' +
             '<div id="ls-cart-hud-controls" style="display:flex;gap:6px;justify-content:center;align-items:center;' + (hasAnyShortage ? 'display:none;' : '') + '">' +
-                '<button id="ls-cart-banner-send-btn" style="background:#27ae60;color:#fff;border:none;padding:5px 12px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.5)">🚀 Gönder (Space)</button>' +
-                '<button id="ls-cart-banner-retry-btn" style="background:#e67e22;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer" title="Hedef koordinat ve yüklemeyi tekrar dene">🔄 Tekrarla</button>' +
-                '<button id="ls-cart-banner-skip-btn" style="background:#34495e;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏭️ Atla</button>' +
-                '<button id="ls-cart-banner-cancel-btn" style="background:#7f8c8d;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏹️ İptal</button>' +
+                '<button id="ls-cart-banner-send-btn" style="background:#27ae60;color:#fff;border:none;padding:5px 12px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.5)">🚀 ' + t('coll_hud_send') + ' (Space)</button>' +
+                '<button id="ls-cart-banner-retry-btn" style="background:#e67e22;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer" title="' + t('coll_hud_retry') + '">🔄 ' + t('coll_hud_retry') + '</button>' +
+                '<button id="ls-cart-banner-skip-btn" style="background:#34495e;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏭️ ' + t('coll_hud_skip') + '</button>' +
+                '<button id="ls-cart-banner-cancel-btn" style="background:#7f8c8d;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏹️ ' + t('coll_hud_cancel') + '</button>' +
             '</div>';
 
         let isSending = false;
@@ -2453,7 +3040,7 @@
         const caps = calculateShipCapacities();
 
         if (cart.length === 0 || groups.length === 0) {
-            listEl.innerHTML = '<div style="text-align:center;color:#666;padding:25px;font-size:11px">Sepet boş<br><span style="font-size:10px;color:#555">Bina veya teknoloji detayından "Sepete Ekle" diyerek ekleyebilirsiniz.</span></div>';
+            listEl.innerHTML = '<div style="text-align:center;color:#666;padding:25px;font-size:11px">' + t('cart_empty') + '</div>';
             return;
         }
 
@@ -2480,30 +3067,30 @@
             let shipEstimateText = '';
             if (grp.totalCargoNeeded > 0) {
                 let parts = [];
-                if (shipPrefs.rehber) parts.push(fmt(Math.ceil(grp.totalCargoNeeded / caps.rehber)) + ' Rehber');
-                if (shipPrefs.kn) parts.push(fmt(Math.ceil(grp.totalCargoNeeded / caps.kn)) + ' KN');
-                if (shipPrefs.bn) parts.push(fmt(Math.ceil(grp.totalCargoNeeded / caps.bn)) + ' BN');
-                shipEstimateText = parts.length > 0 ? parts.join(' | ') : 'Gemi seçilmedi';
+                if (shipPrefs.rehber) parts.push(fmt(Math.ceil(grp.totalCargoNeeded / caps.rehber)) + ' ' + t('cart_ships_pathfinder', 'Rehber'));
+                if (shipPrefs.kn) parts.push(fmt(Math.ceil(grp.totalCargoNeeded / caps.kn)) + ' ' + t('cart_ships_sc', 'KN'));
+                if (shipPrefs.bn) parts.push(fmt(Math.ceil(grp.totalCargoNeeded / caps.bn)) + ' ' + t('cart_ships_lc', 'BN'));
+                shipEstimateText = parts.length > 0 ? parts.join(' | ') : t('cart_no_ships', 'Gemi seçilmedi');
             } else {
-                shipEstimateText = '<span style="color:#2ecc71">Yeterli Kaynak Var ✓</span>';
+                shipEstimateText = '<span style="color:#2ecc71">' + t('cart_enough_res', 'Yeterli Kaynak Var ✓') + '</span>';
             }
 
             card.innerHTML =
                 '<div class="ls-cart-card-head">' +
                     '<div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1">' +
-                        '<input type="checkbox" class="ls-grp-chk" data-key="' + grp.key + '" ' + (grp.selected ? 'checked' : '') + ' style="accent-color:#00bcff;cursor:pointer;margin:0;width:13px;height:13px" title="Toplu dağıtıma dahil et">' +
+                        '<input type="checkbox" class="ls-grp-chk" data-key="' + grp.key + '" ' + (grp.selected ? 'checked' : '') + ' style="accent-color:#00bcff;cursor:pointer;margin:0;width:13px;height:13px" title="' + t('cart_include_batch', 'Toplu dağıtıma dahil et') + '">' +
                         '<span style="font-size:11.5px;font-weight:bold;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' +
                             icon + ' ' + safePlanetName +
                         '</span>' +
                         '<span style="color:#ffbe3b;font-family:monospace;font-size:10px;white-space:nowrap">[' + safeCoords + ']</span>' +
                     '</div>' +
                     '<div style="display:flex;align-items:center;gap:4px;flex-shrink:0">' +
-                        '<button class="ls-cart-mbtn ' + (grp.mission === 3 ? 'active' : '') + '" data-action="mission" data-key="' + grp.key + '" data-val="3" title="Nakliye: Boş geri döner">🚚 Nakliye</button>' +
-                        '<button class="ls-cart-mbtn deploy ' + (grp.mission === 4 ? 'active' : '') + '" data-action="mission" data-key="' + grp.key + '" data-val="4" title="Konuşlandır: Hedefte kalır">🚀 Konuşlandır</button>' +
-                        '<button class="ls-btn-sm" data-action="single-send" data-key="' + grp.key + '" style="background:#27ae60;color:#fff;padding:2px 7px" title="Sadece bu gezegene filo gönder">' +
-                            '⚡ Gönder' +
+                        '<button class="ls-cart-mbtn ' + (grp.mission === 3 ? 'active' : '') + '" data-action="mission" data-key="' + grp.key + '" data-val="3" title="' + t('cart_transport_title', 'Nakliye: Boş geri döner') + '">' + t('cart_transport', '🚚 Nakliye') + '</button>' +
+                        '<button class="ls-cart-mbtn deploy ' + (grp.mission === 4 ? 'active' : '') + '" data-action="mission" data-key="' + grp.key + '" data-val="4" title="' + t('cart_deploy_title', 'Konuşlandır: Hedefte kalır') + '">' + t('cart_deploy', '🚀 Konuşlandır') + '</button>' +
+                        '<button class="ls-btn-sm" data-action="single-send" data-key="' + grp.key + '" style="background:#27ae60;color:#fff;padding:2px 7px" title="' + t('cart_single_send_title', 'Sadece bu gezegene filo gönder') + '">' +
+                            t('cart_single_send', '⚡ Gönder') +
                         '</button>' +
-                        '<button class="ls-btn-sm" data-action="delete-planet" data-key="' + grp.key + '" style="background:#e74c3c;color:#fff;padding:2px 6px;font-weight:bold" title="Bu gezegenin tüm sepetini kaldır">' +
+                        '<button class="ls-btn-sm" data-action="delete-planet" data-key="' + grp.key + '" style="background:#e74c3c;color:#fff;padding:2px 6px;font-weight:bold" title="' + t('cart_remove_planet', 'Bu gezegenin tüm sepetini kaldır') + '">' +
                             '✖' +
                         '</button>' +
                     '</div>' +
@@ -2511,7 +3098,7 @@
                 '<div class="ls-cart-items-box" style="margin:4px 0 6px 14px;display:flex;flex-direction:column;gap:3px"></div>' +
                 '<div style="border-top:1px dashed #233446;padding-top:4px;margin-top:4px">' +
                     '<div style="display:flex;justify-content:space-between;align-items:center;font-size:10px">' +
-                        '<span style="color:#8899aa;font-weight:bold">Net İhtiyaç:</span>' +
+                        '<span style="color:#8899aa;font-weight:bold">' + t('cart_net_deficit', 'Net İhtiyaç:') + '</span>' +
                         '<span style="font-family:monospace">' +
                             '<span style="color:#ffbe3b">' + formatShort(grp.netDeficitM) + ' Met</span> · ' +
                             '<span style="color:#5dade2">' + formatShort(grp.netDeficitC) + ' Kri</span> · ' +
@@ -2519,7 +3106,7 @@
                         '</span>' +
                     '</div>' +
                     '<div style="display:flex;justify-content:space-between;align-items:center;font-size:9.5px;color:#8899aa;margin-top:2px">' +
-                        '<span>Toplam: <b style="color:#fff">' + formatShort(grp.totalCargoNeeded) + '</b></span>' +
+                        '<span>' + t('cart_total', 'Toplam:') + ' <b style="color:#fff">' + formatShort(grp.totalCargoNeeded) + '</b></span>' +
                         '<span>' + shipEstimateText + '</span>' +
                     '</div>' +
                 '</div>';
@@ -2546,7 +3133,7 @@
 
                 itemRow.innerHTML =
                     '<div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1">' +
-                        '<input type="checkbox" class="ls-item-chk" data-idx="' + originalIndex + '" ' + (item.checked !== false ? 'checked' : '') + ' style="accent-color:#2ecc71;cursor:pointer;margin:0;width:12px;height:12px" title="Bu kalemi hesaplamaya dahil et">' +
+                        '<input type="checkbox" class="ls-item-chk" data-idx="' + originalIndex + '" ' + (item.checked !== false ? 'checked' : '') + ' style="accent-color:#2ecc71;cursor:pointer;margin:0;width:12px;height:12px" title="' + t('cart_include_calc', 'Bu kalemi hesaplamaya dahil et') + '">' +
                         '<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + titleHtml + '</div>' +
                     '</div>' +
                     '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:auto">' +
@@ -2555,7 +3142,7 @@
                             '<span style="color:' + cColor(item.crystal) + '">' + sign(item.crystal) + '</span> · ' +
                             '<span style="color:' + dColor(item.deuterium) + '">' + sign(item.deuterium) + '</span>' +
                         '</div>' +
-                        '<button class="ls-x" data-action="delete-item" data-idx="' + originalIndex + '" title="Sepetten Kaldır">✖</button>' +
+                        '<button class="ls-x" data-action="delete-item" data-idx="' + originalIndex + '" title="' + t('cart_remove_item', 'Sepetten Kaldır') + '">✖</button>' +
                     '</div>';
 
                 itemsBox.appendChild(itemRow);
@@ -2565,8 +3152,8 @@
             const deductBtn = document.createElement('button');
             deductBtn.className = 'ls-btn-sm';
             deductBtn.style.cssText = 'width:fit-content;background:rgba(211,84,0,0.2);border:1px solid #d35400;color:#e67e22;padding:2px 8px;margin-top:2px;font-size:9.5px;border-radius:3px;cursor:pointer';
-            deductBtn.textContent = '📉 Bu Gezegenin Canlı Kaynağını Düş';
-            deductBtn.title = 'Şu an bu gezegendeyseniz eldeki kaynakları sepetten mahsup eder';
+            deductBtn.textContent = t('cart_deduct_planet', '📉 Bu Gezegenin Canlı Kaynağını Düş');
+            deductBtn.title = t('cart_deduct_title', 'Şu an bu gezegendeyseniz eldeki kaynakları sepetten mahsup eder');
             deductBtn.addEventListener('click', (e) => {
                 e.preventDefault(); e.stopPropagation();
                 deductPlanetResources(grp.coords, grp.type, grp.planetName);
@@ -2640,51 +3227,51 @@
         totalsEl.innerHTML =
             '<div style="background:rgba(255,255,255,0.03);border:1px solid #1a2c3f;border-radius:6px;padding:8px 10px;margin-bottom:6px">' +
                 '<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;font-weight:bold;color:#00bcff;margin-bottom:4px">' +
-                    '<span>📊 Seçili Gezegenler Genel Toplamı:</span>' +
+                    '<span>' + t('cart_grand_total', '📊 Seçili Gezegenler Genel Toplamı:') + '</span>' +
                 '</div>' +
                 '<div class="ls-total-row" style="display:flex;justify-content:space-between;align-items:center;padding:2px 0;font-size:11px">' +
-                    '<span>🟡 Metal:</span>' +
+                    '<span>' + t('cart_metal', '🟡 Metal:') + '</span>' +
                     '<span style="display:flex;align-items:center;gap:4px">' +
                         '<b style="color:#ffbe3b;font-family:monospace">' + fmt(grandM) + '</b>' +
-                        '<button id="ls-cp-m" class="ls-cp-btn" title="Kopyala">📋</button>' +
+                        '<button id="ls-cp-m" class="ls-cp-btn" title="' + t('cart_copy_hint', 'Kopyala') + '">📋</button>' +
                     '</span>' +
                 '</div>' +
                 '<div class="ls-total-row" style="display:flex;justify-content:space-between;align-items:center;padding:2px 0;font-size:11px">' +
-                    '<span>🔵 Kristal:</span>' +
+                    '<span>' + t('cart_crystal', '🔵 Kristal:') + '</span>' +
                     '<span style="display:flex;align-items:center;gap:4px">' +
                         '<b style="color:#5dade2;font-family:monospace">' + fmt(grandC) + '</b>' +
-                        '<button id="ls-cp-c" class="ls-cp-btn" title="Kopyala">📋</button>' +
+                        '<button id="ls-cp-c" class="ls-cp-btn" title="' + t('cart_copy_hint', 'Kopyala') + '">📋</button>' +
                     '</span>' +
                 '</div>' +
                 '<div class="ls-total-row" style="display:flex;justify-content:space-between;align-items:center;padding:2px 0;font-size:11px">' +
-                    '<span>🟢 Deuterium:</span>' +
+                    '<span>' + t('cart_deuterium', '🟢 Deuterium:') + '</span>' +
                     '<span style="display:flex;align-items:center;gap:4px">' +
                         '<b style="color:#2ecc71;font-family:monospace">' + fmt(grandD) + '</b>' +
-                        '<button id="ls-cp-d" class="ls-cp-btn" title="Kopyala">📋</button>' +
+                        '<button id="ls-cp-d" class="ls-cp-btn" title="' + t('cart_copy_hint', 'Kopyala') + '">📋</button>' +
                     '</span>' +
                 '</div>' +
                 '<div class="ls-total-row" style="border-top:1px solid #233446;padding-top:4px;margin-top:4px;display:flex;justify-content:space-between;align-items:center;font-size:11px">' +
-                    '<span style="color:#ff6b6b;font-weight:bold">🔴 Toplam Kargo:</span>' +
+                    '<span style="color:#ff6b6b;font-weight:bold">' + t('cart_cargo_needed', '🔴 Toplam Kargo:') + '</span>' +
                     '<span style="display:flex;align-items:center;gap:4px">' +
                         '<b style="color:#fff;font-family:monospace;font-weight:bold">' + fmt(grandTotalCargo) + '</b>' +
-                        '<button id="ls-cp-net" class="ls-cp-btn" title="Kopyala">📋</button>' +
+                        '<button id="ls-cp-net" class="ls-cp-btn" title="' + t('cart_copy_hint', 'Kopyala') + '">📋</button>' +
                     '</span>' +
                 '</div>' +
             '</div>' +
 
             // Gemi Öncelik ve Switcher Barı
             '<div style="background:rgba(255,255,255,0.02);border:1px solid #1a2c3f;border-radius:6px;padding:6px 8px;margin-bottom:6px">' +
-                '<div style="font-size:10px;color:#8899aa;margin-bottom:4px">Gemi Tercihi (Öncelik: Rehber > KN > BN):</div>' +
+                '<div style="font-size:10px;color:#8899aa;margin-bottom:4px">' + t('cart_ship_pref_hint', 'Gemi Tercihi (Öncelik: Rehber > KN > BN):') + '</div>' +
                 '<div style="display:flex;gap:4px">' +
-                    '<button id="ls-ship-toggle-rehber" class="ls-ship-pill ' + (shipPrefs.rehber ? 'active' : '') + '">🛰️ Rehber ' + (shipPrefs.rehber ? '✓' : '(Kapalı)') + '</button>' +
-                    '<button id="ls-ship-toggle-kn" class="ls-ship-pill ' + (shipPrefs.kn ? 'active' : '') + '">📦 KN ' + (shipPrefs.kn ? '✓' : '(Kapalı)') + '</button>' +
-                    '<button id="ls-ship-toggle-bn" class="ls-ship-pill ' + (shipPrefs.bn ? 'active' : '') + '">🚛 BN ' + (shipPrefs.bn ? '✓' : '(Kapalı)') + '</button>' +
+                    '<button id="ls-ship-toggle-rehber" class="ls-ship-pill ' + (shipPrefs.rehber ? 'active' : '') + '">🛰️ ' + t('cart_ships_pathfinder', 'Rehber') + ' ' + (shipPrefs.rehber ? '✓' : '(Off)') + '</button>' +
+                    '<button id="ls-ship-toggle-kn" class="ls-ship-pill ' + (shipPrefs.kn ? 'active' : '') + '">📦 ' + t('cart_ships_sc', 'KN') + ' ' + (shipPrefs.kn ? '✓' : '(Off)') + '</button>' +
+                    '<button id="ls-ship-toggle-bn" class="ls-ship-pill ' + (shipPrefs.bn ? 'active' : '') + '">🚛 ' + t('cart_ships_lc', 'BN') + ' ' + (shipPrefs.bn ? '✓' : '(Off)') + '</button>' +
                 '</div>' +
             '</div>' +
 
             // Sırayla Dağıtım Butonu
             '<button id="ls-cart-bulk-send-btn" class="ls-btn" style="width:100%;background:linear-gradient(135deg,#00bcff,#0077b6);color:#fff;padding:8px;font-size:11px;font-weight:bold;box-shadow:0 2px 8px rgba(0,188,255,0.4)">' +
-                '⚡ SEÇİLİ GEZEGENLERE SIRAYLA DAĞIT' +
+                t('cart_bulk_distribute', '⚡ SEÇİLİ GEZEGENLERE SIRAYLA DAĞIT') +
             '</button>';
 
         document.getElementById('ls-ship-toggle-rehber')?.addEventListener('click', () => {
@@ -2786,11 +3373,12 @@
     function formatTimeAgo(ts) {
         if (!ts) return '';
         const diffMs = Date.now() - ts;
-        if (diffMs < 60 * 1000) return 'Az önce';
+        const isTr = (currentLang !== 'en');
+        if (diffMs < 60 * 1000) return isTr ? 'Az önce' : 'Just now';
         const diffMins = Math.floor(diffMs / (60 * 1000));
-        if (diffMins < 60) return diffMins + ' dk önce';
+        if (diffMins < 60) return diffMins + (isTr ? ' dk önce' : ' min ago');
         const diffHours = Math.floor(diffMs / (3600 * 1000));
-        if (diffHours < 24) return diffHours + ' sa önce';
+        if (diffHours < 24) return diffHours + (isTr ? ' sa önce' : ' hr ago');
         return new Date(ts).toLocaleDateString();
     }
 
@@ -2800,41 +3388,78 @@
         const cache = getUniverseCache();
         if (cache && cache.ts) {
             const timeStr = new Date(cache.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            statusEl.innerHTML = '<span style="color:#607d8b">Önbellek: ' + timeStr + ' (' + formatTimeAgo(cache.ts) + ') · ' + cache.coords.length + ' gezegen</span>';
+            const pLbl = (currentLang !== 'en') ? 'gezegen' : 'planets';
+            const cLbl = t('scan_cached', 'Önbellek');
+            statusEl.innerHTML = '<span style="color:#607d8b">' + cLbl + ': ' + timeStr + ' (' + formatTimeAgo(cache.ts) + ') · ' + cache.coords.length.toLocaleString() + ' ' + pLbl + '</span>';
         } else {
-            statusEl.innerHTML = '<span style="color:#8899aa">Henüz evren verisi indirilmedi</span>';
+            statusEl.innerHTML = '<span style="color:#8899aa">' + t('scan_no_data', 'Henüz evren verisi indirilmedi') + '</span>';
+        }
+    }
+
+    function updateFinderStatusInfo() {
+        const infoEl = document.getElementById('ls-find-cache-info');
+        if (!infoEl || infoEl.getAttribute('data-busy')) return;
+
+        let apiData = apiCacheInMemory;
+        if (!apiData) {
+            const raw = sessionStorage.getItem(KEYS.API) || localStorage.getItem(KEYS.API);
+            if (raw) {
+                try { apiData = JSON.parse(raw); } catch (e) {}
+            }
+        }
+
+        if (apiData && apiData.ts) {
+            const timeStr = new Date(apiData.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const pCount = (apiData.planets && apiData.planets.length) || 0;
+            const uCount = (apiData.players && Object.keys(apiData.players).length) || 0;
+            const pLbl = (currentLang !== 'en') ? 'Gezegen' : 'Planets';
+            const uLbl = (currentLang !== 'en') ? 'Oyuncu' : 'Players';
+            const cLbl = t('find_cached', 'Önbellek');
+            infoEl.innerHTML = '<span style="color:#607d8b">' + cLbl + ': ' + timeStr + ' (' + formatTimeAgo(apiData.ts) + ') · ' + pCount.toLocaleString() + ' ' + pLbl + ' · ' + uCount.toLocaleString() + ' ' + uLbl + '</span>';
+        } else {
+            infoEl.innerHTML = '<span style="color:#8899aa">' + t('find_no_cache', 'Henüz evren/oyuncu verisi indirilmedi') + '</span>';
         }
     }
 
     function updateRefreshButtonCooldown() {
-        const btn = document.getElementById('ls-scan-refresh-btn');
-        if (!btn) return;
+        const scanBtn = document.getElementById('ls-scan-refresh-btn');
+        const findBtn = document.getElementById('ls-find-refresh-btn');
+        if (!scanBtn && !findBtn) return;
 
         const lastRefresh = parseInt(localStorage.getItem(KEYS.UNIVERSE_LAST_REFRESH) || '0', 10);
         const elapsed = Math.floor((Date.now() - lastRefresh) / 1000);
         const remaining = 60 - elapsed;
 
+        const setCooldownUI = (btn, rem) => {
+            if (!btn) return;
+            if (rem > 0) {
+                btn.disabled = true;
+                btn.textContent = '⏳ ' + rem + 's';
+                btn.title = (currentLang === 'tr' ? ('Yeni güncelleme için ' + rem + ' saniye bekleyin') : ('Wait ' + rem + 's for next refresh'));
+            } else {
+                btn.disabled = false;
+                btn.textContent = t('scan_refresh_btn', '🔄 Güncelle');
+                btn.title = (btn.id === 'ls-find-refresh-btn' ? t('find_refresh_title') : t('scan_refresh_title'));
+            }
+        };
+
         if (remaining > 0) {
-            btn.disabled = true;
-            btn.textContent = '⏳ ' + remaining + 's';
-            btn.title = 'Yeni güncelleme için ' + remaining + ' saniye bekleyin';
+            setCooldownUI(scanBtn, remaining);
+            setCooldownUI(findBtn, remaining);
             if (!universeCooldownTimer) {
                 universeCooldownTimer = setInterval(() => {
                     const nowElapsed = Math.floor((Date.now() - parseInt(localStorage.getItem(KEYS.UNIVERSE_LAST_REFRESH) || '0', 10)) / 1000);
                     const rem = 60 - nowElapsed;
-                    const b = document.getElementById('ls-scan-refresh-btn');
+                    const sb = document.getElementById('ls-scan-refresh-btn');
+                    const fb = document.getElementById('ls-find-refresh-btn');
                     if (rem <= 0) {
                         clearInterval(universeCooldownTimer);
                         universeCooldownTimer = null;
-                        if (b) {
-                            b.disabled = false;
-                            b.textContent = '🔄 Güncelle';
-                            b.title = 'Evren verisini (universe.xml) sunucudan zorla yenile';
-                        }
-                    } else if (b) {
-                        b.disabled = true;
-                        b.textContent = '⏳ ' + rem + 's';
-                        b.title = 'Yeni güncelleme için ' + rem + ' saniye bekleyin';
+                        setCooldownUI(sb, 0);
+                        setCooldownUI(fb, 0);
+                    } else {
+                        setCooldownUI(sb, rem);
+                        setCooldownUI(fb, rem);
                     }
                 }, 1000);
             }
@@ -2843,9 +3468,147 @@
                 clearInterval(universeCooldownTimer);
                 universeCooldownTimer = null;
             }
-            btn.disabled = false;
-            btn.textContent = '🔄 Güncelle';
-            btn.title = 'Evren verisini (universe.xml) sunucudan zorla yenile';
+            setCooldownUI(scanBtn, 0);
+            setCooldownUI(findBtn, 0);
+        }
+    }
+
+    async function forceRefreshAllUniverseData() {
+        const lastRefresh = parseInt(localStorage.getItem(KEYS.UNIVERSE_LAST_REFRESH) || '0', 10);
+        if (Date.now() - lastRefresh < 60000) {
+            updateRefreshButtonCooldown();
+            return {
+                apiData: apiCacheInMemory,
+                universeData: universeCacheInMemory
+            };
+        }
+
+        localStorage.setItem(KEYS.UNIVERSE_LAST_REFRESH, Date.now().toString());
+        updateRefreshButtonCooldown();
+
+        const scanBtn = document.getElementById('ls-scan-btn');
+        const findBtn = document.getElementById('ls-find-btn');
+        const scanStatusEl = document.getElementById('ls-scan-status');
+        const scanProgEl = document.getElementById('ls-scan-progress');
+        const scanBarEl = document.getElementById('ls-scan-bar');
+        const findCacheInfoEl = document.getElementById('ls-find-cache-info');
+        const findProgEl = document.getElementById('ls-find-progress');
+        const findBarEl = document.getElementById('ls-find-bar');
+
+        if (scanBtn) scanBtn.disabled = true;
+        if (findBtn) findBtn.disabled = true;
+
+        const loadingMsg = (currentLang === 'tr' ? 'Sunucudan taze evren ve oyuncu verisi çekiliyor...' : 'Fetching fresh universe and player data...');
+        if (scanStatusEl) {
+            scanStatusEl.setAttribute('data-busy', '1');
+            scanStatusEl.textContent = loadingMsg;
+        }
+        if (findCacheInfoEl) {
+            findCacheInfoEl.setAttribute('data-busy', '1');
+            findCacheInfoEl.textContent = loadingMsg;
+        }
+        if (scanProgEl) scanProgEl.style.display = 'block';
+        if (scanBarEl) scanBarEl.style.width = '20%';
+        if (findProgEl) findProgEl.style.display = 'block';
+        if (findBarEl) findBarEl.style.width = '20%';
+
+        try {
+            const [pResp, uResp] = await Promise.all([
+                fetch('/api/players.xml'),
+                fetch('/api/universe.xml')
+            ]);
+            if (!pResp.ok || !uResp.ok) throw new Error('API erişim hatası (' + pResp.status + ' / ' + uResp.status + ')');
+
+            if (scanBarEl) scanBarEl.style.width = '60%';
+            if (findBarEl) findBarEl.style.width = '60%';
+
+            const [pText, uText] = await Promise.all([pResp.text(), uResp.text()]);
+
+            const pDoc = new DOMParser().parseFromString(pText, 'text/xml');
+            const uDoc = new DOMParser().parseFromString(uText, 'text/xml');
+
+            const players = {};
+            const pEls = pDoc.getElementsByTagName('player');
+            for (let i = 0; i < pEls.length; i++) {
+                players[pEls[i].getAttribute('id')] = {
+                    name: pEls[i].getAttribute('name') || '',
+                    status: pEls[i].getAttribute('status') || ''
+                };
+            }
+
+            const planets = [];
+            const coords = [];
+            const plEls = uDoc.getElementsByTagName('planet');
+            for (let i = 0; i < plEls.length; i++) {
+                const c = plEls[i].getAttribute('coords') || '';
+                if (c) coords.push(c);
+                planets.push({
+                    player: plEls[i].getAttribute('player'),
+                    name: plEls[i].getAttribute('name') || '',
+                    coords: c
+                });
+            }
+
+            const now = Date.now();
+            const apiData = { ts: now, players, planets };
+            const universeData = { ts: now, coords };
+
+            apiCacheInMemory = apiData;
+            universeCacheInMemory = universeData;
+
+            try {
+                sessionStorage.setItem(KEYS.API, JSON.stringify(apiData));
+                sessionStorage.setItem(KEYS.UNIVERSE_CACHE, JSON.stringify(universeData));
+            } catch (e) {
+                try {
+                    localStorage.setItem(KEYS.API, JSON.stringify(apiData));
+                    localStorage.setItem(KEYS.UNIVERSE_CACHE, JSON.stringify(universeData));
+                } catch (e2) {}
+            }
+
+            if (scanBarEl) scanBarEl.style.width = '100%';
+            if (findBarEl) findBarEl.style.width = '100%';
+
+            const uLbl = (currentLang === 'tr' ? 'Güncellendi!' : 'Updated!');
+            const pLbl = (currentLang === 'tr' ? 'gezegen' : 'planets');
+            const plyrLbl = (currentLang === 'tr' ? 'oyuncu kaydedildi.' : 'players saved.');
+
+            if (scanStatusEl) {
+                scanStatusEl.removeAttribute('data-busy');
+                scanStatusEl.innerHTML = '<span style="color:#2ecc71">✓ ' + uLbl + ' ' + coords.length.toLocaleString() + ' ' + pLbl + '</span>';
+            }
+            if (findCacheInfoEl) {
+                findCacheInfoEl.removeAttribute('data-busy');
+                findCacheInfoEl.innerHTML = '<span style="color:#2ecc71">✓ ' + uLbl + ' ' + coords.length.toLocaleString() + ' ' + pLbl + ', ' + Object.keys(players).length.toLocaleString() + ' ' + plyrLbl + '</span>';
+            }
+
+            LS_LOGGER.info('UNIVERSE', `Evren ve oyuncu verisi senkronize edildi: ${coords.length} gezegen, ${Object.keys(players).length} oyuncu.`);
+
+            setTimeout(() => {
+                updateScanStatusInfo();
+                updateFinderStatusInfo();
+                if (scanProgEl) scanProgEl.style.display = 'none';
+                if (findProgEl) findProgEl.style.display = 'none';
+            }, 2500);
+
+            return { apiData, universeData };
+        } catch (err) {
+            console.error(LS, err);
+            const errMsg = '<span style="color:#e74c3c">Hata: ' + escapeHtml(err.message) + '</span>';
+            if (scanStatusEl) {
+                scanStatusEl.removeAttribute('data-busy');
+                scanStatusEl.innerHTML = errMsg;
+            }
+            if (findCacheInfoEl) {
+                findCacheInfoEl.removeAttribute('data-busy');
+                findCacheInfoEl.innerHTML = errMsg;
+            }
+            if (scanProgEl) scanProgEl.style.display = 'none';
+            if (findProgEl) findProgEl.style.display = 'none';
+            throw err;
+        } finally {
+            if (scanBtn) scanBtn.disabled = false;
+            if (findBtn) findBtn.disabled = false;
         }
     }
 
@@ -2856,75 +3619,8 @@
                 return cached;
             }
         }
-
-        const resp = await fetch('/api/universe.xml');
-        if (!resp.ok) throw new Error('API yanıt vermedi (' + resp.status + ')');
-        const xml = await resp.text();
-
-        const doc = new DOMParser().parseFromString(xml, 'text/xml');
-        const planets = doc.getElementsByTagName('planet');
-        const coords = [];
-        for (let i = 0; i < planets.length; i++) {
-            const c = planets[i].getAttribute('coords');
-            if (c) coords.push(c);
-        }
-
-        const data = { ts: Date.now(), coords };
-        universeCacheInMemory = data;
-        try {
-            sessionStorage.setItem(KEYS.UNIVERSE_CACHE, JSON.stringify(data));
-        } catch (e) {
-            try { localStorage.setItem(KEYS.UNIVERSE_CACHE, JSON.stringify(data)); } catch (e2) {}
-        }
-        return data;
-    }
-
-    async function forceRefreshUniverse() {
-        const btn = document.getElementById('ls-scan-refresh-btn');
-        const scanBtn = document.getElementById('ls-scan-btn');
-        const statusEl = document.getElementById('ls-scan-status');
-        const progEl = document.getElementById('ls-scan-progress');
-        const barEl = document.getElementById('ls-scan-bar');
-
-        const lastRefresh = parseInt(localStorage.getItem(KEYS.UNIVERSE_LAST_REFRESH) || '0', 10);
-        if (Date.now() - lastRefresh < 60000) {
-            updateRefreshButtonCooldown();
-            return;
-        }
-
-        localStorage.setItem(KEYS.UNIVERSE_LAST_REFRESH, Date.now().toString());
-        updateRefreshButtonCooldown();
-
-        if (scanBtn) scanBtn.disabled = true;
-        if (statusEl) {
-            statusEl.setAttribute('data-busy', '1');
-            statusEl.textContent = 'Sunucudan taze evren verisi çekiliyor...';
-        }
-        if (progEl) progEl.style.display = 'block';
-        if (barEl) barEl.style.width = '30%';
-
-        try {
-            const data = await fetchUniverseData(true);
-            if (barEl) barEl.style.width = '100%';
-            if (statusEl) {
-                statusEl.removeAttribute('data-busy');
-                statusEl.innerHTML = '<span style="color:#2ecc71">✓ Güncellendi! ' + data.coords.length + ' gezegen kaydedildi.</span>';
-            }
-            LS_LOGGER.info('SCANNER', `Evren verisi zorla güncellendi: ${data.coords.length} gezegen kaydedildi.`);
-            setTimeout(() => {
-                updateScanStatusInfo();
-                if (progEl) progEl.style.display = 'none';
-            }, 2500);
-        } catch (err) {
-            console.error(LS, err);
-            if (statusEl) {
-                statusEl.removeAttribute('data-busy');
-                statusEl.innerHTML = '<span style="color:#e74c3c">Hata: ' + escapeHtml(err.message) + '</span>';
-            }
-            if (progEl) progEl.style.display = 'none';
-        } finally {
-            if (scanBtn) scanBtn.disabled = false;
-        }
+        const res = await forceRefreshAllUniverseData();
+        return res.universeData;
     }
 
     async function startScan() {
@@ -2944,25 +3640,25 @@
         const minEmpty = parseInt(document.getElementById('ls-min').value, 10) || 1;
 
         const targetSlots = slotsStr.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n) && n >= 1 && n <= 15);
-        if (targetSlots.length === 0) { statusEl.textContent = 'Geçerli slot girilmedi!'; return; }
+        if (targetSlots.length === 0) { statusEl.textContent = (currentLang === 'tr' ? 'Geçerli slot girilmedi!' : 'No valid slots entered!'); return; }
 
         scanSettings = { gStart, gEnd, sStart, sEnd, slots: slotsStr, minEmpty };
         localStorage.setItem(KEYS.SCAN, JSON.stringify(scanSettings));
         LS_LOGGER.action('SCANNER', `Galaksi taraması başlatıldı: G[${gStart}-${gEnd}], S[${sStart}-${sEnd}], Slotlar: ${slotsStr}, Min Boş: ${minEmpty}`);
 
         btn.disabled = true;
-        btn.textContent = '⏳ Taranıyor...';
+        btn.textContent = t('scan_scanning', '⏳ Taranıyor...');
         if (refreshBtn) refreshBtn.disabled = true;
         if (statusEl) statusEl.setAttribute('data-busy', '1');
         progEl.style.display = 'block';
         barEl.style.width = '0%';
         resBox.style.display = 'none';
         resList.innerHTML = '';
-        statusEl.textContent = 'Evren verisi hazırlanıyor...';
+        statusEl.textContent = (currentLang === 'tr' ? 'Evren verisi hazırlanıyor...' : 'Preparing universe data...');
 
         try {
             const data = await fetchUniverseData(false);
-            statusEl.textContent = 'Boş slotlar hesaplanıyor...';
+            statusEl.textContent = (currentLang === 'tr' ? 'Boş slotlar hesaplanıyor...' : 'Calculating empty slots...');
             barEl.style.width = '60%';
 
             const occupied = new Set(data.coords);
@@ -2979,7 +3675,7 @@
 
             barEl.style.width = '100%';
             const ageStr = formatTimeAgo(data.ts);
-            statusEl.innerHTML = results.length + ' sonuç bulundu. <span style="color:#607d8b">(' + ageStr + ')</span>';
+            statusEl.innerHTML = results.length + ' ' + t('scan_found', 'sonuç bulundu.') + ' <span style="color:#607d8b">(' + ageStr + ')</span>';
 
             if (results.length > 0) {
                 resBox.style.display = 'flex';
@@ -2999,7 +3695,7 @@
                     navBtn.className = 'ls-btn-sm';
                     navBtn.style.flexShrink = '0';
                     navBtn.textContent = '🚀';
-                    navBtn.title = 'Galaksiye Git';
+                    navBtn.title = (currentLang === 'tr' ? 'Galaksiye Git' : 'Go to Galaxy');
                     navBtn.addEventListener('click', () => navigateToGalaxy(r.g, r.s));
                     div.appendChild(navBtn);
                     resList.appendChild(div);
@@ -3011,7 +3707,7 @@
         } finally {
             if (statusEl) statusEl.removeAttribute('data-busy');
             btn.disabled = false;
-            btn.textContent = '🔍 Taramayı Başlat';
+            btn.textContent = t('scan_start_btn', '🔍 Taramayı Başlat');
             updateRefreshButtonCooldown();
             setTimeout(() => { progEl.style.display = 'none'; }, 2000);
         }
@@ -3021,15 +3717,15 @@
 
     function copyScanResults() {
         if (!lastScanResults) return;
-        const lines = ['═══ Galaxy Scanner Sonuçları ═══', ''];
+        const lines = ['═══ ' + t('tab_scanner') + ' ' + (currentLang === 'tr' ? 'Sonuçları' : 'Results') + ' ═══', ''];
         lastScanResults.forEach(r => {
-            lines.push('[' + r.g + ':' + r.s + '] → Boş: ' + r.slots.join(', '));
+            lines.push('[' + r.g + ':' + r.s + '] → ' + (currentLang === 'tr' ? 'Boş: ' : 'Empty: ') + r.slots.join(', '));
         });
         lines.push('');
-        lines.push('Toplam: ' + lastScanResults.length + ' sistem');
+        lines.push((currentLang === 'tr' ? 'Toplam: ' : 'Total: ') + lastScanResults.length + ' ' + (currentLang === 'tr' ? 'sistem' : 'systems'));
         copyTextSafe(lines.join('\n'), () => {
             const btn = document.getElementById('ls-scan-copy');
-            if (btn) { btn.textContent = '✓ Kopyalandı!'; setTimeout(() => { btn.textContent = '📋 Panoya Kopyala'; }, 2000); }
+            if (btn) { btn.textContent = t('cart_copied'); setTimeout(() => { btn.textContent = t('scan_copy_coords'); }, 2000); }
         });
     }
 
@@ -3054,42 +3750,8 @@
             } catch (e) { /* ignore */ }
         }
 
-        const [pResp, uResp] = await Promise.all([
-            fetch('/api/players.xml'),
-            fetch('/api/universe.xml')
-        ]);
-        if (!pResp.ok || !uResp.ok) throw new Error('API erişim hatası');
-
-        const pDoc = new DOMParser().parseFromString(await pResp.text(), 'text/xml');
-        const uDoc = new DOMParser().parseFromString(await uResp.text(), 'text/xml');
-
-        const players = {};
-        const pEls = pDoc.getElementsByTagName('player');
-        for (let i = 0; i < pEls.length; i++) {
-            players[pEls[i].getAttribute('id')] = {
-                name: pEls[i].getAttribute('name') || '',
-                status: pEls[i].getAttribute('status') || ''
-            };
-        }
-
-        const planets = [];
-        const plEls = uDoc.getElementsByTagName('planet');
-        for (let i = 0; i < plEls.length; i++) {
-            planets.push({
-                player: plEls[i].getAttribute('player'),
-                name: plEls[i].getAttribute('name') || '',
-                coords: plEls[i].getAttribute('coords') || ''
-            });
-        }
-
-        const data = { ts: Date.now(), players, planets };
-        apiCacheInMemory = data;
-        try {
-            sessionStorage.setItem(KEYS.API, JSON.stringify(data));
-        } catch (e) {
-            try { localStorage.setItem(KEYS.API, JSON.stringify(data)); } catch (e2) { /* storage full, in-memory cache active */ }
-        }
-        return data;
+        const res = await forceRefreshAllUniverseData();
+        return res.apiData;
     }
 
     async function startFinder() {
@@ -3099,10 +3761,10 @@
         const resultsEl = document.getElementById('ls-find-results');
         const btn = document.getElementById('ls-find-btn');
 
-        if (query.length < 2) { statusEl.textContent = 'En az 2 karakter giriniz.'; return; }
+        if (query.length < 2) { statusEl.textContent = t('find_min_chars'); return; }
 
         btn.disabled = true;
-        statusEl.textContent = 'Aranıyor...';
+        statusEl.textContent = t('find_searching');
         resultsEl.innerHTML = '';
         LS_LOGGER.action('FINDER', `Arama yapılıyor: "${query}" (Tip: ${type})`);
 
@@ -3119,7 +3781,7 @@
                         if (count > 50) break;
                         const pPlanets = data.planets.filter(pl => pl.player === pid);
                         const safePName = escapeHtml(p.name);
-                        const sts = p.status ? ' <span style="color:#e74c3c">(' + escapeHtml(p.status) + ')</span>' : ' <span style="color:#2ecc71">(aktif)</span>';
+                        const sts = p.status ? ' <span style="color:#e74c3c">(' + escapeHtml(p.status) + ')</span>' : ' <span style="color:#2ecc71">(' + t('find_active') + ')</span>';
 
                         html += '<div class="ls-finder-card">';
                         html += '<div style="font-weight:bold;color:#fff;margin-bottom:4px">' + safePName + sts + '</div>';
@@ -3129,7 +3791,7 @@
                             const safeCoords = escapeHtml(pl.coords);
                             html += '<div class="ls-finder-planet">' +
                                 '<span>' + safePlName + ' <span style="color:#888">[' + safeCoords + ']</span></span>' +
-                                '<button class="ls-btn-sm ls-nav-btn" data-g="' + parseInt(parts[0], 10) + '" data-s="' + parseInt(parts[1], 10) + '" title="Galaksiye Git">🚀</button>' +
+                                '<button class="ls-btn-sm ls-nav-btn" data-g="' + parseInt(parts[0], 10) + '" data-s="' + parseInt(parts[1], 10) + '" title="' + (currentLang === 'tr' ? 'Galaksiye Git' : 'Go to Galaxy') + '">🚀</button>' +
                             '</div>';
                         });
                         html += '</div>';
@@ -3149,15 +3811,15 @@
                         html += '<div class="ls-item" style="border-left:3px solid #2ecc71">' +
                             '<div style="flex:1">' +
                                 '<strong style="color:#2ecc71">' + safePlName + '</strong> <span style="color:#888">[' + safeCoords + ']</span><br>' +
-                                '<span style="font-size:10px;color:#aaa">Sahip: ' + safeOwner + '</span>' +
+                                '<span style="font-size:10px;color:#aaa">' + t('find_owner') + ': ' + safeOwner + '</span>' +
                             '</div>' +
-                            '<button class="ls-btn-sm ls-nav-btn" data-g="' + parseInt(parts[0], 10) + '" data-s="' + parseInt(parts[1], 10) + '" title="Galaksiye Git">🚀</button>' +
+                            '<button class="ls-btn-sm ls-nav-btn" data-g="' + parseInt(parts[0], 10) + '" data-s="' + parseInt(parts[1], 10) + '" title="' + (currentLang === 'tr' ? 'Galaksiye Git' : 'Go to Galaxy') + '">🚀</button>' +
                         '</div>';
                     }
                 }
             }
 
-            statusEl.textContent = count === 0 ? 'Sonuç bulunamadı.' : count + ' sonuç bulundu.';
+            statusEl.textContent = count === 0 ? t('find_no_results') : count + ' ' + t('scan_found');
             resultsEl.innerHTML = html;
 
             resultsEl.querySelectorAll('.ls-nav-btn').forEach(b => {
@@ -3202,56 +3864,64 @@
     // THREAT ALARM & AUDIO SYNTHESIS
     // ============================================================
     let audioCtx = null;
-    function getAudioContext() {
-        if (!audioCtx) {
-            try {
-                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-                if (AudioContextClass) {
-                    audioCtx = new AudioContextClass();
-                }
-            } catch (e) {
+
+    async function ensureAudioContext() {
+        try {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContextClass) {
+                console.warn('[LS] Web Audio API bu tarayıcıda desteklenmiyor.');
                 return null;
             }
+            if (!audioCtx || audioCtx.state === 'closed') {
+                audioCtx = new AudioContextClass();
+            }
+            if (audioCtx.state === 'suspended') {
+                await audioCtx.resume();
+            }
+            return audioCtx;
+        } catch (e) {
+            console.warn('[LS] AudioContext resume beklemede (kullanıcı etkileşimi gerekebilir):', e);
+            return audioCtx;
         }
-        if (audioCtx && audioCtx.state === 'suspended') {
-            try {
-                const res = audioCtx.resume();
-                if (res && typeof res.catch === 'function') {
-                    res.catch(() => {});
-                }
-            } catch (e) {}
-        }
-        return audioCtx;
     }
 
-    function unlockAudio() {
-        if (!audioCtx) {
-            try {
-                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-                if (AudioContextClass) {
-                    audioCtx = new AudioContextClass();
-                }
-            } catch (e) {}
+    function getAudioContext() {
+        try {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContextClass) return null;
+            if (!audioCtx || audioCtx.state === 'closed') {
+                audioCtx = new AudioContextClass();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume().catch(() => {});
+            }
+            return audioCtx;
+        } catch (e) {
+            return null;
         }
-        if (audioCtx && audioCtx.state === 'suspended') {
-            try {
-                const res = audioCtx.resume();
-                if (res && typeof res.catch === 'function') {
-                    res.catch(() => {});
-                }
-            } catch (e) {}
+    }
+
+    async function unlockAudio() {
+        try {
+            return await ensureAudioContext();
+        } catch (e) {
+            return null;
         }
     }
     ['click', 'keydown', 'touchstart'].forEach(evt => {
         window.addEventListener(evt, unlockAudio, { passive: true });
     });
 
-    function playAttackAlertSound(soundType) {
+    async function playAttackAlertSound(soundType) {
         try {
-            const ctx = getAudioContext();
-            if (!ctx) return;
-            const volume = Math.max(0.01, Math.min(1.0, (alarmSettings.volume || 70) / 100));
-            const now = ctx.currentTime;
+            const ctx = await ensureAudioContext();
+            if (!ctx) {
+                console.warn('[LS] Ses çalınamadı: AudioContext bulunamadı.');
+                return;
+            }
+            const volume = Math.max(0.01, Math.min(1.0, (alarmSettings.volume ?? 70) / 100));
+            // Donanım zaman sapmasını ve JS gecikmesini önlemek için 50ms güvenli başlangıç payı
+            const now = (ctx.currentTime || 0) + 0.05;
             const type = soundType || alarmSettings.attackSound || 'klaxon';
 
             if (type === 'siren') {
@@ -3300,7 +3970,7 @@
                         osc.frequency.setValueAtTime(p.freq, p.t);
 
                         gain.gain.setValueAtTime(0.001, p.t);
-                        gain.gain.linearRampToValueAtTime(volume * 0.85, p.t + 0.015);
+                        gain.gain.linearRampToValueAtTime(volume * 0.85, p.t + 0.02);
                         gain.gain.exponentialRampToValueAtTime(0.001, p.t + p.dur);
 
                         osc.connect(gain);
@@ -3341,18 +4011,23 @@
                 });
             }
         } catch (e) {
-            if (typeof LS_LOGGER !== 'undefined' && LS_LOGGER.debug) {
-                LS_LOGGER.debug('AUDIO', 'Saldırı sesi çalınamadı (kullanıcı etkileşimi bekleniyor): ' + (e.message || e));
+            console.error('[LS] Saldırı alarm sesi çalınamadı:', e);
+            if (typeof LS_LOGGER !== 'undefined') {
+                LS_LOGGER.log('WARN', 'AUDIO', 'Saldırı sesi çalınamadı: ' + (e.message || e));
             }
         }
     }
 
-    function playEspionageAlertSound(soundType) {
+    async function playEspionageAlertSound(soundType) {
         try {
-            const ctx = getAudioContext();
-            if (!ctx) return;
-            const volume = Math.max(0.01, Math.min(1.0, (alarmSettings.volume || 70) / 100));
-            const now = ctx.currentTime;
+            const ctx = await ensureAudioContext();
+            if (!ctx) {
+                console.warn('[LS] Ses çalınamadı: AudioContext bulunamadı.');
+                return;
+            }
+            const volume = Math.max(0.01, Math.min(1.0, (alarmSettings.volume ?? 70) / 100));
+            // Donanım zaman sapmasını ve JS gecikmesini önlemek için 50ms güvenli başlangıç payı
+            const now = (ctx.currentTime || 0) + 0.05;
             const type = soundType || alarmSettings.espionageSound || 'sonar_deep';
 
             if (type === 'sonar_hunter' || type === 'hunter') {
@@ -3367,7 +4042,7 @@
                     osc1.frequency.exponentialRampToValueAtTime(1630, pingTime + 1.0);
 
                     gain1.gain.setValueAtTime(0.0001, pingTime);
-                    gain1.gain.linearRampToValueAtTime(volume * 0.75, pingTime + 0.007);
+                    gain1.gain.linearRampToValueAtTime(volume * 0.75, pingTime + 0.015);
                     gain1.gain.exponentialRampToValueAtTime(volume * 0.20, pingTime + 0.25);
                     gain1.gain.exponentialRampToValueAtTime(0.0001, pingTime + 1.05);
 
@@ -3378,7 +4053,7 @@
                     osc2.frequency.exponentialRampToValueAtTime(3100, pingTime + 0.06);
 
                     gain2.gain.setValueAtTime(0.0001, pingTime);
-                    gain2.gain.linearRampToValueAtTime(volume * 0.30, pingTime + 0.004);
+                    gain2.gain.linearRampToValueAtTime(volume * 0.30, pingTime + 0.015);
                     gain2.gain.exponentialRampToValueAtTime(0.0001, pingTime + 0.06);
 
                     osc1.connect(gain1);
@@ -3403,7 +4078,7 @@
                     osc1.frequency.exponentialRampToValueAtTime(865, cycleStart + 0.8);
 
                     gain1.gain.setValueAtTime(0.0001, cycleStart);
-                    gain1.gain.linearRampToValueAtTime(volume * 0.75, cycleStart + 0.008);
+                    gain1.gain.linearRampToValueAtTime(volume * 0.75, cycleStart + 0.015);
                     gain1.gain.exponentialRampToValueAtTime(0.0001, cycleStart + 0.8);
 
                     const osc2 = ctx.createOscillator();
@@ -3413,7 +4088,7 @@
                     osc2.frequency.exponentialRampToValueAtTime(690, cycleStart + 1.05);
 
                     gain2.gain.setValueAtTime(0.0001, cycleStart + 0.32);
-                    gain2.gain.linearRampToValueAtTime(volume * 0.40, cycleStart + 0.33);
+                    gain2.gain.linearRampToValueAtTime(volume * 0.40, cycleStart + 0.34);
                     gain2.gain.exponentialRampToValueAtTime(0.0001, cycleStart + 1.05);
 
                     osc1.connect(gain1);
@@ -3438,7 +4113,7 @@
                     osc1.frequency.exponentialRampToValueAtTime(1005, pingTime + 1.2);
 
                     gain1.gain.setValueAtTime(0.0001, pingTime);
-                    gain1.gain.linearRampToValueAtTime(volume * 0.8, pingTime + 0.008);
+                    gain1.gain.linearRampToValueAtTime(volume * 0.8, pingTime + 0.015);
                     gain1.gain.exponentialRampToValueAtTime(volume * 0.25, pingTime + 0.30);
                     gain1.gain.exponentialRampToValueAtTime(0.0001, pingTime + 1.2);
 
@@ -3449,7 +4124,7 @@
                     osc2.frequency.exponentialRampToValueAtTime(1950, pingTime + 0.08);
 
                     gain2.gain.setValueAtTime(0.0001, pingTime);
-                    gain2.gain.linearRampToValueAtTime(volume * 0.35, pingTime + 0.005);
+                    gain2.gain.linearRampToValueAtTime(volume * 0.35, pingTime + 0.015);
                     gain2.gain.exponentialRampToValueAtTime(0.0001, pingTime + 0.08);
 
                     osc1.connect(gain1);
@@ -3464,8 +4139,9 @@
                 });
             }
         } catch (e) {
-            if (typeof LS_LOGGER !== 'undefined' && LS_LOGGER.debug) {
-                LS_LOGGER.debug('AUDIO', 'Sonar sesi çalınamadı (kullanıcı etkileşimi bekleniyor): ' + (e.message || e));
+            console.error('[LS] Sonar / Harabe alarm sesi çalınamadı:', e);
+            if (typeof LS_LOGGER !== 'undefined') {
+                LS_LOGGER.log('WARN', 'AUDIO', 'Sonar sesi çalınamadı: ' + (e.message || e));
             }
         }
     }
@@ -3901,27 +4577,27 @@
             dot.style.background = '#2ecc71';
             dot.style.boxShadow = '0 0 6px #2ecc71';
             text.style.color = '#2ecc71';
-            text.textContent = 'Harabe Avcısı Aktif · Galaksi İzleniyor';
+            text.textContent = t('deb_status_active');
         } else {
             banner.style.background = '#121820';
             banner.style.borderColor = '#233446';
             dot.style.background = '#7f8c8d';
             dot.style.boxShadow = 'none';
             text.style.color = '#7f8c8d';
-            text.textContent = 'Harabe Avcısı Pasif (İzleme Kapalı)';
+            text.textContent = t('deb_status_inactive');
         }
     }
 
     function renderDebrisList() {
         const listEl = document.getElementById('ls-debris-list');
         const countTitle = document.getElementById('ls-debris-count-title');
-        if (countTitle) countTitle.textContent = `🛰️ Bulunan Harabeler (${debrisList.length})`;
+        if (countTitle) countTitle.textContent = `${t('deb_found_title')} (${debrisList.length})`;
         if (!listEl) return;
 
         listEl.innerHTML = '';
         if (debrisList.length === 0) {
             listEl.innerHTML = '<div style="text-align:center;color:#8899aa;font-size:11px;padding:16px 8px;background:rgba(255,255,255,0.02);border-radius:4px">' +
-                '🪐 Henüz harabe tespit edilmedi.<br><span style="font-size:10px;color:#5c7080;margin-top:4px;display:inline-block">Galakside gezdikçe belirlediğiniz eşiğin üzerindeki harabeler otomatik listelenir.</span>' +
+                t('deb_no_debris') +
             '</div>';
             return;
         }
@@ -3947,7 +4623,7 @@
                     '</div>' +
                     '<div style="display:flex;align-items:center;gap:4px">' +
                         '<button class="ls-btn-sm ls-debris-nav-btn" data-g="' + item.g + '" data-s="' + item.s + '" style="padding:2px 6px;cursor:pointer;display:inline-flex;align-items:center;gap:2px" title="Galakside [' + item.g + ':' + item.s + '] sistemine git">' +
-                            '🚀 Git' +
+                            '🚀 ' + t('deb_jump') +
                         '</button>' +
                         '<button class="ls-x ls-debris-del" data-idx="' + index + '" title="Bu harabeyi listeden kaldır">✖</button>' +
                     '</div>' +
@@ -4510,8 +5186,8 @@
                     `<span>🌕 ${escapeHtml(mTitle)}</span><span class="crd">${p.coords}</span></div>`;
             }
         });
-        ddHtml += `<div class="ls-coll-dd-item ls-coll-dd-manual" data-manual="1" data-type="1"><span>🪐 Manuel Gezegen...</span><span></span></div>`;
-        ddHtml += `<div class="ls-coll-dd-item ls-coll-dd-manual" data-manual="1" data-type="3"><span>🌕 Manuel Ay...</span><span></span></div>`;
+        ddHtml += `<div class="ls-coll-dd-item ls-coll-dd-manual" data-manual="1" data-type="1"><span>🪐 ${t('coll_manual_planet', 'Manuel Gezegen...')}</span><span></span></div>`;
+        ddHtml += `<div class="ls-coll-dd-item ls-coll-dd-manual" data-manual="1" data-type="3"><span>🌕 ${t('coll_manual_moon', 'Manuel Ay...')}</span><span></span></div>`;
         ddEl.innerHTML = ddHtml;
 
         // 3. Gemi & Kaynak Checkbox'ları Eşitle
@@ -4549,8 +5225,8 @@
                             `<div class="ls-coll-name"><b>${escapeHtml(p.name)}</b><span class="crd">${p.coords}</span></div>` +
                             `<div class="ls-coll-res"><span class="ls-coll-m">${formatShort(pRes.metal)}</span><span class="ls-coll-k">${formatShort(pRes.crystal)}</span><span class="ls-coll-d">${formatShort(pRes.deuterium)}</span></div>` +
                         `</div>` +
-                        `<span class="note">📥 Toplama noktası</span>` +
-                        `<button class="ls-coll-jump" data-cp="${p.id}" title="Gezegene geç">🚀</button>` +
+                        `<span class="note">📥 ${t('coll_target_point', 'Toplama noktası')}</span>` +
+                        `<button class="ls-coll-jump" data-cp="${p.id}" title="${t('coll_jump_hint', 'Gezegene geç')}">🚀</button>` +
                     `</div>`;
                 } else {
                     listHtml += `<div class="ls-coll-prow">` +
@@ -4559,8 +5235,8 @@
                             `<div class="ls-coll-name"><b>${escapeHtml(p.name)}</b><span class="crd">${p.coords}</span></div>` +
                             `<div class="ls-coll-res"><span class="ls-coll-m">${formatShort(pRes.metal)}</span><span class="ls-coll-k">${formatShort(pRes.crystal)}</span><span class="ls-coll-d">${formatShort(pRes.deuterium)}</span></div>` +
                         `</div>` +
-                        `<input class="ls-inp ls-coll-rez" data-id="${p.id}" value="${fmt(pReserve)}" title="Deu Rezerv (Korumalı miktar)">` +
-                        `<button class="ls-coll-jump" data-cp="${p.id}" title="Gezegene geç">🚀</button>` +
+                        `<input class="ls-inp ls-coll-rez" data-id="${p.id}" value="${fmt(pReserve)}" title="${t('coll_reserve_hint', 'Deu Rezerv (Korumalı miktar)')}">` +
+                        `<button class="ls-coll-jump" data-cp="${p.id}" title="${t('coll_jump_hint', 'Gezegene geç')}">🚀</button>` +
                     `</div>`;
                 }
 
@@ -4578,8 +5254,8 @@
                                 `<div class="ls-coll-name"><b>🌕 ${escapeHtml(mTitle)}</b></div>` +
                                 `<div class="ls-coll-res"><span class="ls-coll-m">${formatShort(mRes.metal)}</span><span class="ls-coll-k">${formatShort(mRes.crystal)}</span><span class="ls-coll-d">${formatShort(mRes.deuterium)}</span></div>` +
                             `</div>` +
-                            `<span class="note">📥 Toplama noktası</span>` +
-                            `<button class="ls-coll-jump" data-cp="${p.moon.id}" title="Aya geç">🚀</button>` +
+                            `<span class="note">📥 ${t('coll_target_point', 'Toplama noktası')}</span>` +
+                            `<button class="ls-coll-jump" data-cp="${p.moon.id}" title="${t('coll_jump_moon_hint', 'Aya geç')}">🚀</button>` +
                         `</div>`;
                     } else {
                         listHtml += `<div class="ls-coll-mrow">` +
@@ -4588,8 +5264,8 @@
                                 `<div class="ls-coll-name"><b>🌕 ${escapeHtml(mTitle)}</b></div>` +
                                 `<div class="ls-coll-res"><span class="ls-coll-m">${formatShort(mRes.metal)}</span><span class="ls-coll-k">${formatShort(mRes.crystal)}</span><span class="ls-coll-d">${formatShort(mRes.deuterium)}</span></div>` +
                             `</div>` +
-                            `<input class="ls-inp ls-coll-rez" data-id="${p.moon.id}" value="${fmt(mReserve)}" title="Deu Rezerv (Korumalı miktar)">` +
-                            `<button class="ls-coll-jump" data-cp="${p.moon.id}" title="Aya geç">🚀</button>` +
+                            `<input class="ls-inp ls-coll-rez" data-id="${p.moon.id}" value="${fmt(mReserve)}" title="${t('coll_reserve_hint', 'Deu Rezerv (Korumalı miktar)')}">` +
+                            `<button class="ls-coll-jump" data-cp="${p.moon.id}" title="${t('coll_jump_moon_hint', 'Aya geç')}">🚀</button>` +
                         `</div>`;
                     }
                 }
@@ -4636,7 +5312,7 @@
         });
 
         summaryEl.innerHTML =
-            `<span style="color:#8899aa">${checkedPCount} gezegen · ${checkedMCount} ay</span>` +
+            `<span style="color:#8899aa">${checkedPCount} ${t('coll_planets_count', 'gezegen')} · ${checkedMCount} ${t('coll_moons_count', 'ay')}</span>` +
             `<span style="font-family:monospace"><span class="ls-coll-m">${formatShort(totalM)}</span> · <span class="ls-coll-k">${formatShort(totalC)}</span> · <span class="ls-coll-d">${formatShort(totalD)}</span></span>`;
     }
 
@@ -4856,19 +5532,19 @@
 
     function startCollectorSession() {
         if (!collectorSettings.targetCoord || !/^\d+:\d+:\d+$/.test(collectorSettings.targetCoord)) {
-            alert('Lütfen geçerli bir toplama noktası (hedef) belirleyin!');
+            alert(currentLang === 'tr' ? 'Lütfen geçerli bir toplama noktası (hedef) belirleyin!' : 'Please specify a valid collection target coordinate!');
             return;
         }
 
         const ships = collectorSettings.selectedShips;
         if (!ships.bn && !ships.kn && !ships.rehber) {
-            alert('Lütfen taşımada kullanılacak en az bir gemi türü (BN, KN veya Rehber) seçin!');
+            alert(currentLang === 'tr' ? 'Lütfen taşımada kullanılacak en az bir gemi türü (BN, KN veya Rehber) seçin!' : 'Please select at least one cargo ship type (LC, SC or Pathfinder)!');
             return;
         }
 
         const res = collectorSettings.selectedRes;
         if (!res.deu && !res.cri && !res.met) {
-            alert('Lütfen taşınacak en az bir kaynak (Deuterium, Kristal veya Metal) seçin!');
+            alert(currentLang === 'tr' ? 'Lütfen taşınacak en az bir kaynak (Deuterium, Kristal veya Metal) seçin!' : 'Please select at least one resource to collect (Deuterium, Crystal or Metal)!');
             return;
         }
 
@@ -4883,13 +5559,13 @@
             if (p.moon) {
                 const isTargetMoon = (collectorSettings.targetCoord === p.coords && collectorSettings.targetType === 3);
                 if (!isTargetMoon && collectorSettings.selectedItems[p.moon.id] === true) {
-                    queue.push({ id: p.moon.id, name: p.moon.name || `${p.name} ( Ay )`, coords: p.coords, isMoon: true });
+                    queue.push({ id: p.moon.id, name: p.moon.name || `${p.name} ( ${t('coll_moon_name')} )`, coords: p.coords, isMoon: true });
                 }
             }
         });
 
         if (queue.length === 0) {
-            alert('Toplama yapılacak en az bir gezegen veya ay seçmelisiniz!');
+            alert(currentLang === 'tr' ? 'Toplama yapılacak en az bir gezegen veya ay seçmelisiniz!' : 'Please select at least one planet or moon to collect from!');
             return;
         }
 
@@ -5099,7 +5775,7 @@
                 btn.style.background = '#27ae60';
                 btn.style.color = '#fff';
                 btn.style.cursor = 'pointer';
-                btn.innerText = '🚀 Gönder (Space)';
+                btn.innerText = '🚀 ' + t('coll_hud_send') + ' (Space)';
             }
         };
 
@@ -5228,23 +5904,23 @@
         const totalItems = session.queue.length;
         const currentStep = session.currentIndex + 1;
         const hasShips = details.totalCap > 0;
-        const missionName = (session.mission === 4 ? '🛡️ Konuşlandır' : '🚚 Nakliye');
+        const missionName = (session.mission === 4 ? '🛡️ ' + t('coll_deploy') : '🚚 ' + t('coll_transport'));
 
         let shipDesc = [];
-        if (details.bn > 0) shipDesc.push(details.bn + ' BN');
-        if (details.kn > 0) shipDesc.push(details.kn + ' KN');
-        if (details.rehber > 0) shipDesc.push(details.rehber + ' Rehber');
-        const shipText = shipDesc.length > 0 ? shipDesc.join(', ') : '<span style="color:#e74c3c">Nakliye gemisi yok!</span>';
+        if (details.bn > 0) shipDesc.push(details.bn + ' ' + t('coll_bn'));
+        if (details.kn > 0) shipDesc.push(details.kn + ' ' + t('coll_kn'));
+        if (details.rehber > 0) shipDesc.push(details.rehber + ' ' + t('coll_rehber'));
+        const shipText = shipDesc.length > 0 ? shipDesc.join(', ') : '<span style="color:#e74c3c">' + t('coll_hud_no_ships') + '</span>';
 
         const cleanTName = (session.targetName || '').replace(/^[\s\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]+/u, '').trim();
         let displayTargetTitle = cleanTName;
-        if (!displayTargetTitle || displayTargetTitle === 'Ay') {
+        if (!displayTargetTitle || displayTargetTitle === 'Ay' || displayTargetTitle === 'Moon') {
             if (session.targetType === 3) {
                 const emp = getEmpirePlanetsAndMoons();
                 const matched = emp.find(x => x.coords === session.targetCoord);
-                displayTargetTitle = matched ? `${matched.name} ( Ay )` : 'Ay ( Ay )';
+                displayTargetTitle = matched ? `${matched.name} ( ${t('coll_moon_name')} )` : `${t('coll_moon_name')} ( ${t('coll_moon_name')} )`;
             } else {
-                displayTargetTitle = 'Hedef';
+                displayTargetTitle = (currentLang === 'tr' ? 'Hedef' : 'Target');
             }
         }
         const displayTargetIcon = session.targetType === 3 ? '🌕' : '🪐';
@@ -5257,48 +5933,48 @@
         if (hasShortage) {
             let reasons = [];
             if (details.totalCap === 0) {
-                reasons.push('Nakliye gemisi yok!');
+                reasons.push(t('coll_hud_no_ships'));
             } else {
-                reasons.push(`Kargo Kapasitesi Yetersiz (${formatShort(details.missingCargo)} kargo açıkta kaldı)`);
+                reasons.push(`${t('coll_hud_cap_shortage')} (${formatShort(details.missingCargo)})`);
             }
-            if (details.missingMet > 0) reasons.push(`Metal ${formatShort(details.missingMet)} eksik`);
-            if (details.missingCri > 0) reasons.push(`Kristal ${formatShort(details.missingCri)} eksik`);
-            if (details.missingDeu > 0) reasons.push(`Deuterium ${formatShort(details.missingDeu)} eksik`);
+            if (details.missingMet > 0) reasons.push(`${t('coll_met')} ${formatShort(details.missingMet)}`);
+            if (details.missingCri > 0) reasons.push(`${t('coll_crys')} ${formatShort(details.missingCri)}`);
+            if (details.missingDeu > 0) reasons.push(`${t('coll_deut')} ${formatShort(details.missingDeu)}`);
 
             warningHtml =
                 '<div id="ls-coll-warning-box" style="background:rgba(231,76,60,0.22);border:1px solid #e74c3c;border-radius:4px;padding:6px 8px;margin-bottom:8px;font-size:11px;color:#ff6b6b;text-align:left">' +
-                    '<div style="font-weight:bold;margin-bottom:2px">⚠️ Yetersiz Gemi Kapasitesi!</div>' +
+                    '<div style="font-weight:bold;margin-bottom:2px">' + t('coll_hud_shortage_title') + '</div>' +
                     '<div style="font-size:10.5px;color:#f5b7b1;margin-bottom:6px">' + reasons.join(' · ') + '</div>' +
                     '<div style="display:flex;gap:6px;justify-content:center">' +
-                        '<button id="ls-coll-stop-btn" style="background:#e74c3c;color:#fff;border:none;padding:4px 9px;border-radius:3px;font-weight:bold;font-size:10.5px;cursor:pointer">⏹️ Toplamayı Durdur</button>' +
-                        '<button id="ls-coll-proceed-btn" style="background:#f39c12;color:#000;border:none;padding:4px 9px;border-radius:3px;font-weight:bold;font-size:10.5px;cursor:pointer">⏩ Olduğu Kadar Gönder (Devam Et)</button>' +
+                        '<button id="ls-coll-stop-btn" style="background:#e74c3c;color:#fff;border:none;padding:4px 9px;border-radius:3px;font-weight:bold;font-size:10.5px;cursor:pointer">' + t('coll_hud_stop_btn') + '</button>' +
+                        '<button id="ls-coll-proceed-btn" style="background:#f39c12;color:#000;border:none;padding:4px 9px;border-radius:3px;font-weight:bold;font-size:10.5px;cursor:pointer">' + t('coll_hud_proceed_btn') + '</button>' +
                     '</div>' +
                 '</div>';
         }
 
         banner.innerHTML =
             '<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1a2c3f;padding-bottom:6px;margin-bottom:8px">' +
-                '<span style="font-size:12px;font-weight:bold;color:#00bcff">📦 Toplayıcı Asistanı [' + currentStep + ' / ' + totalItems + ']</span>' +
+                '<span style="font-size:12px;font-weight:bold;color:#00bcff">📦 ' + t('tab_collector') + ' [' + currentStep + ' / ' + totalItems + ']</span>' +
                 '<span style="font-size:11px;color:#fff">' + (currentItem.isMoon ? '🌕' : '🪐') + ' ' + escapeHtml(currentItem.name) + ' ➔ ' + displayTargetIcon + ' ' + escapeHtml(displayTargetTitle) + ' <span style="color:#ffbe3b;font-family:monospace">[' + session.targetCoord + ']</span></span>' +
             '</div>' +
             warningHtml +
             '<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;margin-bottom:6px">' +
-                '<div><b style="color:#8899aa">Seçilen Filo:</b> <span style="font-weight:bold">' + shipText + '</span></div>' +
+                '<div><b style="color:#8899aa">' + t('coll_hud_selected_fleet') + '</b> <span style="font-weight:bold">' + shipText + '</span></div>' +
                 '<div style="font-size:10.5px;color:#00bcff;font-weight:bold">' + missionName + '</div>' +
             '</div>' +
             '<div style="font-size:11.5px;font-family:monospace;margin-bottom:10px">' +
-                '<b style="color:#8899aa">Taşınan:</b> ' +
-                '<span style="color:#ffbe3b">' + formatShort(details.met) + ' Metal</span> · ' +
-                '<span style="color:#5dade2">' + formatShort(details.cri) + ' Kristal</span> · ' +
-                '<span style="color:#2ecc71">' + formatShort(details.deu) + ' Deu</span>' +
+                '<b style="color:#8899aa">' + t('coll_hud_transported') + '</b> ' +
+                '<span style="color:#ffbe3b">' + formatShort(details.met) + ' ' + t('coll_met') + '</span> · ' +
+                '<span style="color:#5dade2">' + formatShort(details.cri) + ' ' + t('coll_crys') + '</span> · ' +
+                '<span style="color:#2ecc71">' + formatShort(details.deu) + ' ' + t('coll_deut') + '</span>' +
             '</div>' +
             '<div id="ls-coll-hud-controls" style="display:flex;gap:6px;justify-content:center;align-items:center;' + (hasShortage ? 'display:none;' : '') + '">' +
                 (hasShips ?
-                    '<button id="ls-banner-send-btn" disabled style="background:#445566;color:#8899aa;border:none;padding:5px 12px;border-radius:4px;font-weight:bold;font-size:11px;cursor:not-allowed">⏳ Hazırlanıyor...</button>'
-                    : '<button class="ls-banner-skip-btn" style="background:#f39c12;color:#000;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏭️ Atla (Space)</button>') +
-                '<button id="ls-banner-retry-btn" style="background:#e67e22;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer" title="Bu adımı ve hedef ayarlarını sıfırdan tekrarla">🔄 Tekrarla</button>' +
-                (hasShips ? '<button class="ls-banner-skip-btn" style="background:#34495e;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏭️ Atla</button>' : '') +
-                '<button id="ls-banner-cancel-btn" style="background:#e74c3c;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏹️ İptal</button>' +
+                    '<button id="ls-banner-send-btn" disabled style="background:#445566;color:#8899aa;border:none;padding:5px 12px;border-radius:4px;font-weight:bold;font-size:11px;cursor:not-allowed">' + t('exp_hud_preparing') + '</button>'
+                    : '<button class="ls-banner-skip-btn" style="background:#f39c12;color:#000;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏭️ ' + t('coll_hud_skip') + ' (Space)</button>') +
+                '<button id="ls-banner-retry-btn" style="background:#e67e22;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer" title="' + t('coll_hud_retry') + '">🔄 ' + t('coll_hud_retry') + '</button>' +
+                (hasShips ? '<button class="ls-banner-skip-btn" style="background:#34495e;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏭️ ' + t('coll_hud_skip') + '</button>' : '') +
+                '<button id="ls-banner-cancel-btn" style="background:#e74c3c;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏹️ ' + t('coll_hud_cancel') + '</button>' +
             '</div>';
 
         const sendFleet = () => {
@@ -6001,7 +6677,7 @@
     function startExpeditionSession() {
         const coordInput = (expeditionSettings.startCoord || '').trim();
         if (!/^\d+:\d+:\d+$/.test(coordInput)) {
-            alert('Lütfen geçerli bir başlangıç keşif koordinatı girin (örn: 5:242:16)!');
+            alert(currentLang === 'tr' ? 'Lütfen geçerli bir başlangıç keşif koordinatı girin (örn: 5:242:16)!' : 'Please enter a valid starting expedition coordinate (e.g. 5:242:16)!');
             return;
         }
 
@@ -6010,7 +6686,7 @@
         const queue = generateExpeditionQueue(gStr, sStr, count);
 
         if (queue.length === 0) {
-            alert('Keşif için sistem listesi oluşturulamadı!');
+            alert(currentLang === 'tr' ? 'Keşif için sistem listesi oluşturulamadı!' : 'Could not generate system list for expeditions!');
             return;
         }
 
@@ -6160,7 +6836,7 @@
                 btn.style.background = '#27ae60';
                 btn.style.color = '#fff';
                 btn.style.cursor = 'pointer';
-                btn.innerText = '🚀 Gönder (Space)';
+                btn.innerText = '🚀 ' + t('exp_hud_send') + ' (Space)';
             }
         };
 
@@ -6309,26 +6985,26 @@
 
         const totalItems = session.queue.length;
         const currentStep = session.currentIndex + 1;
-        const departure = session.departureName ? `${session.departureName} [${session.departureCoord}]` : (session.departureCoord || 'Mevcut');
-        const offsetText = currentItem.offset === 0 ? 'Kendi Sistemi' : (currentItem.offset > 0 ? `+${currentItem.offset} Sistem` : `${currentItem.offset} Sistem`);
-        const templateName = session.templateName || (session.templateId ? `Şablon #${session.templateId}` : 'Varsayılan');
+        const departure = session.departureName ? `${session.departureName} [${session.departureCoord}]` : (session.departureCoord || t('exp_here'));
+        const offsetText = currentItem.offset === 0 ? t('exp_own_system') : (currentItem.offset > 0 ? `+${currentItem.offset} ${t('exp_system_offset')}` : `${currentItem.offset} ${t('exp_system_offset')}`);
+        const templateName = session.templateName || (session.templateId ? `${t('exp_hud_template')} #${session.templateId}` : (currentLang === 'tr' ? 'Varsayılan' : 'Default'));
 
         banner.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);background:rgba(13,27,42,0.96);border:2px solid #9b59b6;box-shadow:0 10px 32px rgba(0,0,0,0.85);border-radius:8px;padding:12px 18px;min-width:420px;max-width:90vw;z-index:9999999;font-family:sans-serif;color:#d1d8e0;text-align:center;box-sizing:border-box';
 
         banner.innerHTML =
             '<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1a2c3f;padding-bottom:6px;margin-bottom:8px">' +
-                '<span style="font-size:12px;font-weight:bold;color:#bb86fc">🧭 Keşif Asistanı [' + currentStep + ' / ' + totalItems + ']</span>' +
-                '<span style="font-size:11px;color:#fff">🪐 ' + escapeHtml(departure) + ' ➔ 🌌 Sonsuz Uzaklar <span style="color:#ffbe3b;font-family:monospace">[' + currentItem.coord + ']</span></span>' +
+                '<span style="font-size:12px;font-weight:bold;color:#bb86fc">🧭 ' + t('exp_hud_title') + ' [' + currentStep + ' / ' + totalItems + ']</span>' +
+                '<span style="font-size:11px;color:#fff">🪐 ' + escapeHtml(departure) + ' ➔ 🌌 ' + t('exp_deep_space') + ' <span style="color:#ffbe3b;font-family:monospace">[' + currentItem.coord + ']</span></span>' +
             '</div>' +
             '<div style="display:flex;justify-content:space-between;align-items:center;font-size:11.5px;margin-bottom:8px">' +
-                '<div><b style="color:#8899aa">Hedef Rota:</b> <span style="color:#00bcff;font-weight:bold">' + offsetText + '</span></div>' +
-                '<div><b style="color:#8899aa">Şablon:</b> <span style="color:#2ecc71;font-weight:bold">' + escapeHtml(templateName) + '</span></div>' +
+                '<div><b style="color:#8899aa">' + t('exp_hud_route') + '</b> <span style="color:#00bcff;font-weight:bold">' + offsetText + '</span></div>' +
+                '<div><b style="color:#8899aa">' + t('exp_hud_template') + '</b> <span style="color:#2ecc71;font-weight:bold">' + escapeHtml(templateName) + '</span></div>' +
             '</div>' +
             '<div style="display:flex;gap:6px;justify-content:center;align-items:center">' +
-                '<button id="ls-exp-banner-send-btn" disabled style="background:#445566;color:#8899aa;border:none;padding:5px 12px;border-radius:4px;font-weight:bold;font-size:11px;cursor:not-allowed">⏳ Hazırlanıyor...</button>' +
-                '<button id="ls-exp-banner-retry-btn" style="background:#e67e22;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer" title="Bu adımı ve hedef ayarlarını sıfırdan tekrarla">🔄 Tekrarla</button>' +
-                '<button id="ls-exp-banner-skip-btn" style="background:#34495e;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏭️ Atla</button>' +
-                '<button id="ls-exp-banner-cancel-btn" style="background:#e74c3c;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏹️ İptal</button>' +
+                '<button id="ls-exp-banner-send-btn" disabled style="background:#445566;color:#8899aa;border:none;padding:5px 12px;border-radius:4px;font-weight:bold;font-size:11px;cursor:not-allowed">' + t('exp_hud_preparing') + '</button>' +
+                '<button id="ls-exp-banner-retry-btn" style="background:#e67e22;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer" title="' + t('exp_hud_retry') + '">🔄 ' + t('exp_hud_retry') + '</button>' +
+                '<button id="ls-exp-banner-skip-btn" style="background:#34495e;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏭️ ' + t('exp_hud_skip') + '</button>' +
+                '<button id="ls-exp-banner-cancel-btn" style="background:#e74c3c;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏹️ ' + t('exp_hud_cancel') + '</button>' +
             '</div>';
 
         let isDispatching = false;
@@ -6356,7 +7032,7 @@
             isDispatching = false;
             window.removeEventListener('keydown', keyListener);
             if (banner) {
-                banner.innerHTML = '<div style="font-size:12px;color:#e67e22;padding:6px;font-weight:bold">🔄 Keşif adımı yeniden deneniyor...</div>';
+                banner.innerHTML = '<div style="font-size:12px;color:#e67e22;padding:6px;font-weight:bold">🔄 ' + t('exp_hud_retrying') + '</div>';
             }
             if (typeof details.retry === 'function') {
                 details.retry();
@@ -6480,7 +7156,7 @@
             '#ls-panel{position:fixed;bottom:120px;right:15px;width:340px;min-width:280px;max-width:calc(100vw - 30px);',
             'min-height:260px;max-height:calc(100vh - 30px);background:rgba(11,16,26,0.97);',
             'border:1px solid #1a2c3f;border-radius:8px;color:#d1d8e0;font-family:sans-serif;font-size:12px;',
-            'z-index:999998;box-shadow:0 10px 30px rgba(0,0,0,0.8);display:none;flex-direction:column}',
+            'z-index:999998;box-shadow:0 10px 30px rgba(0,0,0,0.8);display:none;flex-direction:column;transition:opacity .2s ease}',
 
             '.ls-resize-h{position:absolute;z-index:999999}',
             '.ls-rh-se{right:0;bottom:0;width:14px;height:14px;cursor:nwse-resize}',
@@ -6691,29 +7367,29 @@
         panel.id = 'ls-panel';
         panel.innerHTML =
             '<div id="ls-header">' +
-                '<span id="ls-header-title">' + boltSvg + ' LuckyStrike Helper <span style="font-size:10px;color:#8899aa;font-weight:normal;opacity:0.8">v10.5</span></span>' +
+                '<span id="ls-header-title">' + boltSvg + ' LuckyStrike Helper <span style="font-size:10px;color:#8899aa;font-weight:normal;opacity:0.8">v10.6</span></span>' +
                 '<div style="display:flex;align-items:center;gap:6px">' +
                     '<button id="ls-header-stop-btn" class="ls-btn-d ls-btn-sm" style="display:none;padding:2px 7px;font-size:10px;align-items:center;gap:3px;cursor:pointer" title="Tekrarlayan bu alarmı sustur">⏹️ Sustur</button>' +
                     '<span id="ls-close">✖</span>' +
                 '</div>' +
             '</div>' +
             '<div id="ls-tabs">' +
-                '<div class="ls-tab" data-tab="cart"><span class="ls-tab-icon">🏗️</span><span class="ls-tab-label">Maliyet</span></div>' +
-                '<div class="ls-tab" data-tab="collector"><span class="ls-tab-icon">📦</span><span class="ls-tab-label">Collector</span></div>' +
-                '<div class="ls-tab" data-tab="debris"><span class="ls-tab-icon">🛰️</span><span class="ls-tab-label">Harabe</span></div>' +
-                '<div class="ls-tab" data-tab="expedition"><span class="ls-tab-icon">🧭</span><span class="ls-tab-label">Keşif</span></div>' +
-                '<div class="ls-tab" data-tab="scanner"><span class="ls-tab-icon">🌌</span><span class="ls-tab-label">Scanner</span></div>' +
-                '<div class="ls-tab" data-tab="finder"><span class="ls-tab-icon">🔍</span><span class="ls-tab-label">Finder</span></div>' +
-                '<div class="ls-tab" data-tab="alarm"><span class="ls-tab-icon">🚨</span><span class="ls-tab-label">Alarm</span></div>' +
-                '<div class="ls-tab" data-tab="debug"><span class="ls-tab-icon">🐞</span><span class="ls-tab-label">Debug</span></div>' +
+                '<div class="ls-tab" data-tab="cart"><span class="ls-tab-icon">🏗️</span><span class="ls-tab-label" data-i18n="tab_cart">Maliyet</span></div>' +
+                '<div class="ls-tab" data-tab="collector"><span class="ls-tab-icon">📦</span><span class="ls-tab-label" data-i18n="tab_collector">Toplayıcı</span></div>' +
+                '<div class="ls-tab" data-tab="debris"><span class="ls-tab-icon">🛰️</span><span class="ls-tab-label" data-i18n="tab_debris">Harabe</span></div>' +
+                '<div class="ls-tab" data-tab="expedition"><span class="ls-tab-icon">🧭</span><span class="ls-tab-label" data-i18n="tab_expedition">Keşif</span></div>' +
+                '<div class="ls-tab" data-tab="scanner"><span class="ls-tab-icon">🌌</span><span class="ls-tab-label" data-i18n="tab_scanner">Tarayıcı</span></div>' +
+                '<div class="ls-tab" data-tab="finder"><span class="ls-tab-icon">🔍</span><span class="ls-tab-label" data-i18n="tab_finder">Arama</span></div>' +
+                '<div class="ls-tab" data-tab="alarm"><span class="ls-tab-icon">🚨</span><span class="ls-tab-label" data-i18n="tab_alarm">Alarm</span></div>' +
+                '<div class="ls-tab" data-tab="settings"><span class="ls-tab-icon">⚙️</span><span class="ls-tab-label" data-i18n="tab_settings">Ayarlar</span></div>' +
             '</div>' +
             '<div id="ls-body">' +
 
                 // CART TAB
                 '<div id="tc-cart" class="ls-tc">' +
                     '<div style="display:flex;gap:6px;margin-bottom:8px;flex-shrink:0">' +
-                        '<button id="ls-cart-copy" class="ls-btn" style="flex:1">📋 Panoya Kopyala</button>' +
-                        '<button id="ls-cart-clear" class="ls-btn ls-btn-d" style="flex:1">🗑️ Temizle</button>' +
+                        '<button id="ls-cart-copy" class="ls-btn" style="flex:1" data-i18n="cart_copy">📋 Panoya Kopyala</button>' +
+                        '<button id="ls-cart-clear" class="ls-btn ls-btn-d" style="flex:1" data-i18n="cart_clear">🗑️ Temizle</button>' +
                     '</div>' +
                     '<div id="ls-cart-list" style="flex:1;min-height:60px;overflow-y:auto;overflow-x:hidden;margin-bottom:8px"></div>' +
                     '<div id="ls-cart-totals" style="flex-shrink:0;margin-top:auto"></div>' +
@@ -6722,26 +7398,26 @@
                 // SCANNER TAB
                 '<div id="tc-scanner" class="ls-tc">' +
                     '<div class="ls-row">' +
-                        '<div class="ls-col"><span class="ls-label">Galaksi Başlangıç</span><input type="number" id="ls-sg1" class="ls-inp" min="1" max="9" style="width:100%"></div>' +
-                        '<div class="ls-col"><span class="ls-label">Galaksi Bitiş</span><input type="number" id="ls-sg2" class="ls-inp" min="1" max="9" style="width:100%"></div>' +
+                        '<div class="ls-col"><span class="ls-label" data-i18n="scan_g_start">Galaksi Başlangıç</span><input type="number" id="ls-sg1" class="ls-inp" min="1" max="9" style="width:100%"></div>' +
+                        '<div class="ls-col"><span class="ls-label" data-i18n="scan_g_end">Galaksi Bitiş</span><input type="number" id="ls-sg2" class="ls-inp" min="1" max="9" style="width:100%"></div>' +
                     '</div>' +
                     '<div class="ls-row">' +
-                        '<div class="ls-col"><span class="ls-label">Sistem Başlangıç</span><input type="number" id="ls-ss1" class="ls-inp" min="1" max="499" style="width:100%"></div>' +
-                        '<div class="ls-col"><span class="ls-label">Sistem Bitiş</span><input type="number" id="ls-ss2" class="ls-inp" min="1" max="499" style="width:100%"></div>' +
+                        '<div class="ls-col"><span class="ls-label" data-i18n="scan_s_start">Sistem Başlangıç</span><input type="number" id="ls-ss1" class="ls-inp" min="1" max="499" style="width:100%"></div>' +
+                        '<div class="ls-col"><span class="ls-label" data-i18n="scan_s_end">Sistem Bitiş</span><input type="number" id="ls-ss2" class="ls-inp" min="1" max="499" style="width:100%"></div>' +
                     '</div>' +
                     '<div style="margin-bottom:6px">' +
-                        '<span class="ls-label">Hedef Slotlar (virgülle ayırın)</span>' +
-                        '<input type="text" id="ls-slots" class="ls-inp" style="width:100%" placeholder="8 veya 7, 9">' +
+                        '<span class="ls-label" data-i18n="scan_slots_label">Hedef Slotlar (virgülle ayırın)</span>' +
+                        '<input type="text" id="ls-slots" class="ls-inp" style="width:100%" placeholder="8 veya 7, 9" data-i18n-placeholder="scan_slots_ph">' +
                     '</div>' +
                     '<div style="margin-bottom:8px;display:flex;flex-wrap:wrap;gap:2px">' +
-                        '<span class="ls-chip" data-slots="8" data-min="1">🎯 Sadece 8</span>' +
-                        '<span class="ls-chip" data-slots="7, 9" data-min="1">⭐ 7, 9</span>' +
-                        '<span class="ls-chip" data-slots="13, 14, 15" data-min="1">❄️ 13-15 (Deut)</span>' +
-                        '<span class="ls-chip" data-slots="1, 2, 3" data-min="1">☀️ 1-3 (Solar)</span>' +
+                        '<span class="ls-chip" data-slots="8" data-min="1" data-i18n="scan_chip_8">🎯 Sadece 8</span>' +
+                        '<span class="ls-chip" data-slots="7, 9" data-min="1" data-i18n="scan_chip_7_9">⭐ 7, 9</span>' +
+                        '<span class="ls-chip" data-slots="13, 14, 15" data-min="1" data-i18n="scan_chip_13_15">❄️ 13-15 (Deut)</span>' +
+                        '<span class="ls-chip" data-slots="1, 2, 3" data-min="1" data-i18n="scan_chip_1_3">☀️ 1-3 (Solar)</span>' +
                         '<span class="ls-chip" data-slots="1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15" data-min="15">🪐 Tamamen Boş (1-15)</span>' +
                     '</div>' +
                     '<div style="display:justify;justify-content:space-between;align-items:center;margin-bottom:8px;background:rgba(255,255,255,0.03);padding:6px 8px;border-radius:4px;border:1px solid #1a2c3f;display:flex">' +
-                        '<span class="ls-label" style="font-size:11px;color:#d1d8e0">👥 Min. Eşzamanlı Boş Slot:</span>' +
+                        '<span class="ls-label" style="font-size:11px;color:#d1d8e0" data-i18n="scan_min_empty">👥 Min. Eşzamanlı Boş Slot:</span>' +
                         '<select id="ls-min" class="ls-inp" style="width:80px;padding:3px 6px;text-align:center">' +
                             '<option value="1">1 slot</option>' +
                             '<option value="2">2 slot</option>' +
@@ -6761,13 +7437,13 @@
                         '</select>' +
                     '</div>' +
                     '<div style="display:flex;gap:6px;margin-top:4px">' +
-                        '<button id="ls-scan-btn" class="ls-btn" style="flex:1">🔍 Taramayı Başlat</button>' +
-                        '<button id="ls-scan-refresh-btn" class="ls-btn-warn" style="flex-shrink:0" title="Evren verisini (universe.xml) sunucudan zorla yenile">🔄 Güncelle</button>' +
+                        '<button id="ls-scan-btn" class="ls-btn" style="flex:1" data-i18n="scan_start_btn">🔍 Taramayı Başlat</button>' +
+                        '<button id="ls-scan-refresh-btn" class="ls-btn-warn" style="flex-shrink:0" title="Evren verisini (universe.xml) sunucudan zorla yenile" data-i18n-title="scan_refresh_title" data-i18n="scan_refresh_btn">🔄 Güncelle</button>' +
                     '</div>' +
                     '<div class="ls-prog" id="ls-scan-progress"><div class="ls-prog-bar" id="ls-scan-bar"></div></div>' +
                     '<div id="ls-scan-status" style="font-size:10px;text-align:center;color:#8899aa;margin-top:4px"></div>' +
                     '<div id="ls-scan-results-box" style="display:none;margin-top:8px;flex:1;min-height:60px;flex-direction:column;overflow:hidden">' +
-                        '<button id="ls-scan-copy" class="ls-btn" style="width:100%;margin-bottom:6px;flex-shrink:0">📋 Koordinatları Kopyala</button>' +
+                        '<button id="ls-scan-copy" class="ls-btn" style="width:100%;margin-bottom:6px;flex-shrink:0" data-i18n="scan_copy_coords">📋 Koordinatları Kopyala</button>' +
                         '<div id="ls-scan-results" style="flex:1;min-height:60px;overflow-y:auto;overflow-x:hidden;width:100%;box-sizing:border-box"></div>' +
                     '</div>' +
                 '</div>' +
@@ -6775,14 +7451,19 @@
                 // FINDER TAB
                 '<div id="tc-finder" class="ls-tc">' +
                     '<div style="max-width:270px;margin:0 auto;text-align:center">' +
-                        '<div style="font-size:10px;color:#8899aa;margin-bottom:8px">Evrendeki tüm oyuncuları ve gezegenlerini bulun.</div>' +
-                        '<input type="text" id="ls-find-q" class="ls-inp" style="width:100%;margin-bottom:8px;padding:6px 10px;font-size:11px;text-align:center;border-radius:4px" placeholder="Oyuncu veya gezegen adı...">' +
+                        '<div style="font-size:10px;color:#8899aa;margin-bottom:8px" data-i18n="find_desc">Evrendeki tüm oyuncuları ve gezegenlerini bulun.</div>' +
+                        '<input type="text" id="ls-find-q" class="ls-inp" style="width:100%;margin-bottom:8px;padding:6px 10px;font-size:11px;text-align:center;border-radius:4px" placeholder="Oyuncu veya gezegen adı..." data-i18n-placeholder="find_ph">' +
                         '<div style="display:flex;justify-content:center;gap:14px;margin-bottom:8px;font-size:11px">' +
-                            '<label style="cursor:pointer;display:inline-flex;align-items:center;gap:4px"><input type="radio" name="ls-find-type" value="player" checked> Oyuncu Adı</label>' +
-                            '<label style="cursor:pointer;display:inline-flex;align-items:center;gap:4px"><input type="radio" name="ls-find-type" value="planet"> Gezegen Adı</label>' +
+                            '<label style="cursor:pointer;display:inline-flex;align-items:center;gap:4px"><input type="radio" name="ls-find-type" value="player" checked> <span data-i18n="find_player">Oyuncu Adı</span></label>' +
+                            '<label style="cursor:pointer;display:inline-flex;align-items:center;gap:4px"><input type="radio" name="ls-find-type" value="planet"> <span data-i18n="find_planet">Gezegen Adı</span></label>' +
                         '</div>' +
-                        '<button id="ls-find-btn" class="ls-btn" style="width:100%;padding:6px 12px;font-size:11px">🔍 Ara</button>' +
-                        '<div id="ls-find-status" style="font-size:10px;text-align:center;color:#8899aa;margin-top:6px"></div>' +
+                        '<div style="display:flex;gap:6px;margin-bottom:4px">' +
+                            '<button id="ls-find-btn" class="ls-btn" style="flex:1;padding:6px 12px;font-size:11px" data-i18n="find_btn">🔍 Ara</button>' +
+                            '<button id="ls-find-refresh-btn" class="ls-btn-warn" style="flex-shrink:0" title="Evren ve oyuncu verisini sunucudan zorla yenile" data-i18n-title="find_refresh_title" data-i18n="scan_refresh_btn">🔄 Güncelle</button>' +
+                        '</div>' +
+                        '<div class="ls-prog" id="ls-find-progress"><div class="ls-prog-bar" id="ls-find-bar"></div></div>' +
+                        '<div id="ls-find-cache-info" style="font-size:10px;text-align:center;color:#607d8b;margin-top:4px"></div>' +
+                        '<div id="ls-find-status" style="font-size:10px;text-align:center;color:#8899aa;margin-top:4px"></div>' +
                     '</div>' +
                     '<div id="ls-find-results" style="flex:1;min-height:60px;overflow-y:auto;overflow-x:hidden;margin-top:8px"></div>' +
                 '</div>' +
@@ -6792,57 +7473,57 @@
                     '<div id="ls-alarm-status-banner" style="background:#162436;border:1px solid #1a3a5c;border-radius:6px;padding:8px 10px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">' +
                         '<div style="display:flex;align-items:center;gap:8px">' +
                             '<span id="ls-alarm-dot" style="width:10px;height:10px;border-radius:50%;background:#2ecc71;display:inline-block;box-shadow:0 0 6px #2ecc71"></span>' +
-                            '<span id="ls-alarm-status-text" style="font-size:11px;font-weight:bold;color:#2ecc71">Gözcü Aktif · Tehdit Yok</span>' +
+                            '<span id="ls-alarm-status-text" style="font-size:11px;font-weight:bold;color:#2ecc71" data-i18n="alarm_status_active_safe">Gözcü Aktif · Tehdit Yok</span>' +
                         '</div>' +
-                        '<button id="ls-alarm-stop-btn" class="ls-btn-d ls-btn-sm" style="display:none;padding:3px 8px;font-size:10px;align-items:center;gap:3px;cursor:pointer" title="Tekrarlayan bu alarmı sustur">⏹️ Sustur</button>' +
+                        '<button id="ls-alarm-stop-btn" class="ls-btn-d ls-btn-sm" style="display:none;padding:3px 8px;font-size:10px;align-items:center;gap:3px;cursor:pointer" title="Tekrarlayan bu alarmı sustur" data-i18n-title="stop_alarm_title" data-i18n="stop_alarm">⏹️ Sustur</button>' +
                     '</div>' +
 
                     // Attack alert card
                     '<div style="background:#131d2a;border:1px solid #233446;border-radius:6px;padding:10px;margin-bottom:8px">' +
                         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
-                            '<span style="font-weight:bold;color:#e74c3c;font-size:12px">🚨 Saldırı Alarmı</span>' +
+                            '<span style="font-weight:bold;color:#e74c3c;font-size:12px" data-i18n="alarm_att_title">🚨 Saldırı Alarmı</span>' +
                             '<label class="ls-toggle-switch">' +
                                 '<input type="checkbox" id="ls-alarm-att-toggle">' +
                                 '<span class="ls-toggle-slider"></span>' +
                             '</label>' +
                         '</div>' +
                         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
-                            '<span style="font-size:11px;color:#d1d8e0">🎵 Ses Tipi:</span>' +
+                            '<span style="font-size:11px;color:#d1d8e0" data-i18n="alarm_sound_type">🎵 Ses Tipi:</span>' +
                             '<select id="ls-alarm-att-sound" class="ls-inp" style="width:180px;padding:2px 4px;font-size:10px">' +
-                                '<option value="klaxon">Taktiksel Klakson (Varsayılan)</option>' +
-                                '<option value="siren">Kırmızı Alarm Sireni</option>' +
-                                '<option value="pulse">Acil Durum Nabzı</option>' +
+                                '<option value="klaxon" data-i18n="alarm_sound_klaxon">Taktiksel Klakson (Varsayılan)</option>' +
+                                '<option value="siren" data-i18n="alarm_sound_siren">Kırmızı Alarm Sireni</option>' +
+                                '<option value="pulse" data-i18n="alarm_sound_pulse">Acil Durum Nabzı</option>' +
                             '</select>' +
                         '</div>' +
-                        '<button id="ls-alarm-att-test" class="ls-btn-sm" style="background:#c0392b;color:#fff;border:none;padding:5px 10px;width:100%">🔊 Saldırı Sesini Test Et</button>' +
+                        '<button id="ls-alarm-att-test" class="ls-btn-sm" style="background:#c0392b;color:#fff;border:none;padding:5px 10px;width:100%" data-i18n="alarm_att_test">🔊 Saldırı Sesini Test Et</button>' +
                     '</div>' +
 
                     // Espionage alert card
                     '<div style="background:#131d2a;border:1px solid #233446;border-radius:6px;padding:10px;margin-bottom:8px">' +
                         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
-                            '<span style="font-weight:bold;color:#3498db;font-size:12px">📡 Sonda / Casusluk Uyarısı</span>' +
+                            '<span style="font-weight:bold;color:#3498db;font-size:12px" data-i18n="alarm_esp_title">📡 Sonda / Casusluk Uyarısı</span>' +
                             '<label class="ls-toggle-switch">' +
                                 '<input type="checkbox" id="ls-alarm-esp-toggle">' +
                                 '<span class="ls-toggle-slider"></span>' +
                             '</label>' +
                         '</div>' +
                         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
-                            '<span style="font-size:11px;color:#d1d8e0">🎵 Ses Tipi:</span>' +
+                            '<span style="font-size:11px;color:#d1d8e0" data-i18n="alarm_sound_type">🎵 Ses Tipi:</span>' +
                             '<select id="ls-alarm-esp-sound" class="ls-inp" style="width:180px;padding:2px 4px;font-size:10px">' +
-                                '<option value="sonar_deep">Derin Deniz Sonarı (Klasik Ping)</option>' +
-                                '<option value="sonar_hunter">Aktif Avcı Sonarı (Yüksek Ping)</option>' +
-                                '<option value="sonar_echo">Taktik Yankı Sonarı (Çift Eko)</option>' +
+                                '<option value="sonar_deep" data-i18n="alarm_sound_sonar_deep">Derin Deniz Sonarı (Klasik Ping)</option>' +
+                                '<option value="sonar_hunter" data-i18n="alarm_sound_sonar_hunter">Aktif Avcı Sonarı (Yüksek Ping)</option>' +
+                                '<option value="sonar_echo" data-i18n="alarm_sound_sonar_echo">Taktik Yankı Sonarı (Çift Eko)</option>' +
                             '</select>' +
                         '</div>' +
-                        '<button id="ls-alarm-esp-test" class="ls-btn-sm" style="background:#2980b9;color:#fff;border:none;padding:5px 10px;width:100%">🔊 Sonda Sesini Test Et</button>' +
+                        '<button id="ls-alarm-esp-test" class="ls-btn-sm" style="background:#2980b9;color:#fff;border:none;padding:5px 10px;width:100%" data-i18n="alarm_esp_test">🔊 Sonda Sesini Test Et</button>' +
                     '</div>' +
 
                     // Desktop notification card
                     '<div style="background:#131d2a;border:1px solid #233446;border-radius:6px;padding:10px;margin-bottom:8px">' +
                         '<div style="display:flex;justify-content:space-between;align-items:center">' +
                             '<div>' +
-                                '<div style="font-weight:bold;color:#f39c12;font-size:12px">🖥️ Masaüstü Bildirimi</div>' +
-                                '<div style="font-size:10px;color:#8899aa;margin-top:2px">Sekme arka plandayken bildirim gönder</div>' +
+                                '<div style="font-weight:bold;color:#f39c12;font-size:12px" data-i18n="alarm_desktop_title">🖥️ Masaüstü Bildirimi</div>' +
+                                '<div style="font-size:10px;color:#8899aa;margin-top:2px" data-i18n="alarm_desktop_desc">Sekme arka plandayken bildirim gönder</div>' +
                             '</div>' +
                             '<label class="ls-toggle-switch">' +
                                 '<input type="checkbox" id="ls-alarm-desktop-toggle">' +
@@ -6854,7 +7535,7 @@
                     // Volume slider card
                     '<div style="background:#131d2a;border:1px solid #233446;border-radius:6px;padding:10px;margin-bottom:8px">' +
                         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
-                            '<span style="color:#d1d8e0;font-size:11px">🔊 Ses Seviyesi:</span>' +
+                            '<span style="color:#d1d8e0;font-size:11px" data-i18n="alarm_volume_label">🔊 Ses Seviyesi:</span>' +
                             '<span id="ls-volume-val" style="font-weight:bold;color:#00bcff;font-size:11px">70%</span>' +
                         '</div>' +
                         '<input type="range" id="ls-volume-slider" min="0" max="100" value="70" style="width:100%;accent-color:#00bcff;cursor:pointer">' +
@@ -6863,14 +7544,14 @@
                     // Repeat interval card
                     '<div style="background:#131d2a;border:1px solid #233446;border-radius:6px;padding:10px;margin-bottom:8px">' +
                         '<div style="display:flex;justify-content:space-between;align-items:center">' +
-                            '<span style="color:#d1d8e0;font-size:11px">⏱️ Tekrar Sıklığı:</span>' +
+                            '<span style="color:#d1d8e0;font-size:11px" data-i18n="alarm_repeat_label">⏱️ Tekrar Sıklığı:</span>' +
                             '<select id="ls-alarm-repeat" class="ls-select" style="width:145px;font-size:11px;padding:3px;background:#0a0e17;color:#fff;border:1px solid #2c3e50;border-radius:3px">' +
-                                '<option value="0">Sadece 1 kez çal</option>' +
-                                '<option value="5">Her 5 saniyede bir</option>' +
-                                '<option value="10">Her 10 saniyede bir</option>' +
-                                '<option value="15">Her 15 saniyede bir</option>' +
-                                '<option value="30">Her 30 saniyede bir</option>' +
-                                '<option value="60">Her 60 saniyede bir</option>' +
+                                '<option value="0" data-i18n="alarm_repeat_once">Sadece 1 kez çal</option>' +
+                                '<option value="5" data-i18n="alarm_repeat_5s">Her 5 saniyede bir</option>' +
+                                '<option value="10" data-i18n="alarm_repeat_10s">Her 10 saniyede bir</option>' +
+                                '<option value="15" data-i18n="alarm_repeat_15s">Her 15 saniyede bir</option>' +
+                                '<option value="30" data-i18n="alarm_repeat_30s">Her 30 saniyede bir</option>' +
+                                '<option value="60" data-i18n="alarm_repeat_60s">Her 60 saniyede bir</option>' +
                             '</select>' +
                         '</div>' +
                     '</div>' +
@@ -6881,9 +7562,9 @@
                     '<div id="ls-debris-status-banner" style="flex-shrink:0;background:#162436;border:1px solid #1a3a5c;border-radius:6px;padding:8px 10px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">' +
                         '<div style="display:flex;align-items:center;gap:8px">' +
                             '<span id="ls-debris-dot" style="width:10px;height:10px;border-radius:50%;background:#2ecc71;display:inline-block;box-shadow:0 0 6px #2ecc71"></span>' +
-                            '<span id="ls-debris-status-text" style="font-size:11px;font-weight:bold;color:#2ecc71">Harabe Avcısı Aktif · Galaksi İzleniyor</span>' +
+                            '<span id="ls-debris-status-text" style="font-size:11px;font-weight:bold;color:#2ecc71" data-i18n="deb_status_active">Harabe Avcısı Aktif · Galaksi İzleniyor</span>' +
                         '</div>' +
-                        '<label class="ls-toggle-switch" title="Harabe izlemeyi aç/kapat">' +
+                        '<label class="ls-toggle-switch" title="Harabe izlemeyi aç/kapat" data-i18n-title="deb_toggle_title">' +
                             '<input type="checkbox" id="ls-debris-toggle">' +
                             '<span class="ls-toggle-slider"></span>' +
                         '</label>' +
@@ -6892,7 +7573,7 @@
                     // Debris settings card
                     '<div style="flex-shrink:0;background:#131d2a;border:1px solid #233446;border-radius:6px;padding:10px;margin-bottom:8px">' +
                         '<div style="margin-bottom:6px">' +
-                            '<span class="ls-label" style="color:#d1d8e0">⚡ Min. Harabe Eşiği (Toplam Kaynak):</span>' +
+                            '<span class="ls-label" style="color:#d1d8e0" data-i18n="deb_threshold_label">⚡ Min. Harabe Eşiği (Toplam Kaynak):</span>' +
                             '<input type="text" id="ls-debris-min" class="ls-inp" style="width:100%;font-weight:bold;color:#00bcff;font-family:monospace;margin-top:2px" placeholder="100.000">' +
                         '</div>' +
                         '<div style="display:flex;flex-wrap:wrap;gap:2px;margin-bottom:8px">' +
@@ -6904,20 +7585,20 @@
                             '<span class="ls-chip ls-debris-chip" data-min="5000000">5M</span>' +
                         '</div>' +
                         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
-                            '<span style="font-size:11px;color:#d1d8e0">🎵 Uyarı Sesi:</span>' +
+                            '<span style="font-size:11px;color:#d1d8e0" data-i18n="deb_sound_label">🎵 Uyarı Sesi:</span>' +
                             '<select id="ls-debris-sound" class="ls-inp" style="width:180px;padding:2px 4px;font-size:10px">' +
-                                '<option value="sonar_deep">Derin Deniz Sonarı (Klasik Ping)</option>' +
-                                '<option value="sonar_hunter">Aktif Avcı Sonarı (Yüksek Ping)</option>' +
-                                '<option value="sonar_echo">Taktik Yankı Sonarı (Çift Eko)</option>' +
+                                '<option value="sonar_deep" data-i18n="alarm_sound_sonar_deep">Derin Deniz Sonarı (Klasik Ping)</option>' +
+                                '<option value="sonar_hunter" data-i18n="alarm_sound_sonar_hunter">Aktif Avcı Sonarı (Yüksek Ping)</option>' +
+                                '<option value="sonar_echo" data-i18n="alarm_sound_sonar_echo">Taktik Yankı Sonarı (Çift Eko)</option>' +
                             '</select>' +
                         '</div>' +
-                        '<button id="ls-debris-test-sound" class="ls-btn-sm" style="background:#2980b9;color:#fff;border:none;padding:5px 10px;width:100%">🔊 Harabe Sesini Test Et</button>' +
+                        '<button id="ls-debris-test-sound" class="ls-btn-sm" style="background:#2980b9;color:#fff;border:none;padding:5px 10px;width:100%" data-i18n="deb_test_sound">🔊 Harabe Sesini Test Et</button>' +
                     '</div>' +
 
                     // Debris list header with clear button
                     '<div style="flex-shrink:0;display:flex;justify-content:space-between;align-items:center;margin:10px 0 6px 0;padding-bottom:4px;border-bottom:1px solid #1a2c3f">' +
                         '<span style="font-size:11px;font-weight:bold;color:#00bcff" id="ls-debris-count-title">🛰️ Bulunan Harabeler (0)</span>' +
-                        '<button id="ls-debris-clear-all" class="ls-btn ls-btn-d ls-btn-sm" style="padding:2px 7px;font-size:10px" title="Tüm harabeleri listeden temizle">🗑️ Listeyi Temizle</button>' +
+                        '<button id="ls-debris-clear-all" class="ls-btn ls-btn-d ls-btn-sm" style="padding:2px 7px;font-size:10px" title="Tüm harabeleri listeden temizle" data-i18n-title="deb_clear_title" data-i18n="deb_clear_btn">🗑️ Listeyi Temizle</button>' +
                     '</div>' +
 
                     // Debris items list
@@ -6928,17 +7609,17 @@
                 '<div id="tc-collector" class="ls-tc">' +
                     '<div id="ls-coll-card-target" class="ls-coll-card">' +
                         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">' +
-                            '<span class="ls-label">🎯 Collect To</span>' +
-                            '<button type="button" id="ls-coll-cur-btn" class="ls-btn-sm" style="background:#2c3e50;color:#00bcff;padding:2px 7px;font-size:10px;margin-left:auto;margin-right:6px;border:1px solid #334455;border-radius:3px;cursor:pointer" title="Hedefi şu an bulunduğunuz gezegen/ay yapar">Burası</button>' +
+                            '<span class="ls-label" data-i18n="coll_target_head">🎯 Toplama Hedefi</span>' +
+                            '<button type="button" id="ls-coll-cur-btn" class="ls-btn-sm" style="background:#2c3e50;color:#00bcff;padding:2px 7px;font-size:10px;margin-left:auto;margin-right:6px;border:1px solid #334455;border-radius:3px;cursor:pointer" title="Hedefi şu an bulunduğunuz gezegen/ay yapar" data-i18n-title="coll_here_title" data-i18n="coll_here">Burası</button>' +
                             '<div style="display:flex;gap:4px">' +
-                                '<button type="button" id="ls-coll-mission-3" class="ls-coll-mbtn ' + (collectorSettings.mission === 3 ? 'active' : '') + '">Nakliye</button>' +
-                                '<button type="button" id="ls-coll-mission-4" class="ls-coll-mbtn ' + (collectorSettings.mission === 4 ? 'active' : '') + '">Konuşlandır</button>' +
+                                '<button type="button" id="ls-coll-mission-3" class="ls-coll-mbtn ' + (collectorSettings.mission === 3 ? 'active' : '') + '" data-i18n="coll_transport">Nakliye</button>' +
+                                '<button type="button" id="ls-coll-mission-4" class="ls-coll-mbtn ' + (collectorSettings.mission === 4 ? 'active' : '') + '" data-i18n="coll_deploy">Konuşlandır</button>' +
                             '</div>' +
                         '</div>' +
                         '<div class="ls-coll-row">' +
                             '<div class="ls-coll-combo">' +
                                 '<div id="ls-coll-target-btn" class="ls-coll-sel">' +
-                                    '<span id="ls-coll-target-label"><b>🪐 Yükleniyor...</b></span>' +
+                                    '<span id="ls-coll-target-label"><b data-i18n="coll_loading">🪐 Yükleniyor...</b></span>' +
                                     '<span style="color:#00bcff;font-size:9px">▼</span>' +
                                 '</div>' +
                                 '<div id="ls-coll-dd" class="ls-coll-dd"></div>' +
@@ -6948,29 +7629,29 @@
 
                     '<div class="ls-coll-card">' +
                         '<div class="ls-coll-row" style="margin-bottom:5px">' +
-                            '<span class="ls-label" style="width:52px">🚀 Gemi</span>' +
-                            '<label class="ls-coll-chk"><input type="checkbox" id="ls-coll-ship-bn"> BN</label>' +
-                            '<label class="ls-coll-chk"><input type="checkbox" id="ls-coll-ship-kn"> KN</label>' +
-                            '<label class="ls-coll-chk"><input type="checkbox" id="ls-coll-ship-rehber"> Rehber</label>' +
+                            '<span class="ls-label" style="width:52px" data-i18n="coll_ships">🚀 Gemi</span>' +
+                            '<label class="ls-coll-chk"><input type="checkbox" id="ls-coll-ship-bn"> <span data-i18n="coll_bn">BN</span></label>' +
+                            '<label class="ls-coll-chk"><input type="checkbox" id="ls-coll-ship-kn"> <span data-i18n="coll_kn">KN</span></label>' +
+                            '<label class="ls-coll-chk"><input type="checkbox" id="ls-coll-ship-rehber"> <span data-i18n="coll_rehber">Rehber</span></label>' +
                         '</div>' +
                         '<div class="ls-coll-row">' +
-                            '<span class="ls-label" style="width:52px">💎 Kaynak</span>' +
-                            '<label class="ls-coll-chk"><input type="checkbox" id="ls-coll-res-deu"> <span class="ls-coll-d">Deuterium</span></label>' +
-                            '<label class="ls-coll-chk"><input type="checkbox" id="ls-coll-res-cri"> <span class="ls-coll-k">Kristal</span></label>' +
-                            '<label class="ls-coll-chk"><input type="checkbox" id="ls-coll-res-met"> <span class="ls-coll-m">Metal</span></label>' +
+                            '<span class="ls-label" style="width:52px" data-i18n="coll_resources">💎 Kaynak</span>' +
+                            '<label class="ls-coll-chk"><input type="checkbox" id="ls-coll-res-deu"> <span class="ls-coll-d" data-i18n="coll_deut">Deuterium</span></label>' +
+                            '<label class="ls-coll-chk"><input type="checkbox" id="ls-coll-res-cri"> <span class="ls-coll-k" data-i18n="coll_crys">Kristal</span></label>' +
+                            '<label class="ls-coll-chk"><input type="checkbox" id="ls-coll-res-met"> <span class="ls-coll-m" data-i18n="coll_met">Metal</span></label>' +
                         '</div>' +
                     '</div>' +
 
                     '<div class="ls-coll-selbar">' +
-                        '<button id="ls-coll-sel-all" class="ls-btn-sm">Tümü</button>' +
-                        '<button id="ls-coll-sel-planets" class="ls-btn-sm">🪐 Gezegenler</button>' +
-                        '<button id="ls-coll-sel-moons" class="ls-btn-sm">🌕 Aylar</button>' +
-                        '<button id="ls-coll-sel-none" class="ls-btn-sm" style="color:#e74c3c">✖ Kaldır</button>' +
+                        '<button id="ls-coll-sel-all" class="ls-btn-sm" data-i18n="coll_sel_all">Tümü</button>' +
+                        '<button id="ls-coll-sel-planets" class="ls-btn-sm" data-i18n="coll_sel_planets">🪐 Gezegenler</button>' +
+                        '<button id="ls-coll-sel-moons" class="ls-btn-sm" data-i18n="coll_sel_moons">🌕 Aylar</button>' +
+                        '<button id="ls-coll-sel-none" class="ls-btn-sm" style="color:#e74c3c" data-i18n="coll_sel_none">✖ Kaldır</button>' +
                     '</div>' +
 
                     '<div class="ls-coll-head">' +
-                        '<span style="font-size:11px;font-weight:bold;color:#00bcff">🪐 Gezegenler & Aylar</span>' +
-                        '<span style="font-size:10px;color:#2ecc71;font-weight:bold;width:68px;text-align:center;margin-right:32px">Deu Rezerv</span>' +
+                        '<span style="font-size:11px;font-weight:bold;color:#00bcff" data-i18n="coll_planets_moons">🪐 Gezegenler & Aylar</span>' +
+                        '<span style="font-size:10px;color:#2ecc71;font-weight:bold;width:68px;text-align:center;margin-right:32px" data-i18n="coll_reserve_col">Deu Rezerv</span>' +
                     '</div>' +
 
                     '<div id="ls-coll-list" class="ls-coll-list"></div>' +
@@ -6980,20 +7661,20 @@
                         '<span style="font-family:monospace"><span class="ls-coll-m">0</span> · <span class="ls-coll-k">0</span> · <span class="ls-coll-d">0</span></span>' +
                     '</div>' +
 
-                    '<button id="ls-coll-start-btn" class="ls-coll-go">🚀 Toplamayı Başlat</button>' +
+                    '<button id="ls-coll-start-btn" class="ls-coll-go" data-i18n="coll_start_btn">🚀 Toplamayı Başlat</button>' +
                 '</div>' +
 
                 // EXPEDITION TAB (KEŞİF ASİSTANI)
                 '<div id="tc-expedition" class="ls-tc">' +
                     '<div class="ls-coll-card">' +
                         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">' +
-                            '<span class="ls-label" style="color:#bb86fc">🎯 Başlangıç Keşif Noktası (Slot 16)</span>' +
-                            '<button id="ls-exp-cur-btn" class="ls-btn-sm" style="background:#2c3e50;color:#00bcff;padding:2px 6px;font-size:10px" title="Şu anki gezegenin :16 slotunu yaz">Burası</button>' +
+                            '<span class="ls-label" style="color:#bb86fc" data-i18n="exp_start_slot16">🎯 Başlangıç Keşif Noktası (Slot 16)</span>' +
+                            '<button id="ls-exp-cur-btn" class="ls-btn-sm" style="background:#2c3e50;color:#00bcff;padding:2px 6px;font-size:10px" title="Şu anki gezegenin :16 slotunu yaz" data-i18n-title="exp_here_title" data-i18n="exp_here">Burası</button>' +
                         '</div>' +
                         '<div style="display:flex;gap:6px">' +
                             '<input type="text" id="ls-exp-start-coord" class="ls-inp" style="flex:1;font-family:monospace;font-weight:bold;color:#ffbe3b;text-align:center" placeholder="5:242:16">' +
                         '</div>' +
-                        '<div style="font-size:10px;color:#8899aa;margin-top:4px">' +
+                        '<div style="font-size:10px;color:#8899aa;margin-top:4px" data-i18n="exp_desc">' +
                             'Keşifler bu sistemden başlayarak yakından uzağa doğru spiral (+1, -1, +2, -2...) dağıtılır.' +
                         '</div>' +
                     '</div>' +
@@ -7001,16 +7682,16 @@
                     '<div class="ls-coll-card">' +
                         '<div style="display:flex;gap:8px">' +
                             '<div style="flex:1">' +
-                                '<span class="ls-label">🔢 Sefer Sayısı</span>' +
+                                '<span class="ls-label" data-i18n="exp_count">🔢 Sefer Sayısı</span>' +
                                 '<input type="number" id="ls-exp-count" class="ls-inp" min="1" max="50" style="width:100%;font-weight:bold;color:#00bcff;text-align:center" value="1">' +
                             '</div>' +
                             '<div style="flex:2">' +
                                 '<div style="display:flex;justify-content:space-between;align-items:center">' +
-                                    '<span class="ls-label">📋 Keşif Şablonu</span>' +
-                                    '<span id="ls-exp-refresh-tpls" style="font-size:10px;color:#00bcff;cursor:pointer" title="Şablonları yenile">🔄</span>' +
+                                    '<span class="ls-label" data-i18n="exp_template">📋 Keşif Şablonu</span>' +
+                                    '<span id="ls-exp-refresh-tpls" style="font-size:10px;color:#00bcff;cursor:pointer" title="Şablonları yenile" data-i18n-title="exp_refresh_tpls_title">🔄</span>' +
                                 '</div>' +
                                 '<select id="ls-exp-template" class="ls-inp" style="width:100%;font-size:11px">' +
-                                    '<option value="">-- Şablon Yükleniyor... --</option>' +
+                                    '<option value="" data-i18n="exp_loading_tpl">-- Şablon Yükleniyor... --</option>' +
                                 '</select>' +
                             '</div>' +
                         '</div>' +
@@ -7018,33 +7699,75 @@
 
                     '<div class="ls-coll-card" style="background:#101b2b;border:1px dashed #2c3e50;flex:1;min-height:60px;display:flex;flex-direction:column">' +
                         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">' +
-                            '<span style="font-size:11px;font-weight:bold;color:#d1d8e0">🧭 Rota Dağılımı Önizlemesi:</span>' +
+                            '<span style="font-size:11px;font-weight:bold;color:#d1d8e0" data-i18n="exp_preview_title">🧭 Rota Dağılımı Önizlemesi:</span>' +
                             '<span id="ls-exp-total-steps" style="font-size:10.5px;color:#bb86fc;font-weight:bold">0 Sefer</span>' +
                         '</div>' +
-                        '<div id="ls-exp-preview-list" style="font-size:10.5px;color:#8899aa;font-family:monospace;line-height:1.4;flex:1;overflow-y:auto;padding-right:4px">' +
+                        '<div id="ls-exp-preview-list" style="font-size:10.5px;color:#8899aa;font-family:monospace;line-height:1.4;flex:1;overflow-y:auto;padding-right:4px" data-i18n="exp_preview_placeholder">' +
                             '(Başlangıç koordinatı ve sefer sayısını girin)' +
                         '</div>' +
                     '</div>' +
 
-                    '<button id="ls-exp-start-btn" class="ls-exp-go">🚀 Keşifleri Başlat (Adım Adım)</button>' +
+                    '<button id="ls-exp-start-btn" class="ls-exp-go" data-i18n="exp_start_btn">🚀 Keşifleri Başlat (Adım Adım)</button>' +
                 '</div>' +
 
-                // DEBUG TAB
-                '<div id="tc-debug" class="ls-tc">' +
+                // SETTINGS TAB (AYARLAR)
+                '<div id="tc-settings" class="ls-tc">' +
+                    // GENEL AYARLAR KARTI (DİL & GÖRÜNÜM)
+                    '<div style="background:rgba(255,255,255,0.03);border:1px solid #1a2c3f;border-radius:6px;padding:8px 10px;margin-bottom:8px;flex-shrink:0">' +
+                        '<div style="font-size:11px;font-weight:bold;color:#00bcff;margin-bottom:8px;display:flex;align-items:center;gap:4px">' +
+                            '<span>⚙️</span> <span data-i18n="settings_general">Genel Tercihler</span>' +
+                        '</div>' +
+                        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
+                            '<span style="font-size:11px;color:#d1d8e0" data-i18n="settings_lang">🌐 Dil / Language:</span>' +
+                            '<select id="ls-setting-lang" class="ls-inp" style="width:160px;padding:3px 6px;font-size:11px">' +
+                                '<option value="tr">🇹🇷 Türkçe</option>' +
+                                '<option value="en">🇬🇧 English</option>' +
+                            '</select>' +
+                        '</div>' +
+                        '<div style="display:flex;justify-content:space-between;align-items:center">' +
+                            '<span style="font-size:11px;color:#d1d8e0" data-i18n="settings_theme">🎨 Görünüm / Skin:</span>' +
+                            '<select id="ls-setting-theme" class="ls-inp" style="width:160px;padding:3px 6px;font-size:11px">' +
+                                '<option value="dark" data-i18n="settings_theme_dark">🌌 Uzay Karanlığı (Varsayılan)</option>' +
+                                '<option value="light" disabled data-i18n="settings_theme_light">☀️ Aydınlık (Çok Yakında)</option>' +
+                                '<option value="aero" disabled data-i18n="settings_theme_aero">💎 Aero Glass (Çok Yakında)</option>' +
+                            '</select>' +
+                        '</div>' +
+                        '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">' +
+                            '<span style="font-size:11px;color:#d1d8e0" data-i18n="settings_opacity">👁️ Saydamlık / Opacity:</span>' +
+                            '<div style="display:flex;align-items:center;gap:8px;width:160px">' +
+                                '<input type="range" id="ls-setting-opacity" min="20" max="100" step="5" value="100" style="flex:1;cursor:pointer;accent-color:#00bcff">' +
+                                '<span id="ls-setting-opacity-val" style="font-size:11px;font-weight:bold;color:#00bcff;min-width:32px;text-align:right">100%</span>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">' +
+                            '<label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:#d1d8e0" title="Fare panelin üzerine geldiğinde otomatik olarak %100 görünür yapar" data-i18n-title="settings_hover_focus_title">' +
+                                '<input type="checkbox" id="ls-setting-hover-focus" style="accent-color:#00bcff;cursor:pointer">' +
+                                '<span data-i18n="settings_hover_focus">🎯 Fare Üzerindeyken %100 Yap (Focus)</span>' +
+                            '</label>' +
+                        '</div>' +
+                    '</div>' +
+
+                    // AYIRAÇ: SİSTEM & TEŞHİS GÜNLÜKLERİ
+                    '<div style="display:flex;align-items:center;margin:6px 0 8px 0;flex-shrink:0">' +
+                        '<div style="flex:1;height:1px;background:#1a2c3f"></div>' +
+                        '<span style="padding:0 8px;font-size:10px;color:#8899aa;font-weight:bold;display:flex;align-items:center;gap:4px" data-i18n="settings_diag_divider">🛠️ Sistem & Teşhis Günlükleri</span>' +
+                        '<div style="flex:1;height:1px;background:#1a2c3f"></div>' +
+                    '</div>' +
+
                     // 2-COLUMN HEADER: DEBUG LOGS (LEFT) & TRACE LOGS (RIGHT)
                     '<div style="display:flex;gap:6px;margin-bottom:6px;flex-shrink:0">' +
                         // SOL KART: DEBUG LOGS
                         '<div style="flex:1;background:rgba(255,255,255,0.03);border:1px solid #1a2c3f;border-radius:6px;padding:6px 8px">' +
                             '<div style="display:flex;justify-content:space-between;align-items:center">' +
-                                '<span style="font-weight:bold;color:#00bcff;font-size:11px;display:flex;align-items:center;gap:4px">' +
+                                '<span style="font-weight:bold;color:#00bcff;font-size:11px;display:flex;align-items:center;gap:4px" data-i18n="settings_debug_title">' +
                                     '🐞 Debug Logs' +
                                 '</span>' +
-                                '<label style="position:relative;display:inline-block;width:28px;height:16px;margin:0;cursor:pointer" title="Debug Logs aç/kapat (Uyarı ve Hatalar)">' +
+                                '<label style="position:relative;display:inline-block;width:28px;height:16px;margin:0;cursor:pointer" title="Debug Logs aç/kapat (Uyarı ve Hatalar)" data-i18n-title="settings_debug_toggle_title">' +
                                     '<input type="checkbox" id="ls-debug-toggle" style="opacity:0;width:0;height:0">' +
                                     '<span class="ls-debug-slider"></span>' +
                                 '</label>' +
                             '</div>' +
-                            '<div style="font-size:9px;color:#8899aa;margin-top:3px;line-height:1.2">' +
+                            '<div style="font-size:9px;color:#8899aa;margin-top:3px;line-height:1.2" data-i18n="settings_debug_desc">' +
                                 'Uygulama logları' +
                             '</div>' +
                         '</div>' +
@@ -7052,15 +7775,15 @@
                         // SAĞ KART: TRACE LOGS
                         '<div style="flex:1;background:rgba(255,255,255,0.03);border:1px solid #1a2c3f;border-radius:6px;padding:6px 8px">' +
                             '<div style="display:flex;justify-content:space-between;align-items:center">' +
-                                '<span style="font-weight:bold;color:#ff7043;font-size:11px;display:flex;align-items:center;gap:4px">' +
+                                '<span style="font-weight:bold;color:#ff7043;font-size:11px;display:flex;align-items:center;gap:4px" data-i18n="settings_trace_title">' +
                                     '🎯 Trace Logs' +
                                 '</span>' +
-                                '<label style="position:relative;display:inline-block;width:28px;height:16px;margin:0;cursor:pointer" title="Trace Logs aç/kapat (Tıklama, sayfa, tuş & yanıtlar)">' +
+                                '<label style="position:relative;display:inline-block;width:28px;height:16px;margin:0;cursor:pointer" title="Trace Logs aç/kapat (Tıklama, sayfa, tuş & yanıtlar)" data-i18n-title="settings_trace_toggle_title">' +
                                     '<input type="checkbox" id="ls-trace-toggle" style="opacity:0;width:0;height:0">' +
                                     '<span class="ls-debug-slider"></span>' +
                                 '</label>' +
                             '</div>' +
-                            '<div style="font-size:9px;color:#8899aa;margin-top:3px;line-height:1.2">' +
+                            '<div style="font-size:9px;color:#8899aa;margin-top:3px;line-height:1.2" data-i18n="settings_trace_desc">' +
                                 'İzleme kayıtları' +
                             '</div>' +
                         '</div>' +
@@ -7068,31 +7791,31 @@
 
                     // BUTONLAR: LOGLARI KOPYALA | LOGLARI TEMİZLE | LOGLARI ÇIKAR (3 SEÇENEK)
                     '<div style="display:flex;gap:4px;margin-bottom:6px;flex-shrink:0">' +
-                        '<button id="ls-debug-copy" class="ls-btn" style="flex:1;display:flex;align-items:center;justify-content:center;gap:3px;font-size:10px;padding:5px 2px" title="Filtrelenmiş logları panoya kopyalar">📋 Logları Kopyala</button>' +
-                        '<button id="ls-debug-clear" class="ls-btn ls-btn-d" style="flex:1;display:flex;align-items:center;justify-content:center;gap:3px;font-size:10px;padding:5px 2px" title="Filtrelenmiş logları temizler">🗑️ Logları Temizle</button>' +
-                        '<button id="ls-debug-export" class="ls-btn" style="flex:1;background:#2ecc71;color:#fff;display:flex;align-items:center;justify-content:center;gap:3px;font-size:10px;padding:5px 2px" title="Filtrelenmiş logları .txt dosyası olarak masaüstüne çıkarır">💾 Logları Çıkar</button>' +
+                        '<button id="ls-debug-copy" class="ls-btn" style="flex:1;display:flex;align-items:center;justify-content:center;gap:3px;font-size:10px;padding:5px 2px" title="Filtrelenmiş logları panoya kopyalar" data-i18n-title="settings_copy_logs_title" data-i18n="settings_copy_logs">📋 Logları Kopyala</button>' +
+                        '<button id="ls-debug-clear" class="ls-btn ls-btn-d" style="flex:1;display:flex;align-items:center;justify-content:center;gap:3px;font-size:10px;padding:5px 2px" title="Filtrelenmiş logları temizler" data-i18n-title="settings_clear_logs_title" data-i18n="settings_clear_logs">🗑️ Logları Temizle</button>' +
+                        '<button id="ls-debug-export" class="ls-btn" style="flex:1;background:#2ecc71;color:#fff;display:flex;align-items:center;justify-content:center;gap:3px;font-size:10px;padding:5px 2px" title="Filtrelenmiş logları .txt dosyası olarak masaüstüne çıkarır" data-i18n-title="settings_export_logs_title" data-i18n="settings_export_logs">💾 Logları Çıkar</button>' +
                     '</div>' +
 
                     // 3 SATIRLI GELİŞMİŞ MULTI FİLTRE
                     '<div style="display:flex;flex-direction:column;gap:3px;margin-bottom:6px;flex-shrink:0" id="ls-debug-filters-container">' +
                         // 1. Satır: Akış
                         '<div style="display:flex;gap:3px;align-items:center;flex-wrap:wrap">' +
-                            '<span style="font-size:9px;color:#8899aa;font-weight:bold;min-width:44px">Akış:</span>' +
-                            '<span class="ls-debug-filter active" data-row="1" data-val="ALL">Tümü</span>' +
+                            '<span style="font-size:9px;color:#8899aa;font-weight:bold;min-width:44px" data-i18n="settings_stream">Akış:</span>' +
+                            '<span class="ls-debug-filter active" data-row="1" data-val="ALL" data-i18n="settings_all">Tümü</span>' +
                             '<span class="ls-debug-filter" data-row="1" data-val="DEBUG">🐞 Debug Logs</span>' +
                             '<span class="ls-debug-filter" data-row="1" data-val="TRACE">🎯 Trace Logs</span>' +
                         '</div>' +
                         // 2. Satır: Kapsam / Sunucu & Ajax
                         '<div style="display:flex;gap:3px;align-items:center;flex-wrap:wrap">' +
-                            '<span style="font-size:9px;color:#8899aa;font-weight:bold;min-width:44px">Kapsam:</span>' +
-                            '<span class="ls-debug-filter active" data-row="2" data-val="ALL">Tümü</span>' +
-                            '<span class="ls-debug-filter" data-row="2" data-val="REQ" title="Sunucuya gönderilen AJAX ve istekler">📤 Giden İstekler</span>' +
-                            '<span class="ls-debug-filter" data-row="2" data-val="RESP" title="Sunucudan ve OGame\'den dönen yanıtlar">📥 Gelen Yanıtlar</span>' +
+                            '<span style="font-size:9px;color:#8899aa;font-weight:bold;min-width:44px" data-i18n="settings_scope">Kapsam:</span>' +
+                            '<span class="ls-debug-filter active" data-row="2" data-val="ALL" data-i18n="settings_all">Tümü</span>' +
+                            '<span class="ls-debug-filter" data-row="2" data-val="REQ" title="Sunucuya gönderilen AJAX ve istekler" data-i18n="settings_req">📤 Giden İstekler</span>' +
+                            '<span class="ls-debug-filter" data-row="2" data-val="RESP" title="Sunucudan ve OGame\'den dönen yanıtlar" data-i18n="settings_resp">📥 Gelen Yanıtlar</span>' +
                         '</div>' +
                         // 3. Satır: Seviye
                         '<div style="display:flex;gap:3px;align-items:center;flex-wrap:wrap">' +
-                            '<span style="font-size:9px;color:#8899aa;font-weight:bold;min-width:44px">Seviye:</span>' +
-                            '<span class="ls-debug-filter active" data-row="3" data-val="ALL">Tümü</span>' +
+                            '<span style="font-size:9px;color:#8899aa;font-weight:bold;min-width:44px" data-i18n="settings_level">Seviye:</span>' +
+                            '<span class="ls-debug-filter active" data-row="3" data-val="ALL" data-i18n="settings_all">Tümü</span>' +
                             '<span class="ls-debug-filter" data-row="3" data-val="INFO">ℹ️ Info</span>' +
                             '<span class="ls-debug-filter" data-row="3" data-val="WARN">⚠️ Warning</span>' +
                             '<span class="ls-debug-filter" data-row="3" data-val="ERROR">❌ Error</span>' +
@@ -7144,6 +7867,19 @@
         if (isPanelOpen) {
             panel.style.display = 'flex';
         }
+        applyPanelOpacity();
+
+        panel.addEventListener('mouseenter', () => {
+            isPanelHovered = true;
+            if (generalSettings.hoverFocus) {
+                panel.style.opacity = '1';
+            }
+        });
+
+        panel.addEventListener('mouseleave', () => {
+            isPanelHovered = false;
+            applyPanelOpacity();
+        });
 
         fab.addEventListener('click', () => {
             const willOpen = panel.style.display !== 'flex';
@@ -7293,7 +8029,8 @@
                 if (t === 'collector') renderCollector();
                 if (t === 'expedition') renderExpedition();
                 if (t === 'scanner') { updateScanStatusInfo(); updateRefreshButtonCooldown(); }
-                if (t === 'debug') renderDebugLogs();
+                if (t === 'finder') { updateFinderStatusInfo(); updateRefreshButtonCooldown(); }
+                if (t === 'settings' || t === 'debug') renderDebugLogs();
                 LS_LOGGER.action('UI', 'Sekme değiştirildi: ' + t);
                 setTimeout(ensurePanelInView, 20);
             });
@@ -7305,7 +8042,8 @@
         if (savedContentEl) savedContentEl.classList.add('active');
         if (activeTab === 'expedition') renderExpedition();
         if (activeTab === 'scanner') { updateScanStatusInfo(); updateRefreshButtonCooldown(); }
-        if (activeTab === 'debug') renderDebugLogs();
+        if (activeTab === 'finder') { updateFinderStatusInfo(); updateRefreshButtonCooldown(); }
+        if (activeTab === 'settings' || activeTab === 'debug') renderDebugLogs();
         if (!savedTabEl) {
             const first = document.querySelector('.ls-tab');
             if (first) { first.classList.add('active'); document.getElementById('tc-cart').classList.add('active'); }
@@ -7339,7 +8077,7 @@
         document.getElementById('ls-min').value = scanSettings.minEmpty;
 
         document.getElementById('ls-scan-btn').addEventListener('click', startScan);
-        document.getElementById('ls-scan-refresh-btn')?.addEventListener('click', forceRefreshUniverse);
+        document.getElementById('ls-scan-refresh-btn')?.addEventListener('click', forceRefreshAllUniverseData);
         document.getElementById('ls-scan-copy').addEventListener('click', copyScanResults);
         updateScanStatusInfo();
         updateRefreshButtonCooldown();
@@ -7356,6 +8094,8 @@
         });
 
         document.getElementById('ls-find-btn').addEventListener('click', startFinder);
+        document.getElementById('ls-find-refresh-btn')?.addEventListener('click', forceRefreshAllUniverseData);
+        updateFinderStatusInfo();
         document.getElementById('ls-find-q').addEventListener('keydown', e => {
             if (e.key === 'Enter') startFinder();
         });
@@ -7404,7 +8144,7 @@
                             } else {
                                 alarmSettings.desktopNotification = false;
                                 desktopToggle.checked = false;
-                                alert('Masaüstü bildirimlerine tarayıcınızda izin verilmedi.');
+                                alert(currentLang === 'tr' ? 'Masaüstü bildirimlerine tarayıcınızda izin verilmedi.' : 'Desktop notifications were not permitted by your browser.');
                             }
                         } catch (err) {
                             alarmSettings.desktopNotification = false;
@@ -7413,7 +8153,7 @@
                     } else {
                         alarmSettings.desktopNotification = false;
                         desktopToggle.checked = false;
-                        alert('Tarayıcınız Web Bildirimlerini desteklemiyor.');
+                        alert(currentLang === 'tr' ? 'Tarayıcınız Web Bildirimlerini desteklemiyor.' : 'Your browser does not support Web Notifications.');
                     }
                 } else {
                     alarmSettings.desktopNotification = false;
@@ -7468,16 +8208,24 @@
             muteCurrentThreat();
         });
 
-        document.getElementById('ls-alarm-att-test')?.addEventListener('click', (e) => {
+        document.getElementById('ls-alarm-att-test')?.addEventListener('click', async (e) => {
             e.preventDefault();
-            unlockAudio();
-            playAttackAlertSound(attSoundSelect?.value);
+            try {
+                const sel = document.getElementById('ls-alarm-att-sound');
+                await playAttackAlertSound(sel ? sel.value : null);
+            } catch (err) {
+                console.error('[LS] Saldırı testi hatası:', err);
+            }
         });
 
-        document.getElementById('ls-alarm-esp-test')?.addEventListener('click', (e) => {
+        document.getElementById('ls-alarm-esp-test')?.addEventListener('click', async (e) => {
             e.preventDefault();
-            unlockAudio();
-            playEspionageAlertSound(espSoundSelect?.value);
+            try {
+                const sel = document.getElementById('ls-alarm-esp-sound');
+                await playEspionageAlertSound(sel ? sel.value : null);
+            } catch (err) {
+                console.error('[LS] Sonda testi hatası:', err);
+            }
         });
 
         // Debris Tab Controls (Harabe Avcısı)
@@ -7524,10 +8272,14 @@
             });
         }
 
-        document.getElementById('ls-debris-test-sound')?.addEventListener('click', (e) => {
+        document.getElementById('ls-debris-test-sound')?.addEventListener('click', async (e) => {
             e.preventDefault();
-            unlockAudio();
-            playEspionageAlertSound(debSoundSelect?.value);
+            try {
+                const sel = document.getElementById('ls-debris-sound');
+                await playEspionageAlertSound(sel ? sel.value : null);
+            } catch (err) {
+                console.error('[LS] Harabe ses testi hatası:', err);
+            }
         });
 
         document.getElementById('ls-debris-clear-all')?.addEventListener('click', () => {
@@ -7639,7 +8391,7 @@
             const r3 = Array.from(debugFilterState.row3).join(', ');
 
             let out = '==================================================\n' +
-                      '  LuckyStrike OGame Helper v10.5 - Log Kayıtları\n' +
+                      '  LuckyStrike OGame Helper v10.6 - Log Kayıtları\n' +
                       '  Tarih: ' + nowStr + '\n' +
                       '  URL: ' + window.location.href + '\n' +
                       '  Filtreler: [Akış: ' + r1 + '] [Kapsam: ' + r2 + '] [Seviye: ' + r3 + ']\n' +
@@ -7697,7 +8449,7 @@
             return true;
         }
 
-        function renderDebugLogs() {
+        function renderDebugLogs(isLiveUpdate) {
             const consoleEl = document.getElementById('ls-debug-console');
             const countEl = document.getElementById('ls-debug-count');
             const debugStatusEl = document.getElementById('ls-debug-status');
@@ -7709,15 +8461,17 @@
             const debugOn = LS_LOGGER.isDebugEnabled();
             const traceOn = LS_LOGGER.isTraceEnabled();
 
-            if (debugToggleEl) debugToggleEl.checked = debugOn;
-            if (traceToggleEl) traceToggleEl.checked = traceOn;
+            if (!isLiveUpdate) {
+                if (debugToggleEl) debugToggleEl.checked = debugOn;
+                if (traceToggleEl) traceToggleEl.checked = traceOn;
+            }
 
             if (debugStatusEl) {
-                debugStatusEl.textContent = debugOn ? '● Debug: Açık' : '○ Debug: Kapalı';
+                debugStatusEl.textContent = debugOn ? t('settings_debug_on', '● Debug: Açık') : t('settings_debug_off', '○ Debug: Kapalı');
                 debugStatusEl.style.color = debugOn ? '#2ecc71' : '#8899aa';
             }
             if (traceStatusEl) {
-                traceStatusEl.textContent = traceOn ? '● Trace: Açık' : '○ Trace: Kapalı';
+                traceStatusEl.textContent = traceOn ? t('settings_trace_on', '● Trace: Açık') : t('settings_trace_off', '○ Trace: Kapalı');
                 traceStatusEl.style.color = traceOn ? '#ff7043' : '#8899aa';
             }
 
@@ -7725,17 +8479,26 @@
             const filteredLogs = allLogs.filter(matchesFilters);
 
             if (countEl) {
-                countEl.textContent = `${filteredLogs.length} / ${allLogs.length} kayıt`;
+                countEl.textContent = `${filteredLogs.length} / ${allLogs.length} ` + t('settings_records', 'kayıt');
             }
 
             if (allLogs.length === 0) {
-                let emptyMsg = 'Debug ve Trace modları kapalı.<br>Yukarıdaki switch\'leri açarak hareketleri, tıklamaları ve hataları anbean kaydetmeye başlayabilirsiniz.';
+                const isEn = (currentLang === 'en');
+                let emptyMsg = isEn 
+                    ? 'Debug and Trace modes are off.<br>Turn on the switches above to record actions, clicks, and errors in real time.'
+                    : 'Debug ve Trace modları kapalı.<br>Yukarıdaki switch\'leri açarak hareketleri, tıklamaları ve hataları anbean kaydetmeye başlayabilirsiniz.';
                 if (debugOn && traceOn) {
-                    emptyMsg = 'Debug ve Trace açık. Eklentiyi veya oyunu kullanırken tüm hareketler burada listelenecektir.';
+                    emptyMsg = isEn 
+                        ? 'Debug and Trace are active. Activity will be listed here as you use the extension or game.'
+                        : 'Debug ve Trace açık. Eklentiyi veya oyunu kullanırken tüm hareketler burada listelenecektir.';
                 } else if (debugOn) {
-                    emptyMsg = 'Sadece Debug Logs açık. Yalnızca hata ve uyarı kayıtları listelenecektir.';
+                    emptyMsg = isEn 
+                        ? 'Only Debug Logs is active. Only errors and warning records will be listed.'
+                        : 'Sadece Debug Logs açık. Yalnızca hata ve uyarı kayıtları listelenecektir.';
                 } else if (traceOn) {
-                    emptyMsg = 'Sadece Trace Logs açık. Tıklama, tuş, sayfa geçişleri ve oyun yanıtları listelenecektir.';
+                    emptyMsg = isEn 
+                        ? 'Only Trace Logs is active. Clicks, keypresses, page navigation, and server responses will be listed.'
+                        : 'Sadece Trace Logs açık. Tıklama, tuş, sayfa geçişleri ve oyun yanıtları listelenecektir.';
                 }
                 consoleEl.innerHTML = `<div style="color:#6e7681;padding:15px;text-align:center;font-style:italic">${emptyMsg}</div>`;
                 return;
@@ -7801,8 +8564,8 @@
         }
 
         onDebugLiveUpdate = function(entry) {
-            if (activeTab === 'debug') {
-                renderDebugLogs();
+            if (activeTab === 'settings' || activeTab === 'debug') {
+                renderDebugLogs(true);
             }
         };
 
@@ -7948,6 +8711,75 @@
 
         updateFilterVisuals();
 
+        const langSelect = document.getElementById('ls-setting-lang');
+        if (langSelect) {
+            langSelect.value = currentLang || 'tr';
+            langSelect.addEventListener('change', () => {
+                currentLang = langSelect.value;
+                localStorage.setItem(KEYS.LANG, currentLang);
+                LS_LOGGER.action('SETTINGS', 'Language changed: ' + currentLang);
+                applyTranslations();
+                updateButtonLabel();
+            });
+        }
+        const themeSelect = document.getElementById('ls-setting-theme');
+        if (themeSelect) {
+            themeSelect.value = localStorage.getItem(KEYS.THEME) || 'dark';
+            themeSelect.addEventListener('change', () => {
+                localStorage.setItem(KEYS.THEME, themeSelect.value);
+                LS_LOGGER.action('SETTINGS', 'Theme changed: ' + themeSelect.value);
+            });
+        }
+
+        const opacitySlider = document.getElementById('ls-setting-opacity');
+        const opacityVal = document.getElementById('ls-setting-opacity-val');
+        if (opacitySlider) {
+            opacitySlider.value = String(generalSettings.opacity);
+            if (opacityVal) opacityVal.textContent = generalSettings.opacity + '%';
+            opacitySlider.addEventListener('input', () => {
+                const val = parseInt(opacitySlider.value, 10) || 100;
+                generalSettings.opacity = Math.max(20, Math.min(100, val));
+                if (opacityVal) opacityVal.textContent = generalSettings.opacity + '%';
+                localStorage.setItem(KEYS.OPACITY, String(generalSettings.opacity));
+                applyPanelOpacity();
+            });
+        }
+
+        const hoverFocusToggle = document.getElementById('ls-setting-hover-focus');
+        if (hoverFocusToggle) {
+            hoverFocusToggle.checked = !!generalSettings.hoverFocus;
+            hoverFocusToggle.addEventListener('change', () => {
+                generalSettings.hoverFocus = hoverFocusToggle.checked;
+                localStorage.setItem(KEYS.HOVER_FOCUS, hoverFocusToggle.checked ? 'true' : 'false');
+                applyPanelOpacity();
+                LS_LOGGER.action('SETTINGS', 'Hover focus changed: ' + generalSettings.hoverFocus);
+            });
+        }
+
+        // Intercept clicks on OGame jQuery UI selectmenu popup items (which reside outside #ls-panel in document.body)
+        document.addEventListener('click', (e) => {
+            const item = e.target && e.target.closest && e.target.closest('.ui-menu-item, .ui-selectmenu-menu li, .ui-selectmenu-menu a');
+            if (!item) return;
+
+            const txt = (item.textContent || '').trim();
+            const langSelect = document.getElementById('ls-setting-lang');
+            if (langSelect) {
+                let targetLang = null;
+                if (txt.includes('English')) targetLang = 'en';
+                else if (txt.includes('Türkçe')) targetLang = 'tr';
+                if (targetLang && targetLang !== currentLang) {
+                    currentLang = targetLang;
+                    langSelect.value = targetLang;
+                    localStorage.setItem(KEYS.LANG, currentLang);
+                    LS_LOGGER.action('SETTINGS', 'Language changed: ' + currentLang);
+                    applyTranslations();
+                    updateButtonLabel();
+                }
+            }
+        }, true);
+
+        applyTranslations();
+
         setTimeout(() => {
             checkThreatsInDOM();
         }, 1000);
@@ -7964,11 +8796,12 @@
         const data = parseCostsFromPopup();
         if (countSpan) countSpan.textContent = `+${selectedLevelsToAdd}`;
 
-        let newText = '📥 Sepete Ekle';
+        const baseText = t('cart_btn_add', 'Sepete Ekle');
+        let newText = `📥 ${baseText}`;
         if (data && data.level) {
-            newText = `📥 Sepete Ekle (${data.level})`;
+            newText = `📥 ${baseText} (${data.level})`;
         } else if (data && data.count > 1) {
-            newText = `📥 Sepete Ekle (x${data.count})`;
+            newText = `📥 ${baseText} (x${data.count})`;
         }
 
         if (btn.textContent !== newText) {
@@ -8006,7 +8839,7 @@
             const downBtn = document.createElement('button');
             downBtn.className = 'ls-lvl-btn';
             downBtn.textContent = '−';
-            downBtn.title = 'Kademe azalt';
+            downBtn.title = t('cart_stepper_down_title', 'Kademe azalt');
             downBtn.addEventListener('click', (e) => {
                 e.preventDefault(); e.stopPropagation();
                 if (selectedLevelsToAdd > 1) {
@@ -8022,7 +8855,7 @@
             const upBtn = document.createElement('button');
             upBtn.className = 'ls-lvl-btn';
             upBtn.textContent = '+';
-            upBtn.title = 'Kademe artır';
+            upBtn.title = t('cart_stepper_up_title', 'Kademe artır');
             upBtn.addEventListener('click', (e) => {
                 e.preventDefault(); e.stopPropagation();
                 selectedLevelsToAdd++;
@@ -8037,7 +8870,7 @@
 
         const newBtn = document.createElement('button');
         newBtn.id = 'ls-add-cart-btn';
-        newBtn.textContent = '📥 Sepete Ekle';
+        newBtn.textContent = '📥 ' + t('cart_btn_add', 'Sepete Ekle');
         newBtn.addEventListener('click', e => {
             e.preventDefault();
             e.stopPropagation();
@@ -8076,6 +8909,6 @@
     checkAndRunCollectorAssistant();
     checkAndRunExpeditionAssistant();
     scanAndSaveExpeditionTemplates();
-    console.log(LS, 'LuckyStrike OGame Helper v10.5 hazır!');
+    console.log(LS, 'LuckyStrike OGame Helper v10.6 hazır!');
 
 })();
