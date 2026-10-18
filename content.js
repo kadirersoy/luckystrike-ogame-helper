@@ -693,7 +693,7 @@
 
         const langBtnText = document.querySelector('#ls-setting-lang-button .ui-selectmenu-status, #ls-setting-lang-button .ui-selectmenu-text');
         if (langBtnText) {
-            langBtnText.textContent = (currentLang === 'en') ? '🇬🇧 ENG' : '🇹🇷 TR';
+            langBtnText.textContent = (currentLang === 'en') ? 'ENG (English)' : 'TR (Türkçe)';
         }
         const themeBtnText = document.querySelector('#ls-setting-theme-button .ui-selectmenu-status, #ls-setting-theme-button .ui-selectmenu-text');
         if (themeBtnText) {
@@ -2258,6 +2258,7 @@
         }
         return 0;
     };
+    const getAvailableShipCount = getAvailableCount;
 
     const isLuckyElement = (el) => {
         if (!el) return true;
@@ -4902,7 +4903,7 @@
                     '</div>' +
                     '<div style="display:flex;align-items:center;gap:4px">' +
                         '<button class="ls-btn-sm ls-debris-nav-btn" data-g="' + item.g + '" data-s="' + item.s + '" style="padding:2px 6px;cursor:pointer;display:inline-flex;align-items:center;gap:2px" title="Galakside [' + item.g + ':' + item.s + '] sistemine git">' +
-                            '🚀 ' + t('deb_jump') +
+                            t('deb_jump', '🚀 Git') +
                         '</button>' +
                         '<button class="ls-x ls-debris-del" data-idx="' + index + '" title="Bu harabeyi listeden kaldır">✖</button>' +
                     '</div>' +
@@ -7090,9 +7091,9 @@
 
         const totalCargoNeeded = (currentItem.met || 0) + (currentItem.cri || 0) + (currentItem.deu || 0);
 
-        const availBn = getAvailableShipCount(203);
-        const availKn = getAvailableShipCount(202);
-        const availRehber = getAvailableShipCount(219);
+        const availBn = getAvailableCount(203);
+        const availKn = getAvailableCount(202);
+        const availRehber = getAvailableCount(219);
 
         const liveRes = getLiveResources();
         const availMet = liveRes.metal || 0;
@@ -7101,20 +7102,21 @@
 
         let neededCargo = totalCargoNeeded;
         let bnCount = 0, knCount = 0, rehberCount = 0;
+        const selectedShips = session.selectedShips || { bn: true, kn: true };
 
-        if (session.selectedShips.bn && bnCap > 0) {
+        if (selectedShips.bn && bnCap > 0) {
             const req = Math.ceil(neededCargo / bnCap);
             bnCount = Math.min(availBn, req);
             neededCargo = Math.max(0, neededCargo - (bnCount * bnCap));
         }
 
-        if (neededCargo > 0 && session.selectedShips.kn && knCap > 0) {
+        if (neededCargo > 0 && selectedShips.kn && knCap > 0) {
             const req = Math.ceil(neededCargo / knCap);
             knCount = Math.min(availKn, req);
             neededCargo = Math.max(0, neededCargo - (knCount * knCap));
         }
 
-        if (neededCargo > 0 && session.selectedShips.rehber && rehberCap > 0) {
+        if (neededCargo > 0 && selectedShips.rehber && rehberCap > 0) {
             const req = Math.ceil(neededCargo / rehberCap);
             rehberCount = Math.min(availRehber, req);
             neededCargo = Math.max(0, neededCargo - (rehberCount * rehberCap));
@@ -9183,8 +9185,8 @@
                         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
                             '<span style="font-size:11px;color:#d1d8e0" data-i18n="settings_lang">🌐 Dil / Language:</span>' +
                             '<select id="ls-setting-lang" class="ls-inp" style="width:160px;padding:3px 6px;font-size:11px">' +
-                                '<option value="tr">🇹🇷 TR (Türkçe)</option>' +
-                                '<option value="en">🇬🇧 ENG (English)</option>' +
+                                '<option value="tr">TR (Türkçe)</option>' +
+                                '<option value="en">ENG (English)</option>' +
                             '</select>' +
                         '</div>' +
                         '<div style="display:flex;justify-content:space-between;align-items:center">' +
