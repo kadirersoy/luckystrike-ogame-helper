@@ -1,4 +1,4 @@
-# ⚡ LuckyStrike OGame Helper (v11.0)
+# ⚡ LuckyStrike OGame Helper (v11.1)
 
 [English](#-english-description) | [Türkçe](#-türkçe-açıklama)
 
@@ -180,7 +180,7 @@ LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Term
 ## 🚀 Kurulum / Installation
 
 ### Chrome & Microsoft Edge
-1. İndirin / Download: [`luckystrike-ogame-helper-v11.0.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
+1. İndirin / Download: [`luckystrike-ogame-helper-v11.1.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
 2. Tarayıcıda eklentiler sayfasına gidin / Open extensions page:
    - **Chrome:** `chrome://extensions`
    - **Edge:** `edge://extensions`
@@ -190,6 +190,16 @@ LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Term
 ---
 
 ## 📝 Sürüm Geçmişi / Changelog
+
+### v11.1
+- **📬 Postacı Asistanı İyileştirmeleri & Dağıtım Üssü Seçimi:**
+  - Dağıtım üssü kutusuna tıklandığında açılan açılır liste (combobox) optimize edildi; imparatorluktaki herhangi bir Gezegen veya Ay tek tıkla çıkış noktası olarak atanabilir.
+  - Filo gönderme ekranındaki gemi adet kontrolü ve otomatik form doldurma kararlılığı artırıldı.
+- **⏱️ Sekmeler İçin 3 Saniye Gecikmeli Kullanım Rehberi (Hover Tooltips):**
+  - Paneldeki 9 sekmenin üzerine fare ile 3 saniye gelindiğinde, sekmenin işlevini ve kullanımını özetleyen bilgilendirme kutusu (tooltip) eklendi.
+- **🌐 Dil ve Arayüz Düzenlemeleri:**
+  - Dil seçeneği kısaltması `ENG` olarak sadeleştirildi; işletim sistemi yazı tipi uyumluluğu artırıldı.
+  - Harabe takipçisindeki galaksiye yönlendirme butonu arayüzü tekil roket simgesiyle netleştirildi.
 
 ### v11.0
 - **📬 Yeni Modül: Postacı Asistanı (Resource Courier):**

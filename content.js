@@ -2,7 +2,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v11.0 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v11.1 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -8765,7 +8765,7 @@
         panel.id = 'ls-panel';
         panel.innerHTML =
             '<div id="ls-header">' +
-                '<span id="ls-header-title">' + boltSvg + ' LuckyStrike Helper <span style="font-size:10px;color:#8899aa;font-weight:normal;opacity:0.8">v11.0</span></span>' +
+                '<span id="ls-header-title">' + boltSvg + ' LuckyStrike Helper <span style="font-size:10px;color:#8899aa;font-weight:normal;opacity:0.8">v11.1</span></span>' +
                 '<div style="display:flex;align-items:center;gap:6px">' +
                     '<button id="ls-header-stop-btn" class="ls-btn-d ls-btn-sm" style="display:none;padding:2px 7px;font-size:10px;align-items:center;gap:3px;cursor:pointer" title="Tekrarlayan bu alarmı sustur">⏹️ Sustur</button>' +
                     '<span id="ls-close">✖</span>' +
@@ -9884,7 +9884,7 @@
             const r3 = Array.from(debugFilterState.row3).join(', ');
 
             let out = '==================================================\n' +
-                      '  LuckyStrike OGame Helper v11.0 - Log Kayıtları\n' +
+                      '  LuckyStrike OGame Helper v11.1 - Log Kayıtları\n' +
                       '  Tarih: ' + nowStr + '\n' +
                       '  URL: ' + window.location.href + '\n' +
                       '  Filtreler: [Akış: ' + r1 + '] [Kapsam: ' + r2 + '] [Seviye: ' + r3 + ']\n' +
@@ -10405,6 +10405,6 @@
     checkAndRunCourierAssistant();
     checkAndRunExpeditionAssistant();
     scanAndSaveExpeditionTemplates();
-    console.log(LS, 'LuckyStrike OGame Helper v11.0 hazır!');
+    console.log(LS, 'LuckyStrike OGame Helper v11.1 hazır!');
 
 })();
