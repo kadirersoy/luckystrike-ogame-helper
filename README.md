@@ -1,4 +1,4 @@
-# ⚡ LuckyStrike OGame Helper (v10.4)
+# ⚡ LuckyStrike OGame Helper (v10.5)
 
 [English](#-english-description) | [Türkçe](#-türkçe-açıklama)
 
@@ -174,6 +174,17 @@ LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Term
 ---
 
 ## 📝 Sürüm Geçmişi / Changelog
+
+### v10.5
+- **🌌 Galaxy Scanner Akıllı Önbellek (Cache) & Sıfır Sunucu Yükü:**
+  - `universe.xml` dosyasının her taramada tekrar indirilmesi engellendi; 24 saat geçerli istemci taraflı önbellek mimarisi entegre edildi. Taramalar artık sunucuya 0 ağ isteği atarak ~50 ms içinde yerel hafızadan anında sonuç verir.
+  - **İkili Buton Mimarisi:** `🔍 Taramayı Başlat` (Önbellekten hızlı tarama) ve `🔄 Güncelle` (Sunucudan zorla taze veri çekme).
+  - **60 Saniye Güvenlik Kilidi (Cooldown):** `🔄 Güncelle` butonuna 60 saniyelik geri sayım sayacı (`⏳ 59s` ... `⏳ 1s`) ve kilit mekanizması eklendi; Gameforge API'sinin yanlışlıkla spamlanması teknik olarak engellendi.
+  - **Önbellek Yaşı Göstergesi:** Son güncelleme saati ve toplam kayıtlı gezegen sayısı durum çubuğunda canlı olarak gösterilir.
+- **🛡️ Ses Motoru (AudioContext) & Autoplay Koruma Güvencesi:**
+  - Chrome Autoplay politikası nedeniyle `AudioContext.resume()` çağrılarında oluşan konsol promise reddi hataları koruma altına alındı.
+- **📋 Güvenli Pano Kopyalama (Clipboard Safe Fallback):**
+  - Tarayıcı pencere odağı kaybolduğunda ortaya çıkan `Document is not focused` hatalarına karşı görünmez textarea geri çekilme mekanizması (`copyTextSafe`) eklendi.
 
 ### v10.4
 - **🧭 Keşif Asistanı Sadeleştirmesi & Doğal Şablon Desteği:**

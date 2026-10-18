@@ -2,7 +2,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v10.1 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v10.5 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -32,7 +32,9 @@
         TRACE_LOGS: 'LS_TRACE_LOGS',
         CART_SHIPS: 'LS_CART_SHIPS',
         CART_PLANET_PREFS: 'LS_CART_PLANET_PREFS',
-        CART_QUEUE: 'LS_CART_QUEUE'
+        CART_QUEUE: 'LS_CART_QUEUE',
+        UNIVERSE_CACHE: 'LS_UNIVERSE_CACHE',
+        UNIVERSE_LAST_REFRESH: 'LS_UNIVERSE_LAST_REFRESH'
     };
 
     // ============================================================
@@ -1361,9 +1363,43 @@
         showCollectorToast('Gezegen sepeti kaldırıldı.');
     }
 
+    function copyTextSafe(text, onSuccess, onError) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text)
+                .then(() => {
+                    if (typeof onSuccess === 'function') onSuccess();
+                })
+                .catch(() => {
+                    fallback(text);
+                });
+        } else {
+            fallback(text);
+        }
+
+        function fallback(t) {
+            try {
+                const ta = document.createElement('textarea');
+                ta.value = t;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                const success = document.execCommand('copy');
+                document.body.removeChild(ta);
+                if (success) {
+                    if (typeof onSuccess === 'function') onSuccess();
+                } else {
+                    if (typeof onError === 'function') onError();
+                }
+            } catch (e) {
+                if (typeof onError === 'function') onError(e);
+            }
+        }
+    }
+
     function copyNumber(val, elemId) {
         const absVal = Math.abs(val);
-        navigator.clipboard.writeText(String(absVal)).then(() => {
+        copyTextSafe(String(absVal), () => {
             const el = document.getElementById(elemId);
             if (el) {
                 const orig = el.textContent;
@@ -2701,17 +2737,199 @@
         lines.push(`Metal: ${fmt(tM)} | Kristal: ${fmt(tC)} | Deuterium: ${fmt(tD)}`);
         lines.push(`Toplam Kargo İhtiyacı: ${fmt(tM + tC + tD)}`);
 
-        navigator.clipboard.writeText(lines.join('\n')).then(() => {
+        copyTextSafe(lines.join('\n'), () => {
             const btn = document.getElementById('ls-cart-copy');
             if (btn) { btn.textContent = '✓ Kopyalandı!'; setTimeout(() => { btn.textContent = '📋 Panoya Kopyala'; }, 2000); }
         });
     }
 
     // ============================================================
-    // GALAXY SCANNER
+    // GALAXY SCANNER (CACHED & THROTTLED)
     // ============================================================
+    let universeCacheInMemory = null;
+    let universeCooldownTimer = null;
+
+    function getUniverseCache() {
+        if (universeCacheInMemory && (Date.now() - universeCacheInMemory.ts < 24 * 3600 * 1000)) {
+            return universeCacheInMemory;
+        }
+
+        const raw = sessionStorage.getItem(KEYS.UNIVERSE_CACHE) || localStorage.getItem(KEYS.UNIVERSE_CACHE);
+        if (raw) {
+            try {
+                const cache = JSON.parse(raw);
+                if (cache.ts && (Date.now() - cache.ts < 24 * 3600 * 1000) && Array.isArray(cache.coords)) {
+                    universeCacheInMemory = cache;
+                    return cache;
+                }
+            } catch (e) { /* ignore parse error */ }
+        }
+
+        const apiRaw = sessionStorage.getItem(KEYS.API) || localStorage.getItem(KEYS.API);
+        if (apiRaw) {
+            try {
+                const apiData = JSON.parse(apiRaw);
+                if (apiData.ts && (Date.now() - apiData.ts < 24 * 3600 * 1000) && Array.isArray(apiData.planets)) {
+                    const coords = apiData.planets.map(p => p.coords).filter(Boolean);
+                    if (coords.length > 0) {
+                        const fallbackCache = { ts: apiData.ts, coords };
+                        universeCacheInMemory = fallbackCache;
+                        return fallbackCache;
+                    }
+                }
+            } catch (e) { /* ignore */ }
+        }
+
+        return null;
+    }
+
+    function formatTimeAgo(ts) {
+        if (!ts) return '';
+        const diffMs = Date.now() - ts;
+        if (diffMs < 60 * 1000) return 'Az önce';
+        const diffMins = Math.floor(diffMs / (60 * 1000));
+        if (diffMins < 60) return diffMins + ' dk önce';
+        const diffHours = Math.floor(diffMs / (3600 * 1000));
+        if (diffHours < 24) return diffHours + ' sa önce';
+        return new Date(ts).toLocaleDateString();
+    }
+
+    function updateScanStatusInfo() {
+        const statusEl = document.getElementById('ls-scan-status');
+        if (!statusEl || statusEl.getAttribute('data-busy')) return;
+        const cache = getUniverseCache();
+        if (cache && cache.ts) {
+            const timeStr = new Date(cache.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            statusEl.innerHTML = '<span style="color:#607d8b">Önbellek: ' + timeStr + ' (' + formatTimeAgo(cache.ts) + ') · ' + cache.coords.length + ' gezegen</span>';
+        } else {
+            statusEl.innerHTML = '<span style="color:#8899aa">Henüz evren verisi indirilmedi</span>';
+        }
+    }
+
+    function updateRefreshButtonCooldown() {
+        const btn = document.getElementById('ls-scan-refresh-btn');
+        if (!btn) return;
+
+        const lastRefresh = parseInt(localStorage.getItem(KEYS.UNIVERSE_LAST_REFRESH) || '0', 10);
+        const elapsed = Math.floor((Date.now() - lastRefresh) / 1000);
+        const remaining = 60 - elapsed;
+
+        if (remaining > 0) {
+            btn.disabled = true;
+            btn.textContent = '⏳ ' + remaining + 's';
+            btn.title = 'Yeni güncelleme için ' + remaining + ' saniye bekleyin';
+            if (!universeCooldownTimer) {
+                universeCooldownTimer = setInterval(() => {
+                    const nowElapsed = Math.floor((Date.now() - parseInt(localStorage.getItem(KEYS.UNIVERSE_LAST_REFRESH) || '0', 10)) / 1000);
+                    const rem = 60 - nowElapsed;
+                    const b = document.getElementById('ls-scan-refresh-btn');
+                    if (rem <= 0) {
+                        clearInterval(universeCooldownTimer);
+                        universeCooldownTimer = null;
+                        if (b) {
+                            b.disabled = false;
+                            b.textContent = '🔄 Güncelle';
+                            b.title = 'Evren verisini (universe.xml) sunucudan zorla yenile';
+                        }
+                    } else if (b) {
+                        b.disabled = true;
+                        b.textContent = '⏳ ' + rem + 's';
+                        b.title = 'Yeni güncelleme için ' + rem + ' saniye bekleyin';
+                    }
+                }, 1000);
+            }
+        } else {
+            if (universeCooldownTimer) {
+                clearInterval(universeCooldownTimer);
+                universeCooldownTimer = null;
+            }
+            btn.disabled = false;
+            btn.textContent = '🔄 Güncelle';
+            btn.title = 'Evren verisini (universe.xml) sunucudan zorla yenile';
+        }
+    }
+
+    async function fetchUniverseData(force = false) {
+        if (!force) {
+            const cached = getUniverseCache();
+            if (cached && Array.isArray(cached.coords) && cached.coords.length > 0) {
+                return cached;
+            }
+        }
+
+        const resp = await fetch('/api/universe.xml');
+        if (!resp.ok) throw new Error('API yanıt vermedi (' + resp.status + ')');
+        const xml = await resp.text();
+
+        const doc = new DOMParser().parseFromString(xml, 'text/xml');
+        const planets = doc.getElementsByTagName('planet');
+        const coords = [];
+        for (let i = 0; i < planets.length; i++) {
+            const c = planets[i].getAttribute('coords');
+            if (c) coords.push(c);
+        }
+
+        const data = { ts: Date.now(), coords };
+        universeCacheInMemory = data;
+        try {
+            sessionStorage.setItem(KEYS.UNIVERSE_CACHE, JSON.stringify(data));
+        } catch (e) {
+            try { localStorage.setItem(KEYS.UNIVERSE_CACHE, JSON.stringify(data)); } catch (e2) {}
+        }
+        return data;
+    }
+
+    async function forceRefreshUniverse() {
+        const btn = document.getElementById('ls-scan-refresh-btn');
+        const scanBtn = document.getElementById('ls-scan-btn');
+        const statusEl = document.getElementById('ls-scan-status');
+        const progEl = document.getElementById('ls-scan-progress');
+        const barEl = document.getElementById('ls-scan-bar');
+
+        const lastRefresh = parseInt(localStorage.getItem(KEYS.UNIVERSE_LAST_REFRESH) || '0', 10);
+        if (Date.now() - lastRefresh < 60000) {
+            updateRefreshButtonCooldown();
+            return;
+        }
+
+        localStorage.setItem(KEYS.UNIVERSE_LAST_REFRESH, Date.now().toString());
+        updateRefreshButtonCooldown();
+
+        if (scanBtn) scanBtn.disabled = true;
+        if (statusEl) {
+            statusEl.setAttribute('data-busy', '1');
+            statusEl.textContent = 'Sunucudan taze evren verisi çekiliyor...';
+        }
+        if (progEl) progEl.style.display = 'block';
+        if (barEl) barEl.style.width = '30%';
+
+        try {
+            const data = await fetchUniverseData(true);
+            if (barEl) barEl.style.width = '100%';
+            if (statusEl) {
+                statusEl.removeAttribute('data-busy');
+                statusEl.innerHTML = '<span style="color:#2ecc71">✓ Güncellendi! ' + data.coords.length + ' gezegen kaydedildi.</span>';
+            }
+            LS_LOGGER.info('SCANNER', `Evren verisi zorla güncellendi: ${data.coords.length} gezegen kaydedildi.`);
+            setTimeout(() => {
+                updateScanStatusInfo();
+                if (progEl) progEl.style.display = 'none';
+            }, 2500);
+        } catch (err) {
+            console.error(LS, err);
+            if (statusEl) {
+                statusEl.removeAttribute('data-busy');
+                statusEl.innerHTML = '<span style="color:#e74c3c">Hata: ' + escapeHtml(err.message) + '</span>';
+            }
+            if (progEl) progEl.style.display = 'none';
+        } finally {
+            if (scanBtn) scanBtn.disabled = false;
+        }
+    }
+
     async function startScan() {
         const btn = document.getElementById('ls-scan-btn');
+        const refreshBtn = document.getElementById('ls-scan-refresh-btn');
         const statusEl = document.getElementById('ls-scan-status');
         const progEl = document.getElementById('ls-scan-progress');
         const barEl = document.getElementById('ls-scan-bar');
@@ -2734,31 +2952,20 @@
 
         btn.disabled = true;
         btn.textContent = '⏳ Taranıyor...';
+        if (refreshBtn) refreshBtn.disabled = true;
+        if (statusEl) statusEl.setAttribute('data-busy', '1');
         progEl.style.display = 'block';
         barEl.style.width = '0%';
         resBox.style.display = 'none';
         resList.innerHTML = '';
-        statusEl.textContent = 'Universe API çekiliyor...';
+        statusEl.textContent = 'Evren verisi hazırlanıyor...';
 
         try {
-            const resp = await fetch('/api/universe.xml');
-            if (!resp.ok) throw new Error('API yanıt vermedi (' + resp.status + ')');
-            const xml = await resp.text();
-
-            statusEl.textContent = 'Veri işleniyor...';
-            barEl.style.width = '40%';
-
-            const doc = new DOMParser().parseFromString(xml, 'text/xml');
-            const planets = doc.getElementsByTagName('planet');
-            const occupied = new Set();
-            for (let i = 0; i < planets.length; i++) {
-                const c = planets[i].getAttribute('coords');
-                if (c) occupied.add(c);
-            }
-
-            barEl.style.width = '60%';
+            const data = await fetchUniverseData(false);
             statusEl.textContent = 'Boş slotlar hesaplanıyor...';
+            barEl.style.width = '60%';
 
+            const occupied = new Set(data.coords);
             const results = [];
             for (let g = gStart; g <= gEnd; g++) {
                 for (let s = sStart; s <= sEnd; s++) {
@@ -2771,7 +2978,8 @@
             }
 
             barEl.style.width = '100%';
-            statusEl.textContent = results.length + ' sonuç bulundu.';
+            const ageStr = formatTimeAgo(data.ts);
+            statusEl.innerHTML = results.length + ' sonuç bulundu. <span style="color:#607d8b">(' + ageStr + ')</span>';
 
             if (results.length > 0) {
                 resBox.style.display = 'flex';
@@ -2801,8 +3009,10 @@
             console.error(LS, e);
             statusEl.textContent = 'Hata: ' + e.message;
         } finally {
+            if (statusEl) statusEl.removeAttribute('data-busy');
             btn.disabled = false;
             btn.textContent = '🔍 Taramayı Başlat';
+            updateRefreshButtonCooldown();
             setTimeout(() => { progEl.style.display = 'none'; }, 2000);
         }
     }
@@ -2817,7 +3027,7 @@
         });
         lines.push('');
         lines.push('Toplam: ' + lastScanResults.length + ' sistem');
-        navigator.clipboard.writeText(lines.join('\n')).then(() => {
+        copyTextSafe(lines.join('\n'), () => {
             const btn = document.getElementById('ls-scan-copy');
             if (btn) { btn.textContent = '✓ Kopyalandı!'; setTimeout(() => { btn.textContent = '📋 Panoya Kopyala'; }, 2000); }
         });
@@ -2994,24 +3204,46 @@
     let audioCtx = null;
     function getAudioContext() {
         if (!audioCtx) {
-            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-            if (AudioContextClass) {
-                audioCtx = new AudioContextClass();
+            try {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (AudioContextClass) {
+                    audioCtx = new AudioContextClass();
+                }
+            } catch (e) {
+                return null;
             }
         }
         if (audioCtx && audioCtx.state === 'suspended') {
-            audioCtx.resume();
+            try {
+                const res = audioCtx.resume();
+                if (res && typeof res.catch === 'function') {
+                    res.catch(() => {});
+                }
+            } catch (e) {}
         }
         return audioCtx;
     }
 
     function unlockAudio() {
+        if (!audioCtx) {
+            try {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (AudioContextClass) {
+                    audioCtx = new AudioContextClass();
+                }
+            } catch (e) {}
+        }
         if (audioCtx && audioCtx.state === 'suspended') {
-            audioCtx.resume();
+            try {
+                const res = audioCtx.resume();
+                if (res && typeof res.catch === 'function') {
+                    res.catch(() => {});
+                }
+            } catch (e) {}
         }
     }
     ['click', 'keydown', 'touchstart'].forEach(evt => {
-        window.addEventListener(evt, unlockAudio, { once: true, passive: true });
+        window.addEventListener(evt, unlockAudio, { passive: true });
     });
 
     function playAttackAlertSound(soundType) {
@@ -3109,7 +3341,9 @@
                 });
             }
         } catch (e) {
-            console.error(LS, 'Saldırı sesi çalınamadı:', e);
+            if (typeof LS_LOGGER !== 'undefined' && LS_LOGGER.debug) {
+                LS_LOGGER.debug('AUDIO', 'Saldırı sesi çalınamadı (kullanıcı etkileşimi bekleniyor): ' + (e.message || e));
+            }
         }
     }
 
@@ -3230,7 +3464,9 @@
                 });
             }
         } catch (e) {
-            console.error(LS, 'Sonar sesi çalınamadı:', e);
+            if (typeof LS_LOGGER !== 'undefined' && LS_LOGGER.debug) {
+                LS_LOGGER.debug('AUDIO', 'Sonar sesi çalınamadı (kullanıcı etkileşimi bekleniyor): ' + (e.message || e));
+            }
         }
     }
 
@@ -6313,6 +6549,9 @@
             '.ls-btn:disabled{opacity:0.5;cursor:not-allowed}',
             '.ls-btn-d{background:#e74c3c;color:#fff}',
             '.ls-btn-d:hover{background:#c0392b}',
+            '.ls-btn-warn{background:linear-gradient(135deg,#e67e22,#d35400);color:#fff;border:none;padding:5px 9px;border-radius:3px;cursor:pointer;font-weight:bold;font-size:11px;transition:all .2s;white-space:nowrap}',
+            '.ls-btn-warn:hover{background:linear-gradient(135deg,#f39c12,#e67e22)}',
+            '.ls-btn-warn:disabled{background:#5c3516 !important;color:#998877 !important;opacity:0.65;cursor:not-allowed;border:1px solid #7a441c}',
             '.ls-btn-sm{background:#00bcff;color:#000;border:none;padding:2px 6px;border-radius:3px;',
             'cursor:pointer;font-size:10px;font-weight:bold;white-space:nowrap}',
             '.ls-btn-sm:hover{background:#33cfff}',
@@ -6452,7 +6691,7 @@
         panel.id = 'ls-panel';
         panel.innerHTML =
             '<div id="ls-header">' +
-                '<span id="ls-header-title">' + boltSvg + ' LuckyStrike Helper <span style="font-size:10px;color:#8899aa;font-weight:normal;opacity:0.8">v10.4</span></span>' +
+                '<span id="ls-header-title">' + boltSvg + ' LuckyStrike Helper <span style="font-size:10px;color:#8899aa;font-weight:normal;opacity:0.8">v10.5</span></span>' +
                 '<div style="display:flex;align-items:center;gap:6px">' +
                     '<button id="ls-header-stop-btn" class="ls-btn-d ls-btn-sm" style="display:none;padding:2px 7px;font-size:10px;align-items:center;gap:3px;cursor:pointer" title="Tekrarlayan bu alarmı sustur">⏹️ Sustur</button>' +
                     '<span id="ls-close">✖</span>' +
@@ -6521,7 +6760,10 @@
                             '<option value="15">15 slot</option>' +
                         '</select>' +
                     '</div>' +
-                    '<button id="ls-scan-btn" class="ls-btn" style="width:100%;margin-top:4px">🔍 Taramayı Başlat</button>' +
+                    '<div style="display:flex;gap:6px;margin-top:4px">' +
+                        '<button id="ls-scan-btn" class="ls-btn" style="flex:1">🔍 Taramayı Başlat</button>' +
+                        '<button id="ls-scan-refresh-btn" class="ls-btn-warn" style="flex-shrink:0" title="Evren verisini (universe.xml) sunucudan zorla yenile">🔄 Güncelle</button>' +
+                    '</div>' +
                     '<div class="ls-prog" id="ls-scan-progress"><div class="ls-prog-bar" id="ls-scan-bar"></div></div>' +
                     '<div id="ls-scan-status" style="font-size:10px;text-align:center;color:#8899aa;margin-top:4px"></div>' +
                     '<div id="ls-scan-results-box" style="display:none;margin-top:8px;flex:1;min-height:60px;flex-direction:column;overflow:hidden">' +
@@ -7050,6 +7292,7 @@
                 if (t === 'debris') renderDebrisList();
                 if (t === 'collector') renderCollector();
                 if (t === 'expedition') renderExpedition();
+                if (t === 'scanner') { updateScanStatusInfo(); updateRefreshButtonCooldown(); }
                 if (t === 'debug') renderDebugLogs();
                 LS_LOGGER.action('UI', 'Sekme değiştirildi: ' + t);
                 setTimeout(ensurePanelInView, 20);
@@ -7061,6 +7304,7 @@
         if (savedTabEl) savedTabEl.classList.add('active');
         if (savedContentEl) savedContentEl.classList.add('active');
         if (activeTab === 'expedition') renderExpedition();
+        if (activeTab === 'scanner') { updateScanStatusInfo(); updateRefreshButtonCooldown(); }
         if (activeTab === 'debug') renderDebugLogs();
         if (!savedTabEl) {
             const first = document.querySelector('.ls-tab');
@@ -7095,7 +7339,10 @@
         document.getElementById('ls-min').value = scanSettings.minEmpty;
 
         document.getElementById('ls-scan-btn').addEventListener('click', startScan);
+        document.getElementById('ls-scan-refresh-btn')?.addEventListener('click', forceRefreshUniverse);
         document.getElementById('ls-scan-copy').addEventListener('click', copyScanResults);
+        updateScanStatusInfo();
+        updateRefreshButtonCooldown();
 
         document.querySelectorAll('.ls-chip[data-slots]').forEach(chip => {
             chip.addEventListener('click', () => {
@@ -7380,27 +7627,7 @@
         }
 
         function copyTextToClipboard(text, onSuccess, onError) {
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(text).then(onSuccess).catch(() => fallback(text));
-            } else {
-                fallback(text);
-            }
-
-            function fallback(t) {
-                const ta = document.createElement('textarea');
-                ta.value = t;
-                ta.style.position = 'fixed';
-                ta.style.opacity = '0';
-                document.body.appendChild(ta);
-                ta.select();
-                try {
-                    document.execCommand('copy');
-                    if (typeof onSuccess === 'function') onSuccess();
-                } catch (e) {
-                    if (typeof onError === 'function') onError();
-                }
-                document.body.removeChild(ta);
-            }
+            copyTextSafe(text, onSuccess, onError);
         }
 
         function formatLogsForExport(logs) {
@@ -7412,7 +7639,7 @@
             const r3 = Array.from(debugFilterState.row3).join(', ');
 
             let out = '==================================================\n' +
-                      '  LuckyStrike OGame Helper v10.4 - Log Kayıtları\n' +
+                      '  LuckyStrike OGame Helper v10.5 - Log Kayıtları\n' +
                       '  Tarih: ' + nowStr + '\n' +
                       '  URL: ' + window.location.href + '\n' +
                       '  Filtreler: [Akış: ' + r1 + '] [Kapsam: ' + r2 + '] [Seviye: ' + r3 + ']\n' +
@@ -7849,6 +8076,6 @@
     checkAndRunCollectorAssistant();
     checkAndRunExpeditionAssistant();
     scanAndSaveExpeditionTemplates();
-    console.log(LS, 'LuckyStrike OGame Helper v10.0 hazır!');
+    console.log(LS, 'LuckyStrike OGame Helper v10.5 hazır!');
 
 })();
