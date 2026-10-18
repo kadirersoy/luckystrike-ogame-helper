@@ -2,7 +2,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v10.6 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v11.0 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -22,6 +22,8 @@
         AUTOLOAD: 'LS_FLEET_AUTOLOAD',
         COLLECTOR: 'LS_COLLECTOR_SETTINGS',
         COLLECTOR_RUN: 'LS_COLLECTOR_RUN',
+        COURIER: 'LS_COURIER_SETTINGS',
+        COURIER_RUN: 'LS_COURIER_RUN',
         PLANET_CACHE: 'LS_PLANET_CACHE',
         EXPEDITION: 'LS_EXPEDITION_SETTINGS',
         EXPEDITION_RUN: 'LS_EXPEDITION_RUN',
@@ -51,6 +53,7 @@
             // Tabs
             tab_cart: 'Maliyet',
             tab_collector: 'Toplayıcı',
+            tab_courier: 'Postacı',
             tab_debris: 'Harabe',
             tab_expedition: 'Keşif',
             tab_scanner: 'Tarayıcı',
@@ -148,6 +151,35 @@
             coll_hud_selected_fleet: 'Seçilen Filo:',
             coll_hud_transported: 'Taşınan:',
             coll_hud_cap_shortage: 'Kargo Kapasitesi Yetersiz',
+
+            // Courier Tab (Postacı)
+            cour_origin_head: '📮 Dağıtım Üssü (Çıkış Noktası)',
+            cour_here: 'Burası',
+            cour_here_title: 'Çıkış noktasını şu an bulunduğunuz gezegen/ay yapar',
+            cour_transport: 'Nakliye',
+            cour_deploy: 'Konuşlandır',
+            cour_ships: '🚀 Gemi',
+            cour_bn: 'BN',
+            cour_kn: 'KN',
+            cour_rehber: 'Rehber',
+            cour_sync_title: 'Genel Dağıtım',
+            cour_sync_apply: '⚡ Eşitle',
+            cour_sync_apply_title: 'Bu tutarları tüm seçili hedeflere yaz',
+            cour_sel_all: 'Tümü',
+            cour_sel_planets: '🪐 Gezegenler',
+            cour_sel_moons: '🌕 Aylar',
+            cour_sel_none: '✖ Kaldır',
+            cour_planets_moons: '🪐 Hedef Gezegenler & Aylar',
+            cour_res_cols: 'M / K / D Dağıtımı',
+            cour_origin_badge: '📍 Dağıtım Merkezi',
+            cour_start_btn: '📬 Dağıtımı Başlat',
+            cour_loading: 'Yükleniyor...',
+            cour_no_selection: 'Dağıtım yapılacak gezegen veya ay seçilmedi!',
+            cour_no_resources: 'Lütfen gönderilecek maden miktarlarını girin!',
+            cour_planets_count: 'hedef seçili',
+            cour_hud_title: 'Postacı Asistanı',
+            cour_hud_dest: 'Hedef:',
+            cour_hud_cargo: 'Taşınan:',
             cart_hud_shortage_title: '⚠️ Yetersiz Kaynak veya Gemi Kapasitesi!',
             cart_hud_stop_btn: '⏹️ Dağıtımı Durdur',
             cart_hud_proceed_btn: '⏩ Olduğu Kadar Gönder (Devam Et)',
@@ -294,6 +326,7 @@
             // Tabs
             tab_cart: 'Cost Cart',
             tab_collector: 'Collector',
+            tab_courier: 'Courier',
             tab_debris: 'Debris',
             tab_expedition: 'Expedition',
             tab_scanner: 'Scanner',
@@ -391,6 +424,35 @@
             coll_hud_selected_fleet: 'Selected Fleet:',
             coll_hud_transported: 'Carrying:',
             coll_hud_cap_shortage: 'Insufficient Cargo Capacity',
+
+            // Courier Tab (Postacı)
+            cour_origin_head: '📮 Distribution Base (Origin)',
+            cour_here: 'Here',
+            cour_here_title: 'Sets distribution base to current planet/moon',
+            cour_transport: 'Transport',
+            cour_deploy: 'Deploy',
+            cour_ships: '🚀 Ships',
+            cour_bn: 'LC',
+            cour_kn: 'SC',
+            cour_rehber: 'Pathfinder',
+            cour_sync_title: 'Global Fill',
+            cour_sync_apply: '⚡ Sync All',
+            cour_sync_apply_title: 'Apply these amounts to all selected targets',
+            cour_sel_all: 'All',
+            cour_sel_planets: '🪐 Planets',
+            cour_sel_moons: '🌕 Moons',
+            cour_sel_none: '✖ Clear',
+            cour_planets_moons: '🪐 Target Planets & Moons',
+            cour_res_cols: 'M / C / D Distribution',
+            cour_origin_badge: '📍 Origin Base',
+            cour_start_btn: '📬 Start Distribution',
+            cour_loading: 'Loading...',
+            cour_no_selection: 'No destination planet or moon selected!',
+            cour_no_resources: 'Please enter resource amounts to send!',
+            cour_planets_count: 'targets selected',
+            cour_hud_title: 'Courier Assistant',
+            cour_hud_dest: 'Target:',
+            cour_hud_cargo: 'Distributing:',
             cart_hud_shortage_title: '⚠️ Insufficient Resources or Cargo Capacity!',
             cart_hud_stop_btn: '⏹️ Stop Distribution',
             cart_hud_proceed_btn: '⏩ Send Partial Fleet (Proceed)',
@@ -560,6 +622,7 @@
         const tabMap = {
             cart: 'tab_cart',
             collector: 'tab_collector',
+            courier: 'tab_courier',
             debris: 'tab_debris',
             expedition: 'tab_expedition',
             scanner: 'tab_scanner',
@@ -579,6 +642,7 @@
         // Dinamik alt bileşenleri tazele
         try { if (typeof renderCart === 'function') renderCart(); } catch (e) {}
         try { if (typeof renderCollector === 'function') renderCollector(); } catch (e) {}
+        try { if (typeof renderCourier === 'function') renderCourier(); } catch (e) {}
         try { if (typeof renderDebrisList === 'function') renderDebrisList(); } catch (e) {}
         try { if (typeof renderExpedition === 'function') renderExpedition(); } catch (e) {}
         try { if (typeof updateScanStatusInfo === 'function') updateScanStatusInfo(); } catch (e) {}
@@ -1234,6 +1298,23 @@
 
     function saveCollectorSettings() {
         localStorage.setItem(KEYS.COLLECTOR, JSON.stringify(collectorSettings));
+    }
+
+    let courierSettings = Object.assign({
+        originId: null,
+        originCoord: '',
+        originType: 1,
+        originName: '',
+        mission: 3,
+        selectedShips: { bn: true, kn: true, rehber: false },
+        syncEnabled: false,
+        syncAmount: { met: 0, cri: 0, deu: 0 },
+        targets: {},
+        selectedItems: {}
+    }, JSON.parse(localStorage.getItem(KEYS.COURIER) || '{}'));
+
+    function saveCourierSettings() {
+        localStorage.setItem(KEYS.COURIER, JSON.stringify(courierSettings));
     }
 
     let expeditionSettings = Object.assign({
@@ -2140,7 +2221,7 @@
 
     const isLuckyElement = (el) => {
         if (!el) return true;
-        return !!el.closest?.('#ls-panel, [id^="ls-"], .ls-custom, #ls-coll-floating-banner, #ls-exp-floating-banner');
+        return !!el.closest?.('#ls-panel, [id^="ls-"], .ls-custom, #ls-coll-floating-banner, #ls-cour-floating-banner, #ls-exp-floating-banner');
     };
 
     const setShipAmount = (shipId, amount) => {
@@ -4171,10 +4252,32 @@
         } catch (e) {}
     }
 
+    let origDocTitle = document.title || 'OGame';
+    let titleFlashTimer = null;
+
+    function startTitleFlash(text) {
+        if (titleFlashTimer) return;
+        if (!origDocTitle || origDocTitle.includes('SALDIRI')) origDocTitle = 'OGame';
+        let flip = false;
+        titleFlashTimer = setInterval(() => {
+            document.title = flip ? ('🚨 ' + text) : ('⚔️ ' + text);
+            flip = !flip;
+        }, 900);
+    }
+
+    function stopTitleFlash() {
+        if (titleFlashTimer) {
+            clearInterval(titleFlashTimer);
+            titleFlashTimer = null;
+            if (origDocTitle) document.title = origDocTitle;
+        }
+    }
+
     function muteCurrentThreat() {
         const stored = getStoredThreatState();
         stored.muted = true;
         setStoredThreatState(stored);
+        stopTitleFlash();
 
         const stopBtn = document.getElementById('ls-alarm-stop-btn');
         const headerStopBtn = document.getElementById('ls-header-stop-btn');
@@ -4190,19 +4293,37 @@
 
     function triggerDesktopNotification(title, body) {
         if (!alarmSettings.desktopNotification) return;
+
+        let sentViaExtension = false;
+        try {
+            if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+                chrome.runtime.sendMessage({
+                    type: 'SHOW_NOTIFICATION',
+                    title: title,
+                    message: body
+                }, (resp) => {
+                    if (chrome.runtime.lastError) {
+                        fallbackDOMNotification(title, body);
+                    }
+                });
+                sentViaExtension = true;
+            }
+        } catch (e) {}
+
+        if (!sentViaExtension) {
+            fallbackDOMNotification(title, body);
+        }
+    }
+
+    function fallbackDOMNotification(title, body) {
         if (!('Notification' in window)) return;
         if (Notification.permission === 'granted') {
             try {
-                new Notification(title, { body: body, icon: 'icons/icon48.png' });
+                const icon = (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getURL)
+                    ? chrome.runtime.getURL('icons/icon128.png')
+                    : '';
+                new Notification(title, { body: body, icon: icon });
             } catch (e) {}
-        } else if (Notification.permission !== 'denied') {
-            Notification.requestPermission().then(permission => {
-                if (permission === 'granted') {
-                    try {
-                        new Notification(title, { body: body, icon: 'icons/icon48.png' });
-                    } catch (e) {}
-                }
-            });
         }
     }
 
@@ -4223,9 +4344,10 @@
 
         // 1. İkisi de ayarlardan kapalıysa gözcüyü pasife al
         if (!alarmSettings.attackEnabled && !alarmSettings.espionageEnabled) {
+            stopTitleFlash();
             if (banner) { banner.style.background = '#121820'; banner.style.borderColor = '#233446'; }
             if (dot) { dot.style.background = '#7f8c8d'; dot.style.boxShadow = 'none'; }
-            if (text) { text.style.color = '#7f8c8d'; text.textContent = 'Gözcü Pasif (Alarmlar Kapalı)'; }
+            if (text) { text.style.color = '#7f8c8d'; text.textContent = currentLang === 'tr' ? 'Gözcü Pasif (Alarmlar Kapalı)' : 'Watcher Inactive (Alarms Disabled)'; }
             if (stopBtn) stopBtn.style.display = 'none';
             if (headerStopBtn) headerStopBtn.style.display = 'none';
             clearStoredThreatState();
@@ -4239,6 +4361,7 @@
         // 2. Tehdit bittiğinde susturma ve kayıt durumunu sıfırla
         if (!isThreat) {
             clearStoredThreatState();
+            stopTitleFlash();
             if (stopBtn) stopBtn.style.display = 'none';
             if (headerStopBtn) headerStopBtn.style.display = 'none';
             if (banner) { banner.style.background = '#162436'; banner.style.borderColor = '#1a3a5c'; }
@@ -4264,8 +4387,9 @@
         if (stopBtn) stopBtn.style.display = canShowStop ? 'inline-flex' : 'none';
         if (headerStopBtn) headerStopBtn.style.display = canShowStop ? 'inline-flex' : 'none';
 
-        // Banner güncelle
+        // Banner güncelle & Sekme Başlığı Yanıp Sönmesi
         if (isAttackThreat) {
+            startTitleFlash(isMuted ? 'SALDIRI VAR (SUSTURULDU)' : 'GELEN DÜŞMAN SALDIRISI VAR!');
             if (banner) { banner.style.background = '#301416'; banner.style.borderColor = '#e74c3c'; }
             if (dot) { dot.style.background = '#e74c3c'; dot.style.boxShadow = '0 0 8px #e74c3c'; }
             if (text) {
@@ -4273,6 +4397,7 @@
                 text.textContent = isMuted ? '🚨 Saldırı Var (Alarm Susturuldu)' : '🚨 DİKKAT: GELEN SALDIRI VAR!';
             }
         } else if (isEspionageThreat) {
+            stopTitleFlash();
             if (banner) { banner.style.background = '#0e2338'; banner.style.borderColor = '#3498db'; }
             if (dot) { dot.style.background = '#3498db'; dot.style.boxShadow = '0 0 8px #3498db'; }
             if (text) {
@@ -4402,7 +4527,7 @@
         try {
             const doc = new DOMParser().parseFromString(html, 'text/html');
             const parsed = parseHostileFleets(doc);
-            let hasAttack = parsed.hasAttack || isDOMAttackAlert();
+            let hasAttack = parsed.hasAttack;
             let hasEspionage = parsed.hasEspionage;
             let sig = '';
             if (hasAttack) sig = 'ATT:' + parsed.hostileIds.join(',');
@@ -4414,6 +4539,120 @@
 
             handleThreatState(hasAttack, hasEspionage, sig);
         } catch (e) {}
+    }
+
+    // ============================================================
+    // AKILLI ARKA PLAN TEHDİT GÖZCÜSÜ (SMART BACKGROUND THREAT WATCHER)
+    // - OGame'in doğal eventList çağrısını kullanır (Sıfır ban riski)
+    // - 50s ile 80s arasında insan refleksi gibi rastgele dalgalanır (Jitter)
+    // - Kullanıcı aktif gezinirken ekstra istek atmaz
+    // - Tarayıcı arka plandayken / küçültülmüşken Web Worker ile uyumadan korur
+    // ============================================================
+    let lastUserActivityTime = Date.now();
+    let isBgChecking = false;
+    let bgWatcherTimer = null;
+    let bgWatcherWorker = null;
+
+    ['mousemove', 'mousedown', 'keydown', 'scroll', 'click'].forEach(evt => {
+        window.addEventListener(evt, () => {
+            lastUserActivityTime = Date.now();
+        }, { passive: true });
+    });
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            scheduleNextBgCheck();
+        } else {
+            stopTitleFlash();
+            checkThreatsInDOM();
+            lastUserActivityTime = Date.now();
+        }
+    });
+
+    async function checkBackgroundThreats() {
+        if (isBgChecking) return;
+        if (!alarmSettings.attackEnabled && !alarmSettings.espionageEnabled) return;
+
+        isBgChecking = true;
+        try {
+            const resp = await fetch('/game/index.php?page=componentOnly&component=eventList', {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            if (resp.ok) {
+                const html = await resp.text();
+                if (html && !html.includes('loginForm') && !html.includes('page=login')) {
+                    parseThreatsFromHTML(html);
+                    LS_LOGGER.trace('ALARM', 'Threat status verified.');
+                }
+            }
+        } catch (err) {
+            // Ağ hataları sessizce yutulur
+        } finally {
+            isBgChecking = false;
+        }
+    }
+
+    function scheduleNextBgCheck() {
+        if (!alarmSettings.attackEnabled && !alarmSettings.espionageEnabled) {
+            if (bgWatcherWorker) bgWatcherWorker.postMessage({ action: 'stop' });
+            if (bgWatcherTimer) clearTimeout(bgWatcherTimer);
+            return;
+        }
+
+        // Dengeli Mod: 50s - 80s rastgele dalgalanma (Jitter)
+        const delay = Math.floor(50000 + Math.random() * 30000);
+
+        if (bgWatcherWorker) {
+            bgWatcherWorker.postMessage({ action: 'wait', delay: delay });
+        } else {
+            if (bgWatcherTimer) clearTimeout(bgWatcherTimer);
+            bgWatcherTimer = setTimeout(() => {
+                handleBgWatcherTick();
+            }, delay);
+        }
+    }
+
+    function handleBgWatcherTick() {
+        const isUserActivelyBrowsing = !document.hidden && (Date.now() - lastUserActivityTime < 45000);
+        if (!isUserActivelyBrowsing) {
+            checkBackgroundThreats().finally(() => {
+                scheduleNextBgCheck();
+            });
+        } else {
+            scheduleNextBgCheck();
+        }
+    }
+
+    function initBgWatcherWorker() {
+        try {
+            const code = `
+                var timer = null;
+                self.onmessage = function(e) {
+                    if (e.data && e.data.action === 'wait') {
+                        if (timer) clearTimeout(timer);
+                        timer = setTimeout(function() {
+                            self.postMessage('tick');
+                        }, e.data.delay || 60000);
+                    } else if (e.data && e.data.action === 'stop') {
+                        if (timer) clearTimeout(timer);
+                        timer = null;
+                    }
+                };
+            `;
+            const blob = new Blob([code], { type: 'application/javascript' });
+            const url = URL.createObjectURL(blob);
+            bgWatcherWorker = new Worker(url);
+            bgWatcherWorker.onmessage = function(e) {
+                if (e.data === 'tick') {
+                    handleBgWatcherTick();
+                }
+            };
+        } catch (e) {
+            bgWatcherWorker = null;
+        }
     }
 
     // ============================================================
@@ -6148,6 +6387,1098 @@
     }
 
     // ============================================================
+    // POSTACI ASİSTANI (RESOURCE COURIER)
+    // ============================================================
+    function renderCourier() {
+        const empire = getEmpirePlanetsAndMoons();
+        const listEl = document.getElementById('ls-cour-list');
+        const originLabelEl = document.getElementById('ls-cour-origin-label');
+        const ddEl = document.getElementById('ls-cour-origin-dd');
+        if (!listEl || !originLabelEl || !ddEl) return;
+
+        // Varsayılan çıkış noktası (Dağıtım Üssü): Sadece henüz hiç belirlenmemişse veya geçersizse VE aktif oturum yoksa bulunulan aktif gezegen/ayı seç
+        const hasValidOrigin = courierSettings.originCoord && /^\d+:\d+:\d+$/.test(courierSettings.originCoord);
+        const isSessionRunning = !!sessionStorage.getItem(KEYS.COURIER_RUN);
+        if (empire.length > 0 && !hasValidOrigin && !isSessionRunning) {
+            const cur = getCurrentActiveTarget(empire);
+            if (cur) {
+                courierSettings.originId = cur.id;
+                courierSettings.originCoord = cur.coords;
+                courierSettings.originType = cur.type;
+                courierSettings.originName = cur.name;
+                saveCourierSettings();
+            }
+        }
+
+        // 1. Çıkış Buton Başlığı
+        let originIcon = '🪐';
+        if (courierSettings.originType === 3) originIcon = '🌕';
+        let rawOriginTitle = courierSettings.originName || 'Dağıtım Üssü';
+        let cleanOriginTitle = rawOriginTitle.replace(/^[\s\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]+/u, '').trim();
+        if (!cleanOriginTitle || cleanOriginTitle === 'Ay') {
+            if (courierSettings.originType === 3) {
+                const parentP = empire.find(p => p.coords === courierSettings.originCoord);
+                cleanOriginTitle = parentP ? `${parentP.name} ( Ay )` : 'Ay ( Ay )';
+            } else {
+                cleanOriginTitle = 'Gezegen';
+            }
+        }
+        if (courierSettings.originId === 'manual') {
+            cleanOriginTitle = (courierSettings.originType === 3 ? 'Manuel Ay' : 'Manuel Gezegen');
+        }
+
+        originLabelEl.innerHTML = `<span><b>${originIcon} ${escapeHtml(cleanOriginTitle)}</b><span class="crd">${courierSettings.originCoord || ''}</span></span>`;
+
+        // 2. Dropdown Listesi Doldur
+        let ddHtml = '';
+        empire.forEach(p => {
+            const isPActive = (courierSettings.originCoord === p.coords && courierSettings.originType === 1);
+            ddHtml += `<div class="ls-coll-dd-item ${isPActive ? 'active' : ''}" data-id="${p.id}" data-coord="${p.coords}" data-type="1" data-name="${escapeHtml(p.name)}">` +
+                `<span>🪐 ${escapeHtml(p.name)}</span><span class="crd">${p.coords}</span></div>`;
+            if (p.moon) {
+                const isMActive = (courierSettings.originCoord === p.coords && courierSettings.originType === 3);
+                const mTitle = p.moon.name || `${p.name} ( Ay )`;
+                ddHtml += `<div class="ls-coll-dd-item moon ${isMActive ? 'active' : ''}" data-id="${p.moon.id}" data-coord="${p.coords}" data-type="3" data-name="${escapeHtml(mTitle)}">` +
+                    `<span>🌕 ${escapeHtml(mTitle)}</span><span class="crd">${p.coords}</span></div>`;
+            }
+        });
+        ddHtml += `<div class="ls-coll-dd-item ls-coll-dd-manual" data-manual="1" data-type="1"><span>🪐 ${t('coll_manual_planet', 'Manuel Gezegen...')}</span><span></span></div>`;
+        ddHtml += `<div class="ls-coll-dd-item ls-coll-dd-manual" data-manual="1" data-type="3"><span>🌕 ${t('coll_manual_moon', 'Manuel Ay...')}</span><span></span></div>`;
+        ddEl.innerHTML = ddHtml;
+
+        // 3. Gemi & Genel Senkronizasyon Ayarlarını Eşitle
+        const bnChk = document.getElementById('ls-cour-ship-bn');
+        const knChk = document.getElementById('ls-cour-ship-kn');
+        const rehberChk = document.getElementById('ls-cour-ship-rehber');
+        const syncChk = document.getElementById('ls-cour-sync-chk');
+        const syncM = document.getElementById('ls-cour-sync-m');
+        const syncC = document.getElementById('ls-cour-sync-c');
+        const syncD = document.getElementById('ls-cour-sync-d');
+
+        if (bnChk) bnChk.checked = !!courierSettings.selectedShips.bn;
+        if (knChk) knChk.checked = !!courierSettings.selectedShips.kn;
+        if (rehberChk) rehberChk.checked = !!courierSettings.selectedShips.rehber;
+        if (syncChk) syncChk.checked = !!courierSettings.syncEnabled;
+
+        const syncAmt = courierSettings.syncAmount || { met: 0, cri: 0, deu: 0 };
+        if (syncM && document.activeElement !== syncM) syncM.value = syncAmt.met > 0 ? fmt(syncAmt.met) : '';
+        if (syncC && document.activeElement !== syncC) syncC.value = syncAmt.cri > 0 ? fmt(syncAmt.cri) : '';
+        if (syncD && document.activeElement !== syncD) syncD.value = syncAmt.deu > 0 ? fmt(syncAmt.deu) : '';
+
+        // 4. Gezegen & Ay Listesini Çiz
+        let listHtml = '';
+        if (empire.length === 0) {
+            listHtml = '<div style="text-align:center;color:#8899aa;padding:20px;font-size:11px">Gezegen listesi okunuyor...<br>Lütfen OGame menüsünde gezinin.</div>';
+        } else {
+            empire.forEach(p => {
+                const isOriginPlanet = (courierSettings.originCoord === p.coords && courierSettings.originType === 1);
+                const pRes = getPlanetCachedResources(p.id);
+                const pChecked = courierSettings.selectedItems[p.id] !== false;
+                const pTarget = (courierSettings.targets && courierSettings.targets[p.id]) ? courierSettings.targets[p.id] : { met: 0, cri: 0, deu: 0 };
+
+                listHtml += '<div class="ls-coll-grp">';
+
+                if (isOriginPlanet) {
+                    listHtml += `<div class="ls-coll-prow ls-coll-dest">` +
+                        `<input type="checkbox" disabled>` +
+                        `<div class="ls-coll-info">` +
+                            `<div class="ls-coll-name"><b>${escapeHtml(p.name)}</b><span class="crd">${p.coords}</span></div>` +
+                            `<div class="ls-coll-res"><span class="ls-coll-m">${formatShort(pRes.metal)}</span><span class="ls-coll-k">${formatShort(pRes.crystal)}</span><span class="ls-coll-d">${formatShort(pRes.deuterium)}</span></div>` +
+                        `</div>` +
+                        `<span class="note" style="color:#00bcff;font-weight:bold">${t('cour_origin_badge', '📍 Dağıtım Merkezi')}</span>` +
+                        `<button class="ls-coll-jump" data-cp="${p.id}" title="${t('coll_jump_hint', 'Gezegene geç')}">🚀</button>` +
+                    `</div>`;
+                } else {
+                    listHtml += `<div class="ls-coll-prow">` +
+                        `<input type="checkbox" class="ls-cour-item-chk" data-id="${p.id}" ${pChecked ? 'checked' : ''}>` +
+                        `<div class="ls-coll-info">` +
+                            `<div class="ls-coll-name"><b>${escapeHtml(p.name)}</b><span class="crd">${p.coords}</span></div>` +
+                            `<div class="ls-coll-res"><span class="ls-coll-m">${formatShort(pRes.metal)}</span><span class="ls-coll-k">${formatShort(pRes.crystal)}</span><span class="ls-coll-d">${formatShort(pRes.deuterium)}</span></div>` +
+                        `</div>` +
+                        `<div class="ls-cour-inputs-wrap">` +
+                            `<input type="text" class="ls-cour-inp ls-cour-inp-m" data-id="${p.id}" data-res="met" value="${pTarget.met > 0 ? fmt(pTarget.met) : ''}" placeholder="M" title="Metal">` +
+                            `<input type="text" class="ls-cour-inp ls-cour-inp-c" data-id="${p.id}" data-res="cri" value="${pTarget.cri > 0 ? fmt(pTarget.cri) : ''}" placeholder="K" title="Kristal">` +
+                            `<input type="text" class="ls-cour-inp ls-cour-inp-d" data-id="${p.id}" data-res="deu" value="${pTarget.deu > 0 ? fmt(pTarget.deu) : ''}" placeholder="D" title="Deuterium">` +
+                        `</div>` +
+                        `<button class="ls-coll-jump" data-cp="${p.id}" title="${t('coll_jump_hint', 'Gezegene geç')}">🚀</button>` +
+                    `</div>`;
+                }
+
+                if (p.moon) {
+                    const isOriginMoon = (courierSettings.originCoord === p.coords && courierSettings.originType === 3);
+                    const mRes = getPlanetCachedResources(p.moon.id);
+                    const mChecked = courierSettings.selectedItems[p.moon.id] === true;
+                    const mTarget = (courierSettings.targets && courierSettings.targets[p.moon.id]) ? courierSettings.targets[p.moon.id] : { met: 0, cri: 0, deu: 0 };
+                    const mTitle = p.moon.name || `${p.name} ( Ay )`;
+
+                    if (isOriginMoon) {
+                        listHtml += `<div class="ls-coll-mrow ls-coll-dest">` +
+                            `<input type="checkbox" disabled>` +
+                            `<div class="ls-coll-info">` +
+                                `<div class="ls-coll-name"><b>🌕 ${escapeHtml(mTitle)}</b></div>` +
+                                `<div class="ls-coll-res"><span class="ls-coll-m">${formatShort(mRes.metal)}</span><span class="ls-coll-k">${formatShort(mRes.crystal)}</span><span class="ls-coll-d">${formatShort(mRes.deuterium)}</span></div>` +
+                            `</div>` +
+                            `<span class="note" style="color:#00bcff;font-weight:bold">${t('cour_origin_badge', '📍 Dağıtım Merkezi')}</span>` +
+                            `<button class="ls-coll-jump" data-cp="${p.moon.id}" title="${t('coll_jump_moon_hint', 'Aya geç')}">🚀</button>` +
+                        `</div>`;
+                    } else {
+                        listHtml += `<div class="ls-coll-mrow">` +
+                            `<input type="checkbox" class="ls-cour-item-chk" data-id="${p.moon.id}" ${mChecked ? 'checked' : ''}>` +
+                            `<div class="ls-coll-info">` +
+                                `<div class="ls-coll-name"><b>🌕 ${escapeHtml(mTitle)}</b></div>` +
+                                `<div class="ls-coll-res"><span class="ls-coll-m">${formatShort(mRes.metal)}</span><span class="ls-coll-k">${formatShort(mRes.crystal)}</span><span class="ls-coll-d">${formatShort(mRes.deuterium)}</span></div>` +
+                            `</div>` +
+                            `<div class="ls-cour-inputs-wrap">` +
+                                `<input type="text" class="ls-cour-inp ls-cour-inp-m" data-id="${p.moon.id}" data-res="met" value="${mTarget.met > 0 ? fmt(mTarget.met) : ''}" placeholder="M" title="Metal">` +
+                                `<input type="text" class="ls-cour-inp ls-cour-inp-c" data-id="${p.moon.id}" data-res="cri" value="${mTarget.cri > 0 ? fmt(mTarget.cri) : ''}" placeholder="K" title="Kristal">` +
+                                `<input type="text" class="ls-cour-inp ls-cour-inp-d" data-id="${p.moon.id}" data-res="deu" value="${mTarget.deu > 0 ? fmt(mTarget.deu) : ''}" placeholder="D" title="Deuterium">` +
+                            `</div>` +
+                            `<button class="ls-coll-jump" data-cp="${p.moon.id}" title="${t('coll_jump_moon_hint', 'Aya geç')}">🚀</button>` +
+                        `</div>`;
+                    }
+                }
+
+                listHtml += '</div>';
+            });
+        }
+        listEl.innerHTML = listHtml;
+
+        // 5. Özet Bilgisini Hesapla ve Göster
+        updateCourierSummary();
+    }
+
+    function updateCourierSummary() {
+        const empire = getEmpirePlanetsAndMoons();
+        const summaryEl = document.getElementById('ls-cour-summary');
+        if (!summaryEl) return;
+
+        let totalM = 0, totalC = 0, totalD = 0;
+        let checkedCount = 0;
+
+        empire.forEach(p => {
+            const isOriginP = (courierSettings.originCoord === p.coords && courierSettings.originType === 1);
+            if (!isOriginP && courierSettings.selectedItems[p.id] !== false) {
+                const tData = (courierSettings.targets && courierSettings.targets[p.id]) || { met: 0, cri: 0, deu: 0 };
+                const subM = tData.met || 0;
+                const subC = tData.cri || 0;
+                const subD = tData.deu || 0;
+                if ((subM + subC + subD) > 0) checkedCount++;
+                totalM += subM;
+                totalC += subC;
+                totalD += subD;
+            }
+
+            if (p.moon) {
+                const isOriginM = (courierSettings.originCoord === p.coords && courierSettings.originType === 3);
+                if (!isOriginM && courierSettings.selectedItems[p.moon.id] === true) {
+                    const tData = (courierSettings.targets && courierSettings.targets[p.moon.id]) || { met: 0, cri: 0, deu: 0 };
+                    const subM = tData.met || 0;
+                    const subC = tData.cri || 0;
+                    const subD = tData.deu || 0;
+                    if ((subM + subC + subD) > 0) checkedCount++;
+                    totalM += subM;
+                    totalC += subC;
+                    totalD += subD;
+                }
+            }
+        });
+
+        const totalCargo = totalM + totalC + totalD;
+
+        // Çıkış üssünün kaynak yeterlilik kontrolü
+        let originRes = { metal: 0, crystal: 0, deuterium: 0 };
+        if (courierSettings.originId) {
+            originRes = getPlanetCachedResources(courierSettings.originId);
+        }
+        const hasEnoughMet = (originRes.metal || 0) >= totalM;
+        const hasEnoughCri = (originRes.crystal || 0) >= totalC;
+        const hasEnoughDeu = (originRes.deuterium || 0) >= totalD;
+        const isResourceSuff = (hasEnoughMet && hasEnoughCri && hasEnoughDeu);
+
+        let statusText = '';
+        if (totalCargo === 0) {
+            statusText = `<span style="color:#8899aa">Tutar bekleniyor</span>`;
+        } else if (isResourceSuff) {
+            statusText = `<span style="color:#2ecc71">✔ Üs Kaynağı Yeterli</span>`;
+        } else {
+            statusText = `<span style="color:#f39c12" title="Metal: ${formatShort(originRes.metal)}/${formatShort(totalM)}, Kri: ${formatShort(originRes.crystal)}/${formatShort(totalC)}, Deu: ${formatShort(originRes.deuterium)}/${formatShort(totalD)}">⚠ Üs Stoğu Eksik</span>`;
+        }
+
+        summaryEl.innerHTML =
+            '<div style="display:flex;justify-content:space-between;align-items:center;width:100%">' +
+                `<span style="color:#8899aa">${checkedCount} ${t('cour_planets_count', 'hedef seçili')}</span>` +
+                `<span style="font-family:monospace"><span class="ls-coll-m">${formatShort(totalM)}</span> · <span class="ls-coll-k">${formatShort(totalC)}</span> · <span class="ls-coll-d">${formatShort(totalD)}</span></span>` +
+            '</div>' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;width:100%;font-size:10px;margin-top:2px;border-top:1px dashed #1a2c3f;padding-top:2px">' +
+                `<span style="color:#8899aa">Kargo İhtiyacı: <b style="color:#00bcff">${formatShort(totalCargo)}</b></span>` +
+                statusText +
+            '</div>';
+    }
+
+    function applyCourierSyncToTargets() {
+        const syncAmt = courierSettings.syncAmount || { met: 0, cri: 0, deu: 0 };
+        const empire = getEmpirePlanetsAndMoons();
+        if (!courierSettings.targets) courierSettings.targets = {};
+
+        empire.forEach(p => {
+            const isOriginP = (courierSettings.originCoord === p.coords && courierSettings.originType === 1);
+            if (!isOriginP && courierSettings.selectedItems[p.id] !== false) {
+                courierSettings.targets[p.id] = { met: syncAmt.met || 0, cri: syncAmt.cri || 0, deu: syncAmt.deu || 0 };
+            }
+            if (p.moon) {
+                const isOriginM = (courierSettings.originCoord === p.coords && courierSettings.originType === 3);
+                if (!isOriginM && courierSettings.selectedItems[p.moon.id] === true) {
+                    courierSettings.targets[p.moon.id] = { met: syncAmt.met || 0, cri: syncAmt.cri || 0, deu: syncAmt.deu || 0 };
+                }
+            }
+        });
+
+        // DOM'daki girdi kutularını tazele
+        const listEl = document.getElementById('ls-cour-list');
+        if (listEl) {
+            listEl.querySelectorAll('.ls-cour-inp').forEach(inp => {
+                const id = inp.getAttribute('data-id');
+                const res = inp.getAttribute('data-res');
+                if (id && res && courierSettings.targets[id]) {
+                    const val = courierSettings.targets[id][res];
+                    inp.value = val > 0 ? fmt(val) : '';
+                }
+            });
+        }
+        saveCourierSettings();
+        updateCourierSummary();
+    }
+
+    let courierEventsInitialized = false;
+    function initCourierEvents() {
+        if (courierEventsInitialized) return;
+        courierEventsInitialized = true;
+
+        const ddEl = document.getElementById('ls-cour-origin-dd');
+        const originBtn = document.getElementById('ls-cour-origin-btn');
+
+        const courCurBtn = document.getElementById('ls-cour-cur-btn');
+        if (courCurBtn) {
+            courCurBtn.addEventListener('click', () => {
+                const cur = getCurrentActiveTarget(getEmpirePlanetsAndMoons());
+                if (cur) {
+                    courierSettings.originId = cur.id;
+                    courierSettings.originCoord = cur.coords;
+                    courierSettings.originType = cur.type;
+                    courierSettings.originName = cur.name;
+                    saveCourierSettings();
+                    renderCourier();
+                    showCollectorToast('📮 Çıkış üssü güncellendi: ' + (cur.type === 3 ? '🌕 ' : '🪐 ') + cur.name);
+                }
+            });
+        }
+
+        if (originBtn && ddEl) {
+            originBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                ddEl.classList.toggle('show');
+            });
+
+            ddEl.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const item = e.target.closest('.ls-coll-dd-item');
+                if (!item) return;
+
+                if (item.classList.contains('ls-coll-dd-manual')) {
+                    const reqType = parseInt(item.getAttribute('data-type'), 10) || 1;
+                    const promptMsg = (reqType === 3)
+                        ? 'Dağıtım üssü olacak Ay koordinatını girin (Örn: 1:20:5):'
+                        : 'Dağıtım üssü olacak Gezegen koordinatını girin (Örn: 1:20:5):';
+                    const manualCoord = window.prompt(promptMsg, courierSettings.originCoord || '');
+                    if (manualCoord && /^\d+:\d+:\d+$/.test(manualCoord.trim())) {
+                        courierSettings.originCoord = manualCoord.trim();
+                        courierSettings.originType = reqType;
+                        courierSettings.originId = 'manual';
+                        courierSettings.originName = (reqType === 3 ? 'Manuel Ay' : 'Manuel Gezegen');
+                        saveCourierSettings();
+                        renderCourier();
+                    }
+                    ddEl.classList.remove('show');
+                    return;
+                }
+
+                courierSettings.originId = item.getAttribute('data-id');
+                courierSettings.originCoord = item.getAttribute('data-coord');
+                courierSettings.originType = parseInt(item.getAttribute('data-type'), 10) || 1;
+                courierSettings.originName = item.getAttribute('data-name');
+                saveCourierSettings();
+                ddEl.classList.remove('show');
+                renderCourier();
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('#ls-cour-origin-btn') && !e.target.closest('#ls-cour-origin-dd')) {
+                    ddEl.classList.remove('show');
+                }
+            });
+        }
+
+        // Görev Seçimi (Nakliye / Konuşlandır)
+        const m3Btn = document.getElementById('ls-cour-mission-3');
+        const m4Btn = document.getElementById('ls-cour-mission-4');
+        if (m3Btn && m4Btn) {
+            m3Btn.addEventListener('click', () => {
+                courierSettings.mission = 3;
+                m3Btn.classList.add('active');
+                m4Btn.classList.remove('active');
+                saveCourierSettings();
+            });
+            m4Btn.addEventListener('click', () => {
+                courierSettings.mission = 4;
+                m4Btn.classList.add('active');
+                m3Btn.classList.remove('active');
+                saveCourierSettings();
+            });
+        }
+
+        // Gemi Seçimi Checkbox'ları
+        ['bn', 'kn', 'rehber'].forEach(st => {
+            const el = document.getElementById('ls-cour-ship-' + st);
+            if (el) {
+                el.addEventListener('change', () => {
+                    if (!courierSettings.selectedShips) courierSettings.selectedShips = {};
+                    courierSettings.selectedShips[st] = el.checked;
+                    saveCourierSettings();
+                    updateCourierSummary();
+                });
+            }
+        });
+
+        // Genel Dağıtım Senkronizasyonu Kontrolleri
+        const syncChk = document.getElementById('ls-cour-sync-chk');
+        if (syncChk) {
+            syncChk.addEventListener('change', () => {
+                courierSettings.syncEnabled = syncChk.checked;
+                saveCourierSettings();
+                if (syncChk.checked) {
+                    applyCourierSyncToTargets();
+                }
+            });
+        }
+
+        const handleSyncInput = (resKey, inputEl) => {
+            if (!inputEl) return;
+            const updateVal = () => {
+                const val = parseOgNum(inputEl.value);
+                if (!courierSettings.syncAmount) courierSettings.syncAmount = { met: 0, cri: 0, deu: 0 };
+                courierSettings.syncAmount[resKey] = val;
+                saveCourierSettings();
+                if (courierSettings.syncEnabled) {
+                    applyCourierSyncToTargets();
+                }
+            };
+            inputEl.addEventListener('input', updateVal);
+            inputEl.addEventListener('blur', () => {
+                const val = parseOgNum(inputEl.value);
+                inputEl.value = val > 0 ? fmt(val) : '';
+                updateVal();
+            });
+        };
+
+        handleSyncInput('met', document.getElementById('ls-cour-sync-m'));
+        handleSyncInput('cri', document.getElementById('ls-cour-sync-c'));
+        handleSyncInput('deu', document.getElementById('ls-cour-sync-d'));
+
+        const syncApplyBtn = document.getElementById('ls-cour-sync-apply');
+        if (syncApplyBtn) {
+            syncApplyBtn.addEventListener('click', () => {
+                const mInp = document.getElementById('ls-cour-sync-m');
+                const cInp = document.getElementById('ls-cour-sync-c');
+                const dInp = document.getElementById('ls-cour-sync-d');
+                if (!courierSettings.syncAmount) courierSettings.syncAmount = { met: 0, cri: 0, deu: 0 };
+                if (mInp) courierSettings.syncAmount.met = parseOgNum(mInp.value);
+                if (cInp) courierSettings.syncAmount.cri = parseOgNum(cInp.value);
+                if (dInp) courierSettings.syncAmount.deu = parseOgNum(dInp.value);
+                saveCourierSettings();
+                applyCourierSyncToTargets();
+                showCollectorToast('⚡ Tutarlar tüm seçili hedeflere uygulandı.');
+            });
+        }
+
+        // Hızlı Seçim Butonları
+        const empire = () => getEmpirePlanetsAndMoons();
+        const setAllChecked = (fn) => {
+            const emp = empire();
+            if (!courierSettings.selectedItems) courierSettings.selectedItems = {};
+            emp.forEach(p => {
+                const isOriginP = (courierSettings.originCoord === p.coords && courierSettings.originType === 1);
+                if (!isOriginP) courierSettings.selectedItems[p.id] = fn(p, false);
+                if (p.moon) {
+                    const isOriginM = (courierSettings.originCoord === p.coords && courierSettings.originType === 3);
+                    if (!isOriginM) courierSettings.selectedItems[p.moon.id] = fn(p.moon, true);
+                }
+            });
+            saveCourierSettings();
+            renderCourier();
+        };
+
+        document.getElementById('ls-cour-sel-all')?.addEventListener('click', () => setAllChecked(() => true));
+        document.getElementById('ls-cour-sel-planets')?.addEventListener('click', () => setAllChecked((item, isMoon) => !isMoon));
+        document.getElementById('ls-cour-sel-moons')?.addEventListener('click', () => setAllChecked((item, isMoon) => isMoon));
+        document.getElementById('ls-cour-sel-none')?.addEventListener('click', () => setAllChecked(() => false));
+
+        // Liste İçi Dinamik Etkinlikler (Event Delegation)
+        const listEl = document.getElementById('ls-cour-list');
+        if (listEl) {
+            listEl.addEventListener('change', (e) => {
+                const chk = e.target.closest('.ls-cour-item-chk');
+                if (chk) {
+                    const id = chk.getAttribute('data-id');
+                    if (!courierSettings.selectedItems) courierSettings.selectedItems = {};
+                    courierSettings.selectedItems[id] = chk.checked;
+
+                    // Eğer genel dağıtım aktifse ve yeni seçildiyse otomatik doldur
+                    if (chk.checked && courierSettings.syncEnabled) {
+                        const syncAmt = courierSettings.syncAmount || { met: 0, cri: 0, deu: 0 };
+                        if (!courierSettings.targets) courierSettings.targets = {};
+                        courierSettings.targets[id] = { met: syncAmt.met || 0, cri: syncAmt.cri || 0, deu: syncAmt.deu || 0 };
+                        const row = chk.closest('.ls-coll-prow, .ls-coll-mrow');
+                        if (row) {
+                            const mInp = row.querySelector('.ls-cour-inp-m');
+                            const cInp = row.querySelector('.ls-cour-inp-c');
+                            const dInp = row.querySelector('.ls-cour-inp-d');
+                            if (mInp) mInp.value = syncAmt.met > 0 ? fmt(syncAmt.met) : '';
+                            if (cInp) cInp.value = syncAmt.cri > 0 ? fmt(syncAmt.cri) : '';
+                            if (dInp) dInp.value = syncAmt.deu > 0 ? fmt(syncAmt.deu) : '';
+                        }
+                    }
+
+                    saveCourierSettings();
+                    updateCourierSummary();
+                    return;
+                }
+            });
+
+            listEl.addEventListener('input', (e) => {
+                const inp = e.target.closest('.ls-cour-inp');
+                if (inp) {
+                    const id = inp.getAttribute('data-id');
+                    const res = inp.getAttribute('data-res');
+                    if (id && res) {
+                        const val = parseOgNum(inp.value);
+                        if (!courierSettings.targets) courierSettings.targets = {};
+                        if (!courierSettings.targets[id]) courierSettings.targets[id] = { met: 0, cri: 0, deu: 0 };
+                        courierSettings.targets[id][res] = val;
+                        saveCourierSettings();
+                        updateCourierSummary();
+                    }
+                }
+            });
+
+            listEl.addEventListener('blur', (e) => {
+                const inp = e.target.closest('.ls-cour-inp');
+                if (inp) {
+                    const val = parseOgNum(inp.value);
+                    inp.value = val > 0 ? fmt(val) : '';
+                }
+            }, true);
+
+            listEl.addEventListener('click', (e) => {
+                const jumpBtn = e.target.closest('.ls-coll-jump');
+                if (jumpBtn) {
+                    const cp = jumpBtn.getAttribute('data-cp');
+                    if (cp) {
+                        const comp = new URLSearchParams(window.location.search).get('component') || 'overview';
+                        window.location.href = `/game/index.php?page=ingame&component=${comp}&cp=${cp}`;
+                    }
+                }
+            });
+        }
+
+        // Dağıtımı Başlat Butonu
+        const startBtn = document.getElementById('ls-cour-start-btn');
+        if (startBtn) {
+            startBtn.addEventListener('click', () => {
+                startCourierSession();
+            });
+        }
+    }
+
+    function startCourierSession() {
+        if (!courierSettings.originCoord || !courierSettings.originId) {
+            showCollectorToast(t('cour_origin_head', 'Lütfen dağıtım üssünü belirleyin!'));
+            return;
+        }
+
+        const { bn, kn, rehber } = courierSettings.selectedShips || {};
+        if (!bn && !kn && !rehber) {
+            showCollectorToast(t('coll_ships', 'Lütfen en az bir gemi tipi seçin!'));
+            return;
+        }
+
+        const empire = getEmpirePlanetsAndMoons();
+        const queue = [];
+
+        empire.forEach(p => {
+            const isOriginP = (courierSettings.originCoord === p.coords && courierSettings.originType === 1);
+            if (!isOriginP && courierSettings.selectedItems[p.id] !== false) {
+                const tData = (courierSettings.targets && courierSettings.targets[p.id]) || { met: 0, cri: 0, deu: 0 };
+                const subM = tData.met || 0;
+                const subC = tData.cri || 0;
+                const subD = tData.deu || 0;
+                if ((subM + subC + subD) > 0) {
+                    queue.push({
+                        id: p.id,
+                        name: p.name,
+                        coords: p.coords,
+                        type: 1,
+                        isMoon: false,
+                        met: subM,
+                        cri: subC,
+                        deu: subD
+                    });
+                }
+            }
+
+            if (p.moon) {
+                const isOriginM = (courierSettings.originCoord === p.coords && courierSettings.originType === 3);
+                if (!isOriginM && courierSettings.selectedItems[p.moon.id] === true) {
+                    const tData = (courierSettings.targets && courierSettings.targets[p.moon.id]) || { met: 0, cri: 0, deu: 0 };
+                    const subM = tData.met || 0;
+                    const subC = tData.cri || 0;
+                    const subD = tData.deu || 0;
+                    if ((subM + subC + subD) > 0) {
+                        queue.push({
+                            id: p.moon.id,
+                            name: p.moon.name || `${p.name} ( Ay )`,
+                            coords: p.coords,
+                            type: 3,
+                            isMoon: true,
+                            met: subM,
+                            cri: subC,
+                            deu: subD
+                        });
+                    }
+                }
+            }
+        });
+
+        if (queue.length === 0) {
+            showCollectorToast(t('cour_no_resources', 'Lütfen gönderilecek maden miktarlarını girin ve hedefleri seçin!'));
+            return;
+        }
+
+        const session = {
+            originId: courierSettings.originId,
+            originCoord: courierSettings.originCoord,
+            originType: courierSettings.originType,
+            originName: courierSettings.originName,
+            mission: courierSettings.mission || 3,
+            selectedShips: { ...courierSettings.selectedShips },
+            currentIndex: 0,
+            queue: queue
+        };
+
+        sessionStorage.setItem(KEYS.COURIER_RUN, JSON.stringify(session));
+        LS_LOGGER.action('COURIER', `Dağıtım oturumu başlatıldı: ${queue.length} hedef kuyruğa alındı. Üs: [${session.originCoord}] ${session.originName}`);
+
+        const firstItem = queue[0];
+        const [g, s, p] = firstItem.coords.split(':');
+        const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${session.originId}&type=${session.originType}&galaxy=${g}&system=${s}&position=${p}&mission=${session.mission || 3}`;
+        window.location.href = url;
+    }
+
+    function checkAndRunCourierAssistant() {
+        const rawSession = sessionStorage.getItem(KEYS.COURIER_RUN);
+        if (!rawSession) return;
+
+        let session;
+        try {
+            session = JSON.parse(rawSession);
+        } catch (e) {
+            sessionStorage.removeItem(KEYS.COURIER_RUN);
+            return;
+        }
+
+        if (!session || !session.queue || session.currentIndex >= session.queue.length) {
+            sessionStorage.removeItem(KEYS.COURIER_RUN);
+            return;
+        }
+
+        const comp = new URLSearchParams(window.location.search).get('component');
+        if (comp !== 'fleetdispatch') return;
+
+        // Çıkış üssünde miyiz kontrol et (cp kontrolü)
+        if (session.originId && session.originId !== 'manual') {
+            const currentCp = document.querySelector('meta[name="ogame-planet-id"]')?.getAttribute('content');
+            if (currentCp && String(currentCp) !== String(session.originId)) {
+                LS_LOGGER.dispatch('COURIER', `Dağıtım üssüne geçiliyor (cp: ${session.originId})...`);
+                const currentItem = session.queue[session.currentIndex];
+                const [g, s, p] = currentItem.coords.split(':');
+                const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${session.originId}&type=${session.originType}&galaxy=${g}&system=${s}&position=${p}&mission=${session.mission || 3}`;
+                window.location.href = url;
+                return;
+            }
+        }
+
+        // Filo 1 formu hazır olana kadar bekle
+        let pollCount = 0;
+        const pollTimer = setInterval(() => {
+            pollCount++;
+            const fleetForm = document.getElementById('fleet1') || document.querySelector('form[name="shipsAlternative"]') || document.querySelector('#shipsAlternative');
+            const hasInputs = Array.from(document.querySelectorAll('input.military, input.civil, input[name^="am"]')).length > 0;
+
+            if (fleetForm && hasInputs) {
+                clearInterval(pollTimer);
+                const currentItem = session.queue[session.currentIndex];
+                executeCourierDispatchStep(session, currentItem);
+            } else if (pollCount > 30) {
+                clearInterval(pollTimer);
+                const currentItem = session.queue[session.currentIndex];
+                executeCourierDispatchStep(session, currentItem);
+            }
+        }, 150);
+    }
+
+    function executeCourierDispatchStep(session, currentItem) {
+        if (!session || !currentItem) return;
+
+        const shipCaps = calculateShipCapacities();
+        const bnCap = shipCaps.bn;
+        const knCap = shipCaps.kn;
+        const rehberCap = shipCaps.rehber;
+
+        const totalCargoNeeded = (currentItem.met || 0) + (currentItem.cri || 0) + (currentItem.deu || 0);
+
+        const availBn = getAvailableShipCount(203);
+        const availKn = getAvailableShipCount(202);
+        const availRehber = getAvailableShipCount(219);
+
+        const liveRes = getLiveResources();
+        const availMet = liveRes.metal || 0;
+        const availCri = liveRes.crystal || 0;
+        const availDeu = liveRes.deuterium || 0;
+
+        let neededCargo = totalCargoNeeded;
+        let bnCount = 0, knCount = 0, rehberCount = 0;
+
+        if (session.selectedShips.bn && bnCap > 0) {
+            const req = Math.ceil(neededCargo / bnCap);
+            bnCount = Math.min(availBn, req);
+            neededCargo = Math.max(0, neededCargo - (bnCount * bnCap));
+        }
+
+        if (neededCargo > 0 && session.selectedShips.kn && knCap > 0) {
+            const req = Math.ceil(neededCargo / knCap);
+            knCount = Math.min(availKn, req);
+            neededCargo = Math.max(0, neededCargo - (knCount * knCap));
+        }
+
+        if (neededCargo > 0 && session.selectedShips.rehber && rehberCap > 0) {
+            const req = Math.ceil(neededCargo / rehberCap);
+            rehberCount = Math.min(availRehber, req);
+            neededCargo = Math.max(0, neededCargo - (rehberCount * rehberCap));
+        }
+
+        const totalCap = (bnCount * bnCap) + (knCount * knCap) + (rehberCount * rehberCap);
+
+        let metLoad = Math.min(currentItem.met || 0, availMet);
+        let criLoad = Math.min(currentItem.cri || 0, availCri);
+        let deuLoad = Math.min(currentItem.deu || 0, availDeu);
+
+        // Eğer toplam yük kapasiteyi aşıyorsa kapasiteye sığdır
+        let totalLoad = metLoad + criLoad + deuLoad;
+        if (totalLoad > totalCap && totalCap > 0) {
+            if (metLoad > totalCap) {
+                metLoad = totalCap;
+                criLoad = 0;
+                deuLoad = 0;
+            } else if (metLoad + criLoad > totalCap) {
+                criLoad = totalCap - metLoad;
+                deuLoad = 0;
+            } else {
+                deuLoad = totalCap - metLoad - criLoad;
+            }
+        }
+
+        const missingCargo = Math.max(0, totalCargoNeeded - totalCap);
+        const missingMet = Math.max(0, (currentItem.met || 0) - availMet);
+        const missingCri = Math.max(0, (currentItem.cri || 0) - availCri);
+        const missingDeu = Math.max(0, (currentItem.deu || 0) - availDeu);
+        const hasAnyShortage = (missingCargo > 0 || missingMet > 0 || missingCri > 0 || missingDeu > 0 || totalCap === 0);
+
+        // Gemi miktarlarını yaz
+        setShipAmount(203, bnCount);
+        setShipAmount(202, knCount);
+        setShipAmount(219, rehberCount);
+
+        // Hedef koordinatları
+        const [g, s, p] = currentItem.coords.split(':');
+        setFleetTargetCoords(g, s, p, currentItem.type);
+
+        let isStepCancelled = false;
+
+        const updateCourierBannerReady = () => {
+            const btn = document.getElementById('ls-banner-send-btn');
+            if (btn) {
+                btn.disabled = false;
+                btn.style.background = '#27ae60';
+                btn.style.color = '#fff';
+                btn.style.cursor = 'pointer';
+                btn.innerText = '🚀 ' + t('coll_hud_send') + ' (Space)';
+            }
+        };
+
+        const prepareStep2 = () => {
+            if (isStepCancelled) return;
+            const missionId = session.mission || 3;
+            setFleetTargetCoords(g, s, p, currentItem.type);
+            setFleetMission(missionId);
+            fillFleetResources(metLoad, criLoad, deuLoad);
+            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                detail: { type: 'SELECT_MISSION', missionId: missionId }
+            }));
+            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                detail: { type: 'CARGO_REFRESH' }
+            }));
+
+            let checkCount = 0;
+            const step2CheckTimer = setInterval(() => {
+                if (isStepCancelled) {
+                    clearInterval(step2CheckTimer);
+                    return;
+                }
+                checkCount++;
+                const mBtn = document.querySelector('#missionButton' + missionId + ', [data-mission="' + missionId + '"]');
+                const isMissionActive = mBtn && (mBtn.classList.contains('selected') || mBtn.classList.contains('active'));
+                if (!isMissionActive) setFleetMission(missionId);
+                fillFleetResources(metLoad, criLoad, deuLoad);
+
+                const sendBtn = findSendFleetButton();
+                const isSendBtnReady = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
+
+                if ((isMissionActive && isSendBtnReady && checkCount >= 2) || checkCount > 15) {
+                    clearInterval(step2CheckTimer);
+                    updateCourierBannerReady();
+                }
+            }, 100);
+        };
+
+        let ensureShipsTimer = null;
+        const targetShipTotal = bnCount + knCount + rehberCount;
+        if (targetShipTotal > 0) {
+            let shipTries = 0;
+            ensureShipsTimer = setInterval(() => {
+                if (isStepCancelled) {
+                    clearInterval(ensureShipsTimer);
+                    return;
+                }
+                shipTries++;
+                const { total } = getSelectedShipsSummary();
+                if (total > 0 || shipTries > 6) {
+                    clearInterval(ensureShipsTimer);
+                    setTimeout(() => {
+                        if (isStepCancelled) return;
+                        clickDevamButton();
+                        window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                            detail: { type: 'SUBMIT_FLEET1' }
+                        }));
+
+                        let step2Tries = 0;
+                        const step2Interval = setInterval(() => {
+                            if (isStepCancelled) {
+                                clearInterval(step2Interval);
+                                return;
+                            }
+                            step2Tries++;
+                            const devamBtn = document.getElementById('continueToFleet2') || document.querySelector('button.continue') || document.querySelector('a.continue');
+                            const isStep1StillActive = devamBtn && (devamBtn.offsetWidth > 0 || window.getComputedStyle(devamBtn).display !== 'none');
+                            const sendBtn = findSendFleetButton();
+                            const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
+                            const isStep2Active = !isStep1StillActive && isSendBtnVisible;
+
+                            if (isStep2Active) {
+                                clearInterval(step2Interval);
+                                setTimeout(prepareStep2, 100);
+                            } else {
+                                if (step2Tries % 5 === 0) {
+                                    clickDevamButton();
+                                    window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                                        detail: { type: 'SUBMIT_FLEET1' }
+                                    }));
+                                }
+                                if (step2Tries > 30) {
+                                    clearInterval(step2Interval);
+                                    setTimeout(prepareStep2, 100);
+                                }
+                            }
+                        }, 100);
+                    }, 200);
+                } else {
+                    setShipAmount(203, bnCount);
+                    setShipAmount(202, knCount);
+                    setShipAmount(219, rehberCount);
+                }
+            }, 150);
+        }
+
+        // Asistan Banner'ını Çiz
+        renderCourierAssistantBanner(session, currentItem, {
+            bn: bnCount, kn: knCount, rehber: rehberCount,
+            deu: deuLoad, cri: criLoad, met: metLoad,
+            totalCap: totalCap,
+            totalCargoNeeded: totalCargoNeeded,
+            missingCargo: missingCargo,
+            missingMet: missingMet,
+            missingCri: missingCri,
+            missingDeu: missingDeu,
+            hasAnyShortage: hasAnyShortage,
+            g: g, s: s, p: p,
+            prepareStep2: prepareStep2,
+            cancel: () => {
+                isStepCancelled = true;
+                if (ensureShipsTimer) clearInterval(ensureShipsTimer);
+            }
+        });
+    }
+
+    function renderCourierAssistantBanner(session, currentItem, details) {
+        let banner = document.getElementById('ls-cour-floating-banner');
+        if (!banner) {
+            banner = document.createElement('div');
+            banner.id = 'ls-cour-floating-banner';
+            document.body.appendChild(banner);
+        }
+
+        const totalItems = session.queue.length;
+        const currentStep = session.currentIndex + 1;
+        const hasShips = details.totalCap > 0;
+        const missionName = (session.mission === 4 ? '🛡️ ' + t('cour_deploy') : '🚚 ' + t('cour_transport'));
+
+        let shipDesc = [];
+        if (details.bn > 0) shipDesc.push(details.bn + ' ' + t('cour_bn'));
+        if (details.kn > 0) shipDesc.push(details.kn + ' ' + t('cour_kn'));
+        if (details.rehber > 0) shipDesc.push(details.rehber + ' ' + t('cour_rehber'));
+        const shipText = shipDesc.length > 0 ? shipDesc.join(', ') : '<span style="color:#e74c3c">' + t('coll_hud_no_ships') + '</span>';
+
+        const cleanTName = (currentItem.name || '').replace(/^[\s\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]+/u, '').trim();
+        const displayTargetIcon = currentItem.isMoon ? '🌕' : '🪐';
+        const displayOriginIcon = session.originType === 3 ? '🌕' : '🪐';
+
+        banner.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);background:rgba(13,27,42,0.96);border:2px solid #2980b9;box-shadow:0 10px 32px rgba(0,0,0,0.85);border-radius:8px;padding:12px 18px;min-width:400px;max-width:90vw;z-index:9999999;font-family:sans-serif;color:#d1d8e0;text-align:center;box-sizing:border-box';
+
+        // Yetersiz Kapasite veya Kaynak Uyarısı
+        let warningHtml = '';
+        const hasShortage = !!details.hasAnyShortage;
+        if (hasShortage) {
+            let reasons = [];
+            if (details.totalCap === 0) {
+                reasons.push(t('coll_hud_no_ships'));
+            } else if (details.missingCargo > 0) {
+                reasons.push(`${t('coll_hud_cap_shortage')} (${formatShort(details.missingCargo)})`);
+            }
+            if (details.missingMet > 0) reasons.push(`${t('coll_met')} ${formatShort(details.missingMet)} eksik`);
+            if (details.missingCri > 0) reasons.push(`${t('coll_crys')} ${formatShort(details.missingCri)} eksik`);
+            if (details.missingDeu > 0) reasons.push(`${t('coll_deut')} ${formatShort(details.missingDeu)} eksik`);
+
+            warningHtml =
+                '<div id="ls-cour-warning-box" style="background:rgba(231,76,60,0.22);border:1px solid #e74c3c;border-radius:4px;padding:6px 8px;margin-bottom:8px;font-size:11px;color:#ff6b6b;text-align:left">' +
+                    '<div style="font-weight:bold;margin-bottom:2px">' + t('cart_hud_shortage_title', '⚠️ Yetersiz Kaynak veya Gemi Kapasitesi!') + '</div>' +
+                    '<div style="font-size:10.5px;color:#f5b7b1;margin-bottom:6px">' + reasons.join(' · ') + '</div>' +
+                    '<div style="display:flex;gap:6px;justify-content:center">' +
+                        '<button id="ls-cour-stop-btn" style="background:#e74c3c;color:#fff;border:none;padding:4px 9px;border-radius:3px;font-weight:bold;font-size:10.5px;cursor:pointer">' + t('cart_hud_stop_btn', '⏹️ Dağıtımı Durdur') + '</button>' +
+                        '<button id="ls-cour-proceed-btn" style="background:#f39c12;color:#000;border:none;padding:4px 9px;border-radius:3px;font-weight:bold;font-size:10.5px;cursor:pointer">' + t('cart_hud_proceed_btn', '⏩ Olduğu Kadar Gönder (Devam Et)') + '</button>' +
+                    '</div>' +
+                '</div>';
+        }
+
+        banner.innerHTML =
+            '<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1a2c3f;padding-bottom:6px;margin-bottom:8px">' +
+                '<span style="font-size:12px;font-weight:bold;color:#2980b9">📬 ' + t('cour_hud_title', 'Postacı Asistanı') + ' [' + currentStep + ' / ' + totalItems + ']</span>' +
+                '<span style="font-size:11px;color:#fff">' + displayOriginIcon + ' ' + escapeHtml(session.originName || 'Üs') + ' ➔ ' + displayTargetIcon + ' ' + escapeHtml(cleanTName) + ' <span style="color:#ffbe3b;font-family:monospace">[' + currentItem.coords + ']</span></span>' +
+            '</div>' +
+            warningHtml +
+            '<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;margin-bottom:6px">' +
+                '<div><b style="color:#8899aa">' + t('coll_hud_selected_fleet') + '</b> <span style="font-weight:bold">' + shipText + '</span></div>' +
+                '<div style="font-size:10.5px;color:#00bcff;font-weight:bold">' + missionName + '</div>' +
+            '</div>' +
+            '<div style="font-size:11.5px;font-family:monospace;margin-bottom:10px">' +
+                '<b style="color:#8899aa">' + t('cour_hud_cargo', 'Taşınan:') + '</b> ' +
+                '<span style="color:#ffbe3b">' + formatShort(details.met) + ' ' + t('coll_met') + '</span> · ' +
+                '<span style="color:#5dade2">' + formatShort(details.cri) + ' ' + t('coll_crys') + '</span> · ' +
+                '<span style="color:#2ecc71">' + formatShort(details.deu) + ' ' + t('coll_deut') + '</span>' +
+            '</div>' +
+            '<div id="ls-cour-hud-controls" style="display:flex;gap:6px;justify-content:center;align-items:center;' + (hasShortage ? 'display:none;' : '') + '">' +
+                (hasShips ?
+                    '<button id="ls-banner-send-btn" disabled style="background:#445566;color:#8899aa;border:none;padding:5px 12px;border-radius:4px;font-weight:bold;font-size:11px;cursor:not-allowed">' + t('exp_hud_preparing') + '</button>'
+                    : '<button class="ls-banner-skip-btn" style="background:#f39c12;color:#000;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏭️ ' + t('coll_hud_skip') + ' (Space)</button>') +
+                '<button id="ls-banner-retry-btn" style="background:#e67e22;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer" title="' + t('coll_hud_retry') + '">🔄 ' + t('coll_hud_retry') + '</button>' +
+                (hasShips ? '<button class="ls-banner-skip-btn" style="background:#34495e;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏭️ ' + t('coll_hud_skip') + '</button>' : '') +
+                '<button id="ls-banner-cancel-btn" style="background:#e74c3c;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏹️ ' + t('coll_hud_cancel') + '</button>' +
+            '</div>';
+
+        const sendFleet = () => {
+            const sendBtnEl = document.getElementById('ls-banner-send-btn');
+            if (sendBtnEl && sendBtnEl.disabled) return;
+
+            if (document.activeElement && document.activeElement.blur) {
+                document.activeElement.blur();
+            }
+
+            const sendBtn = findSendFleetButton();
+            const isSendBtnReady = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
+
+            if (isSendBtnReady) {
+                dispatchSendFleetButton();
+            } else {
+                clickDevamButton();
+                window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                    detail: { type: 'SUBMIT_FLEET1' }
+                }));
+                if (typeof details.prepareStep2 === 'function') {
+                    details.prepareStep2();
+                }
+            }
+        };
+
+        const retryCurrentStep = () => {
+            window.removeEventListener('keydown', keyListener);
+            if (typeof details.cancel === 'function') details.cancel();
+            if (banner) {
+                banner.innerHTML = '<div style="font-size:12px;color:#e67e22;padding:6px;font-weight:bold">🔄 Adım yeniden deneniyor...</div>';
+            }
+            setTimeout(() => {
+                executeCourierDispatchStep(session, currentItem);
+            }, 150);
+        };
+
+        const dispatchSendFleetButton = () => {
+            window.removeEventListener('keydown', keyListener);
+            if (typeof details.cancel === 'function') details.cancel();
+
+            // 1. Gönderilen hedefi Postacı ayarlarında uncheck yap
+            if (!courierSettings.selectedItems) courierSettings.selectedItems = {};
+            courierSettings.selectedItems[currentItem.id] = false;
+            saveCourierSettings();
+            renderCourier();
+
+            // 2. Oturum kuyruğunu bir sonraki adıma geçir ve kaydet
+            session.currentIndex++;
+            sessionStorage.setItem(KEYS.COURIER_RUN, JSON.stringify(session));
+
+            LS_LOGGER.dispatch('COURIER', `Postacı filosu gönderiliyor: Üs [${session.originCoord}] -> Hedef: ${currentItem.name} [${currentItem.coords}] (Adım ${session.currentIndex}/${session.queue.length})`);
+
+            if (banner) {
+                banner.innerHTML =
+                    '<div style="font-size:12px;color:#2ecc71;padding:8px;font-weight:bold">' +
+                        '🚀 Filo gönderildi! Sıradaki hedefe geçiliyor...' +
+                    '</div>';
+            }
+
+            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                detail: { type: 'SUBMIT_FLEET2' }
+            }));
+
+            const sendBtn = findSendFleetButton();
+            if (sendBtn) {
+                try {
+                    sendBtn.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, cancelable: true, view: window }));
+                    sendBtn.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
+                    sendBtn.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
+                    sendBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+                    sendBtn.click();
+                } catch (e) {}
+            }
+
+            setTimeout(() => {
+                if (session.currentIndex < session.queue.length) {
+                    const nextItem = session.queue[session.currentIndex];
+                    const [ng, ns, np] = nextItem.coords.split(':');
+                    const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${session.originId}&type=${session.originType}&galaxy=${ng}&system=${ns}&position=${np}&mission=${session.mission || 3}`;
+                    window.location.href = url;
+                } else {
+                    sessionStorage.removeItem(KEYS.COURIER_RUN);
+                    if (banner) banner.remove();
+                    showCollectorToast('🎉 Tebrikler! Tüm dağıtım filoları başarıyla gönderildi.', 6000);
+                }
+            }, 800);
+        };
+
+        const proceedToNext = () => {
+            window.removeEventListener('keydown', keyListener);
+            if (typeof details.cancel === 'function') details.cancel();
+
+            // Atlanan hedefi uncheck yap
+            if (!courierSettings.selectedItems) courierSettings.selectedItems = {};
+            courierSettings.selectedItems[currentItem.id] = false;
+            saveCourierSettings();
+            renderCourier();
+
+            session.currentIndex++;
+            sessionStorage.setItem(KEYS.COURIER_RUN, JSON.stringify(session));
+
+            if (banner) {
+                banner.innerHTML = '<div style="font-size:12px;color:#f39c12;padding:6px">⏭️ Hedef atlandı, sıradakine geçiliyor...</div>';
+            }
+
+            setTimeout(() => {
+                if (session.currentIndex < session.queue.length) {
+                    const nextItem = session.queue[session.currentIndex];
+                    const [ng, ns, np] = nextItem.coords.split(':');
+                    const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${session.originId}&type=${session.originType}&galaxy=${ng}&system=${ns}&position=${np}&mission=${session.mission || 3}`;
+                    window.location.href = url;
+                } else {
+                    sessionStorage.removeItem(KEYS.COURIER_RUN);
+                    if (banner) banner.remove();
+                    showCollectorToast('🎉 Postacı asistanı tamamlandı.', 5000);
+                }
+            }, 400);
+        };
+
+        const cancel = () => {
+            window.removeEventListener('keydown', keyListener);
+            if (typeof details.cancel === 'function') details.cancel();
+            LS_LOGGER.warn('COURIER', 'Dağıtım işlemi iptal edildi.');
+            sessionStorage.removeItem(KEYS.COURIER_RUN);
+            if (banner) banner.remove();
+            showCollectorToast('Dağıtım işlemi iptal edildi.', 3000);
+        };
+
+        const keyListener = (e) => {
+            if (e.code === 'Space' || e.key === ' ') {
+                const tag = document.activeElement ? document.activeElement.tagName : '';
+                if (tag === 'TEXTAREA' || tag === 'SELECT') return;
+                if (tag === 'INPUT') {
+                    if (document.activeElement.id && document.activeElement.id.includes('search')) return;
+                    document.activeElement.blur();
+                }
+                const wBox = document.getElementById('ls-cour-warning-box');
+                if (wBox && wBox.style.display !== 'none') return;
+
+                const sendBtnEl = document.getElementById('ls-banner-send-btn');
+                if (hasShips && sendBtnEl && sendBtnEl.disabled) return;
+
+                e.preventDefault();
+                if (hasShips) {
+                    sendFleet();
+                } else {
+                    proceedToNext();
+                }
+            }
+        };
+
+        window.addEventListener('keydown', keyListener);
+
+        document.getElementById('ls-banner-send-btn')?.addEventListener('click', sendFleet);
+        document.getElementById('ls-banner-retry-btn')?.addEventListener('click', retryCurrentStep);
+        banner.querySelectorAll('.ls-banner-skip-btn').forEach(btn => btn.addEventListener('click', proceedToNext));
+        document.getElementById('ls-banner-cancel-btn')?.addEventListener('click', cancel);
+
+        document.getElementById('ls-cour-stop-btn')?.addEventListener('click', cancel);
+        document.getElementById('ls-cour-proceed-btn')?.addEventListener('click', () => {
+            const warningBox = document.getElementById('ls-cour-warning-box');
+            if (warningBox) warningBox.style.display = 'none';
+            const controls = document.getElementById('ls-cour-hud-controls');
+            if (controls) controls.style.display = 'flex';
+        });
+    }
+
+    // ============================================================
     // KEŞİF ASİSTANI (EXPEDITION ASSISTANT)
     // ============================================================
     function getGameSelects() {
@@ -7284,9 +8615,9 @@
             '.ls-toggle-switch input:checked + .ls-toggle-slider{background-color:#2ecc71}',
             '.ls-toggle-switch input:checked + .ls-toggle-slider:before{transform:translateX(16px)}',
 
-            '#ls-body::-webkit-scrollbar, #ls-cart-list::-webkit-scrollbar, #ls-debris-list::-webkit-scrollbar, #ls-scan-results::-webkit-scrollbar, #ls-find-results::-webkit-scrollbar, #ls-coll-list::-webkit-scrollbar, #ls-coll-dd::-webkit-scrollbar{width:5px}',
-            '#ls-body::-webkit-scrollbar-track, #ls-cart-list::-webkit-scrollbar-track, #ls-debris-list::-webkit-scrollbar-track, #ls-scan-results::-webkit-scrollbar-track, #ls-find-results::-webkit-scrollbar-track, #ls-coll-list::-webkit-scrollbar-track, #ls-coll-dd::-webkit-scrollbar-track{background:#0a0e17}',
-            '#ls-body::-webkit-scrollbar-thumb, #ls-cart-list::-webkit-scrollbar-thumb, #ls-debris-list::-webkit-scrollbar-thumb, #ls-scan-results::-webkit-scrollbar-thumb, #ls-find-results::-webkit-scrollbar-thumb, #ls-coll-list::-webkit-scrollbar-thumb, #ls-coll-dd::-webkit-scrollbar-thumb{background:#00bcff;border-radius:3px}',
+            '#ls-body::-webkit-scrollbar, #ls-cart-list::-webkit-scrollbar, #ls-debris-list::-webkit-scrollbar, #ls-scan-results::-webkit-scrollbar, #ls-find-results::-webkit-scrollbar, #ls-coll-list::-webkit-scrollbar, #ls-coll-dd::-webkit-scrollbar, #ls-cour-list::-webkit-scrollbar, #ls-cour-origin-dd::-webkit-scrollbar{width:5px}',
+            '#ls-body::-webkit-scrollbar-track, #ls-cart-list::-webkit-scrollbar-track, #ls-debris-list::-webkit-scrollbar-track, #ls-scan-results::-webkit-scrollbar-track, #ls-find-results::-webkit-scrollbar-track, #ls-coll-list::-webkit-scrollbar-track, #ls-coll-dd::-webkit-scrollbar-track, #ls-cour-list::-webkit-scrollbar-track, #ls-cour-origin-dd::-webkit-scrollbar-track{background:#0a0e17}',
+            '#ls-body::-webkit-scrollbar-thumb, #ls-cart-list::-webkit-scrollbar-thumb, #ls-debris-list::-webkit-scrollbar-thumb, #ls-scan-results::-webkit-scrollbar-thumb, #ls-find-results::-webkit-scrollbar-thumb, #ls-coll-list::-webkit-scrollbar-thumb, #ls-coll-dd::-webkit-scrollbar-thumb, #ls-cour-list::-webkit-scrollbar-thumb, #ls-cour-origin-dd::-webkit-scrollbar-thumb{background:#00bcff;border-radius:3px}',
 
             /* Collector Tab Styles */
             '#ls-coll-card-target{position:relative !important;z-index:1000 !important;overflow:visible !important}',
@@ -7349,6 +8680,21 @@
             '.ls-ship-pill{background:#1a2c3f;color:#8899aa;border:1px solid #2c3e50;padding:2px 8px;border-radius:12px;cursor:pointer;font-size:10px;font-weight:bold;transition:all .15s;user-select:none;line-height:1.3}',
             '.ls-ship-pill.active{background:#00bcff;color:#000;border-color:#00bcff;box-shadow:0 0 6px rgba(0,188,255,0.4)}',
             '.ls-ship-pill:hover{border-color:#00bcff}',
+
+            /* Courier Tab Styles */
+            '#ls-cour-card-origin{position:relative !important;z-index:900 !important;overflow:visible !important}',
+            '.ls-cour-inputs-wrap{display:flex;gap:3px;align-items:center;flex-shrink:0}',
+            '.ls-cour-inp{width:46px;padding:2px 3px;font-size:10px;text-align:right;font-family:monospace;border-radius:3px;box-sizing:border-box}',
+            '.ls-cour-inp-m{color:#ffbe3b;border:1px solid #4a3b1a;background:#0a0e17}',
+            '.ls-cour-inp-m:focus{border-color:#ffbe3b;outline:none}',
+            '.ls-cour-inp-c{color:#5dade2;border:1px solid #1c3952;background:#0a0e17}',
+            '.ls-cour-inp-c:focus{border-color:#5dade2;outline:none}',
+            '.ls-cour-inp-d{color:#2ecc71;border:1px solid #174229;background:#0a0e17}',
+            '.ls-cour-inp-d:focus{border-color:#2ecc71;outline:none}',
+            '.ls-cour-go{flex-shrink:0;width:100%;background:linear-gradient(180deg,#2980b9,#1f618d);color:#fff;border:none;border-radius:3px;padding:8px;font-weight:bold;font-size:12px;cursor:pointer;transition:transform .15s, background .15s}',
+            '.ls-cour-go:hover{background:linear-gradient(180deg,#3498db,#2980b9);transform:scale(1.01)}',
+            '.ls-cour-go:active{transform:scale(0.99)}',
+            '.ls-cour-go:disabled{opacity:0.5;cursor:not-allowed}',
         ].join('\n');
         document.head.appendChild(style);
 
@@ -7367,7 +8713,7 @@
         panel.id = 'ls-panel';
         panel.innerHTML =
             '<div id="ls-header">' +
-                '<span id="ls-header-title">' + boltSvg + ' LuckyStrike Helper <span style="font-size:10px;color:#8899aa;font-weight:normal;opacity:0.8">v10.6</span></span>' +
+                '<span id="ls-header-title">' + boltSvg + ' LuckyStrike Helper <span style="font-size:10px;color:#8899aa;font-weight:normal;opacity:0.8">v11.0</span></span>' +
                 '<div style="display:flex;align-items:center;gap:6px">' +
                     '<button id="ls-header-stop-btn" class="ls-btn-d ls-btn-sm" style="display:none;padding:2px 7px;font-size:10px;align-items:center;gap:3px;cursor:pointer" title="Tekrarlayan bu alarmı sustur">⏹️ Sustur</button>' +
                     '<span id="ls-close">✖</span>' +
@@ -7376,6 +8722,7 @@
             '<div id="ls-tabs">' +
                 '<div class="ls-tab" data-tab="cart"><span class="ls-tab-icon">🏗️</span><span class="ls-tab-label" data-i18n="tab_cart">Maliyet</span></div>' +
                 '<div class="ls-tab" data-tab="collector"><span class="ls-tab-icon">📦</span><span class="ls-tab-label" data-i18n="tab_collector">Toplayıcı</span></div>' +
+                '<div class="ls-tab" data-tab="courier"><span class="ls-tab-icon">📬</span><span class="ls-tab-label" data-i18n="tab_courier">Postacı</span></div>' +
                 '<div class="ls-tab" data-tab="debris"><span class="ls-tab-icon">🛰️</span><span class="ls-tab-label" data-i18n="tab_debris">Harabe</span></div>' +
                 '<div class="ls-tab" data-tab="expedition"><span class="ls-tab-icon">🧭</span><span class="ls-tab-label" data-i18n="tab_expedition">Keşif</span></div>' +
                 '<div class="ls-tab" data-tab="scanner"><span class="ls-tab-icon">🌌</span><span class="ls-tab-label" data-i18n="tab_scanner">Tarayıcı</span></div>' +
@@ -7662,6 +9009,71 @@
                     '</div>' +
 
                     '<button id="ls-coll-start-btn" class="ls-coll-go" data-i18n="coll_start_btn">🚀 Toplamayı Başlat</button>' +
+                '</div>' +
+
+                // COURIER TAB (POSTACI)
+                '<div id="tc-courier" class="ls-tc">' +
+                    '<div id="ls-cour-card-origin" class="ls-coll-card">' +
+                        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">' +
+                            '<span class="ls-label" data-i18n="cour_origin_head">📮 Dağıtım Üssü (Çıkış Noktası)</span>' +
+                            '<button type="button" id="ls-cour-cur-btn" class="ls-btn-sm" style="background:#2c3e50;color:#00bcff;padding:2px 7px;font-size:10px;margin-left:auto;margin-right:6px;border:1px solid #334455;border-radius:3px;cursor:pointer" title="Çıkış noktasını şu an bulunduğunuz gezegen/ay yapar" data-i18n-title="cour_here_title" data-i18n="cour_here">Burası</button>' +
+                            '<div style="display:flex;gap:4px">' +
+                                '<button type="button" id="ls-cour-mission-3" class="ls-coll-mbtn ' + (courierSettings.mission === 3 ? 'active' : '') + '" data-i18n="cour_transport">Nakliye</button>' +
+                                '<button type="button" id="ls-cour-mission-4" class="ls-coll-mbtn ' + (courierSettings.mission === 4 ? 'active' : '') + '" data-i18n="cour_deploy">Konuşlandır</button>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div class="ls-coll-row">' +
+                            '<div class="ls-coll-combo">' +
+                                '<div id="ls-cour-origin-btn" class="ls-coll-sel">' +
+                                    '<span id="ls-cour-origin-label"><b data-i18n="cour_loading">🪐 Yükleniyor...</b></span>' +
+                                    '<span style="color:#00bcff;font-size:9px">▼</span>' +
+                                '</div>' +
+                                '<div id="ls-cour-origin-dd" class="ls-coll-dd"></div>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>' +
+
+                    '<div class="ls-coll-card">' +
+                        '<div class="ls-coll-row" style="margin-bottom:5px">' +
+                            '<span class="ls-label" style="width:52px" data-i18n="cour_ships">🚀 Gemi</span>' +
+                            '<label class="ls-coll-chk"><input type="checkbox" id="ls-cour-ship-bn"> <span data-i18n="cour_bn">BN</span></label>' +
+                            '<label class="ls-coll-chk"><input type="checkbox" id="ls-cour-ship-kn"> <span data-i18n="cour_kn">KN</span></label>' +
+                            '<label class="ls-coll-chk"><input type="checkbox" id="ls-cour-ship-rehber"> <span data-i18n="cour_rehber">Rehber</span></label>' +
+                        '</div>' +
+                        '<div class="ls-coll-row" style="align-items:center;gap:4px">' +
+                            '<label class="ls-coll-chk" style="width:96px;flex-shrink:0" title="Aktif olduğunda girilen tutarlar tüm seçili hedeflere otomatik uygulanır">' +
+                                '<input type="checkbox" id="ls-cour-sync-chk">' +
+                                '<span style="color:#00bcff;font-weight:bold" data-i18n="cour_sync_title">Genel Dağıtım</span>' +
+                            '</label>' +
+                            '<div class="ls-cour-inputs-wrap" style="flex:1">' +
+                                '<input type="text" id="ls-cour-sync-m" class="ls-cour-inp ls-cour-inp-m" placeholder="Metal" title="Tüm hedeflere dağıtılacak Metal miktarı (örn: 1m, 500k)">' +
+                                '<input type="text" id="ls-cour-sync-c" class="ls-cour-inp ls-cour-inp-c" placeholder="Kristal" title="Tüm hedeflere dağıtılacak Kristal miktarı (örn: 2m, 250k)">' +
+                                '<input type="text" id="ls-cour-sync-d" class="ls-cour-inp ls-cour-inp-d" placeholder="Deu" title="Tüm hedeflere dağıtılacak Deuterium miktarı (örn: 3m, 100k)">' +
+                            '</div>' +
+                            '<button type="button" id="ls-cour-sync-apply" class="ls-btn-sm" style="background:#2980b9;color:#fff;border:none;border-radius:3px;padding:3px 7px;font-size:10px;cursor:pointer;flex-shrink:0" title="Bu tutarları tüm seçili hedeflere yaz" data-i18n-title="cour_sync_apply_title" data-i18n="cour_sync_apply">⚡ Eşitle</button>' +
+                        '</div>' +
+                    '</div>' +
+
+                    '<div class="ls-coll-selbar">' +
+                        '<button id="ls-cour-sel-all" class="ls-btn-sm" data-i18n="cour_sel_all">Tümü</button>' +
+                        '<button id="ls-cour-sel-planets" class="ls-btn-sm" data-i18n="cour_sel_planets">🪐 Gezegenler</button>' +
+                        '<button id="ls-cour-sel-moons" class="ls-btn-sm" data-i18n="cour_sel_moons">🌕 Aylar</button>' +
+                        '<button id="ls-cour-sel-none" class="ls-btn-sm" style="color:#e74c3c" data-i18n="cour_sel_none">✖ Kaldır</button>' +
+                    '</div>' +
+
+                    '<div class="ls-coll-head">' +
+                        '<span style="font-size:11px;font-weight:bold;color:#00bcff" data-i18n="cour_planets_moons">🪐 Hedef Gezegenler & Aylar</span>' +
+                        '<span style="font-size:10px;color:#ffbe3b;font-weight:bold;margin-right:32px" data-i18n="cour_res_cols">M / K / D Dağıtımı</span>' +
+                    '</div>' +
+
+                    '<div id="ls-cour-list" class="ls-coll-list"></div>' +
+
+                    '<div id="ls-cour-summary" class="ls-coll-sum">' +
+                        '<span style="color:#8899aa">0 hedef seçili</span>' +
+                        '<span style="font-family:monospace"><span class="ls-coll-m">0</span> · <span class="ls-coll-k">0</span> · <span class="ls-coll-d">0</span></span>' +
+                    '</div>' +
+
+                    '<button id="ls-cour-start-btn" class="ls-cour-go" data-i18n="cour_start_btn">📬 Dağıtımı Başlat</button>' +
                 '</div>' +
 
                 // EXPEDITION TAB (KEŞİF ASİSTANI)
@@ -8027,6 +9439,7 @@
                 }
                 if (t === 'debris') renderDebrisList();
                 if (t === 'collector') renderCollector();
+                if (t === 'courier') renderCourier();
                 if (t === 'expedition') renderExpedition();
                 if (t === 'scanner') { updateScanStatusInfo(); updateRefreshButtonCooldown(); }
                 if (t === 'finder') { updateFinderStatusInfo(); updateRefreshButtonCooldown(); }
@@ -8119,6 +9532,7 @@
                 alarmSettings.attackEnabled = attToggle.checked;
                 saveAlarmSettings();
                 checkThreatsInDOM();
+                scheduleNextBgCheck();
             });
         }
 
@@ -8128,37 +9542,22 @@
                 alarmSettings.espionageEnabled = espToggle.checked;
                 saveAlarmSettings();
                 checkThreatsInDOM();
+                scheduleNextBgCheck();
             });
         }
 
         const desktopToggle = document.getElementById('ls-alarm-desktop-toggle');
         if (desktopToggle) {
             desktopToggle.checked = !!alarmSettings.desktopNotification;
-            desktopToggle.addEventListener('change', async () => {
-                if (desktopToggle.checked) {
-                    if ('Notification' in window) {
-                        try {
-                            const perm = await Notification.requestPermission();
-                            if (perm === 'granted') {
-                                alarmSettings.desktopNotification = true;
-                            } else {
-                                alarmSettings.desktopNotification = false;
-                                desktopToggle.checked = false;
-                                alert(currentLang === 'tr' ? 'Masaüstü bildirimlerine tarayıcınızda izin verilmedi.' : 'Desktop notifications were not permitted by your browser.');
-                            }
-                        } catch (err) {
-                            alarmSettings.desktopNotification = false;
-                            desktopToggle.checked = false;
-                        }
-                    } else {
-                        alarmSettings.desktopNotification = false;
-                        desktopToggle.checked = false;
-                        alert(currentLang === 'tr' ? 'Tarayıcınız Web Bildirimlerini desteklemiyor.' : 'Your browser does not support Web Notifications.');
-                    }
-                } else {
-                    alarmSettings.desktopNotification = false;
-                }
+            desktopToggle.addEventListener('change', () => {
+                alarmSettings.desktopNotification = desktopToggle.checked;
                 saveAlarmSettings();
+                if (alarmSettings.desktopNotification) {
+                    triggerDesktopNotification(
+                        'LuckyStrike OGame Helper',
+                        currentLang === 'tr' ? '🔔 Masaüstü bildirimleri aktif edildi! Saldırı ve casusluklarda Windows bildirimi alacaksınız.' : '🔔 Desktop notifications enabled! You will receive Windows notifications on incoming attacks and espionage.'
+                    );
+                }
             });
         }
 
@@ -8294,6 +9693,9 @@
         initCollectorEvents();
         renderCollector();
 
+        initCourierEvents();
+        renderCourier();
+
         setupExpeditionEvents();
         renderExpedition();
 
@@ -8391,7 +9793,7 @@
             const r3 = Array.from(debugFilterState.row3).join(', ');
 
             let out = '==================================================\n' +
-                      '  LuckyStrike OGame Helper v10.6 - Log Kayıtları\n' +
+                      '  LuckyStrike OGame Helper v11.0 - Log Kayıtları\n' +
                       '  Tarih: ' + nowStr + '\n' +
                       '  URL: ' + window.location.href + '\n' +
                       '  Filtreler: [Akış: ' + r1 + '] [Kapsam: ' + r2 + '] [Seviye: ' + r3 + ']\n' +
@@ -8782,6 +10184,8 @@
 
         setTimeout(() => {
             checkThreatsInDOM();
+            initBgWatcherWorker();
+            scheduleNextBgCheck();
         }, 1000);
     }
 
@@ -8907,8 +10311,9 @@
     checkAndApplyCartDelivery();
     updateActivePlanetCache();
     checkAndRunCollectorAssistant();
+    checkAndRunCourierAssistant();
     checkAndRunExpeditionAssistant();
     scanAndSaveExpeditionTemplates();
-    console.log(LS, 'LuckyStrike OGame Helper v10.6 hazır!');
+    console.log(LS, 'LuckyStrike OGame Helper v11.0 hazır!');
 
 })();

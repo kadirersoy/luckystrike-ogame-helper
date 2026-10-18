@@ -1,4 +1,4 @@
-# ⚡ LuckyStrike OGame Helper (v10.6)
+# ⚡ LuckyStrike OGame Helper (v11.0)
 
 [English](#-english-description) | [Türkçe](#-türkçe-açıklama)
 
@@ -47,7 +47,16 @@ LuckyStrike OGame Helper, **Gameforge Kullanım Şartları ve Oyun Kuralları (K
 
 ---
 
-#### 3. 🛰️ Harabe Alanı Takipçisi (Debris Tracker)
+#### 3. 📬 Postacı Asistanı (Resource Courier)
+- **Merkezi Dağıtım Kolaylığı:** Belirlenen ana üsten (Dağıtım Üssü) seçilen hedef gezegen ve aylara maden sevkiyatı yapar (Maden Toplayıcı'nın ters yönlü dağıtım modeli).
+- **Genel Dağıtım Senkronizasyonu (Global Fill):** Üst alanda girilen Metal, Kristal ve Deuterium tutarlarını tek tıkla (`⚡ Eşitle`) tüm seçili hedeflere otomatik uygular.
+- **Hedefe Özel Bağımsız Giriş:** İstenirse her koloninin yanındaki 3 kutudan (M / K / D) bağımsız özel tutarlar girilebilir; `1m`, `500k`, `2.5m` gibi sayı kısaltmaları desteklenir.
+- **Canlı Stok & Kapasite Kontrolü:** Dağıtım üssündeki maden varlığı ve seçilen kargo gemilerinin (BN, KN, Rehber) kapasitesi anlık taranarak yetersizlik durumunda uyarı verir.
+- **Otomatik Liste Güncellemesi:** Filosu yola çıkan her gezegenin/ayın onay kutusu otomatik olarak kaldırılır (`uncheck`), mükerrer gönderim riski önlenir; `Space` tuşu ile sıralı gönderim yapılır.
+
+---
+
+#### 4. 🛰️ Harabe Alanı Takipçisi (Debris Tracker)
 
 <p align="center">
   <img src="screenshots/tab_debris.png" width="380" alt="LuckyStrike Harabe Takipçisi">
@@ -60,7 +69,7 @@ LuckyStrike OGame Helper, **Gameforge Kullanım Şartları ve Oyun Kuralları (K
 
 ---
 
-#### 4. 🧭 Keşif Asistanı (Expedition Assistant)
+#### 5. 🧭 Keşif Asistanı (Expedition Assistant)
 
 <p align="center">
   <img src="screenshots/tab_expedition.png" width="380" alt="LuckyStrike Keşif Asistanı">
@@ -73,7 +82,7 @@ LuckyStrike OGame Helper, **Gameforge Kullanım Şartları ve Oyun Kuralları (K
 
 ---
 
-#### 5. 🌌 Galaxy Scanner (Boş Slot & Sistem Arayıcı)
+#### 6. 🌌 Galaxy Scanner (Boş Slot & Sistem Arayıcı)
 
 <p align="center">
   <img src="screenshots/tab_scanner.png" width="380" alt="LuckyStrike Galaxy Scanner">
@@ -85,7 +94,7 @@ LuckyStrike OGame Helper, **Gameforge Kullanım Şartları ve Oyun Kuralları (K
 
 ---
 
-#### 6. 🔍 Player Finder (Oyuncu & Gezegen Arama)
+#### 7. 🔍 Player Finder (Oyuncu & Gezegen Arama)
 
 <p align="center">
   <img src="screenshots/tab_finder.png" width="380" alt="LuckyStrike Player Finder">
@@ -96,7 +105,7 @@ LuckyStrike OGame Helper, **Gameforge Kullanım Şartları ve Oyun Kuralları (K
 
 ---
 
-#### 7. 🚨 Saldırı & Sonda Bildirim Desteği (Threat Alert)
+#### 8. 🚨 Saldırı & Sonda Bildirim Desteği (Threat Alert)
 
 <p align="center">
   <img src="screenshots/tab_alarm.png" width="380" alt="LuckyStrike Tehdit Bildirimi">
@@ -136,26 +145,33 @@ LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Term
 - Floating HUD banner with fleet summary and single-stroke `Space` sending.
 - Step retry button for handling slow network or page loads without disrupting queue order.
 
-#### 3. 🛰️ Debris Field Tracker
+#### 3. 📬 Resource Courier Assistant
+- **Central Distribution Hub:** Ships resources from a designated central base (Distribution Origin) to selected target planets and moons.
+- **Global Amount Sync:** Enter global Metal, Crystal, and Deuterium values and apply them to all selected colonies with a single click (`⚡ Sync All`).
+- **Individual Colony Overrides:** Freely fine-tune or override amounts per colony with compact inputs supporting shorthand numbers (`1m`, `500k`, `2.5m`).
+- **Real-Time Stock & Capacity Verification:** Checks origin base resources and selected cargo capacity (Large Cargo, Small Cargo, Pathfinder) on the fly.
+- **Sequential Spacebar Dispatch & Auto-Uncheck:** Each successfully sent destination is automatically unchecked from the list; queue progresses seamlessly with `Space`.
+
+#### 4. 🛰️ Debris Field Tracker
 - **Active Navigation Only:** Organizes and lists debris fields visible on screen as the player browses galaxy pages.
 - Includes Slot 16 (Expedition / Endless Expanse) debris info.
 - Optional audio notification for debris fields above user-selected thresholds.
 - Calculates required Recyclers on screen.
 
-#### 4. 🧭 Expedition Assistant
+#### 5. 🧭 Expedition Assistant
 - **Spiral Expedition Routing:** Automatically distributes expedition missions to slot 16 across systems expanding outward in a spiral pattern (+1, -1, +2, -2...).
 - **Dynamic Template Detection:** Detects and applies expedition fleet templates directly from the game's native fleet dispatch.
 - **Speed & Holding Time Control:** Automatically applies customized speed percentage and expedition holding duration.
 - **Step-by-Step Floating Banner:** Previews route and allows seamless progression with the `Space` key.
 
-#### 5. 🌌 Galaxy Scanner (Empty Slot Locator)
+#### 6. 🌌 Galaxy Scanner (Empty Slot Locator)
 - Analyzes official universe data to find empty slots or suitable systems for colonization/relocation.
 - Target slot filters (Slot 8, 7-8-9, etc.) for streamlined search.
 
-#### 6. 🔍 Player Finder (Colony Locator)
+#### 7. 🔍 Player Finder (Colony Locator)
 - Displays player colony lists and coordinates via official public APIs.
 
-#### 7. 🚨 In-Game Threat Alert Assistant
+#### 8. 🚨 In-Game Threat Alert Assistant
 - **Active Screen Updates Only:** Reads threat status when pages are loaded or when the game's native event header updates.
 - Provides optional audio and desktop notifications to prevent missing incoming activity while playing.
 
@@ -164,7 +180,7 @@ LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Term
 ## 🚀 Kurulum / Installation
 
 ### Chrome & Microsoft Edge
-1. İndirin / Download: [`luckystrike-ogame-helper-v10.4.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
+1. İndirin / Download: [`luckystrike-ogame-helper-v11.0.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
 2. Tarayıcıda eklentiler sayfasına gidin / Open extensions page:
    - **Chrome:** `chrome://extensions`
    - **Edge:** `edge://extensions`
@@ -174,6 +190,15 @@ LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Term
 ---
 
 ## 📝 Sürüm Geçmişi / Changelog
+
+### v11.0
+- **📬 Yeni Modül: Postacı Asistanı (Resource Courier):**
+  - Maden Toplayıcı'nın (Collector) tam simetrik tersi olarak çalışan, tek bir çıkış üssünden (Dağıtım Üssü) imparatorluk genelindeki tüm hedef gezegen ve aylara maden sevkiyatı yapan yepyeni asistan sekmesi eklendi.
+  - **Genel Dağıtım Senkronizasyonu (Global Fill):** Metal, Kristal ve Deuterium için genel tutar kutuları ve `⚡ Eşitle` butonu entegre edildi. Belirlenen tutarlar tek hamlede tüm seçili kolonilere aktarılabilir.
+  - **Hedefe Özel Bağımsız Girişler:** Her gezegen ve ay için ayrı ayrı Metal, Kristal, Deuterium girdi alanları sunuldu (`1m`, `500k`, `2.5m` gibi sayı kısaltmaları desteklenir).
+  - **Çıkış Üssü Koruma Rozeti:** Dağıtım üssü olarak seçilen merkez otomatik algılanarak `📍 Dağıtım Merkezi` rozetiyle işaretlenir, onay kutusu kilitlenir ve yanlışlıkla kendine gönderim yapılması engellenir.
+  - **Canlı Stok & Kapasite Doğrulaması:** Dağıtım üssündeki canlı hammadde miktarları ve seçilen kargo gemilerinin (Büyük Nakliye, Küçük Nakliye, Rehber) toplam kapasitesi kontrol edilerek özet çubuğunda yeterlilik durumu raporlanır.
+  - **Yüzen Bilgi Paneli & Otomatik Uncheck:** Gönderimi tamamlanan hedefler otomatik olarak listeden düşürülür (uncheck edilir); `Space` tuşu desteğiyle kesintisiz, sıra sıra konforlu filo dağıtımı sağlanır.
 
 ### v10.6
 - **🔄 Birleşik Evren & Oyuncu Önbellek Senkronizasyonu (Unified Universe & Player Cache):**

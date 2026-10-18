@@ -1,12 +1,12 @@
 {
   "manifest_version": 3,
   "name": "LuckyStrike OGame Helper",
-  "version": "10.6",
+  "version": "11.0",
   "permissions": [
     "notifications",
     "storage"
   ],
-  "description": "OGame helper: Maliyet Sepeti, Keşif Asistanı, Galaxy Scanner, Player Finder, Sesli Alarm, Harabe Avcısı, Maden Toplayıcı",
+  "description": "OGame helper: Maliyet Sepeti, Toplayıcı, Postacı, Harabe Avcısı, Keşif Asistanı, Galaxy Scanner, Player Finder, Sesli Alarm",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -39,6 +39,19 @@
         "content.js"
       ],
       "run_at": "document_idle"
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icons/*.png"
+      ],
+      "matches": [
+        "*://*.ogame.gameforge.com/*"
+      ]
     }
   ]
 }
