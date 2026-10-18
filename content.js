@@ -61,6 +61,26 @@
             tab_alarm: 'Alarm',
             tab_settings: 'Ayarlar',
 
+            // Tab Tooltips (Hover 3s)
+            tab_tip_title_cart: '🏗️ Maliyet Sepeti',
+            tab_tip_desc_cart: 'Bina ve araştırma kademelerinin hammadde maliyetlerini sepete ekler, gezegendeki mevcut stoğu düşerek net açığı hesaplar ve gereken nakliye filosunu tek tuşla (Space) yola çıkarır.',
+            tab_tip_title_collector: '📦 Maden Toplayıcı',
+            tab_tip_desc_collector: 'İmparatorluğunuzdaki tüm gezegen ve aylarda biriken madenleri (deuterium rezervini koruyarak) tek bir hedef üsse otomatik kargo hesabı ve Space tuşu ile sıra sıra toplar.',
+            tab_tip_title_courier: '📬 Postacı Asistanı',
+            tab_tip_desc_courier: 'Seçilen merkezi dağıtım üssünden diğer tüm kolonilerinize genel veya özel maden tutarlarını (Metal, Kristal, Deuterium) hızlıca paylaştırır ve tek tuşla sıra sıra sevk eder.',
+            tab_tip_title_debris: '🛰️ Harabe Takipçisi',
+            tab_tip_desc_debris: 'Galaksi sayfasında gezinirken ekrandaki ve 16. keşif slotundaki harabeleri otomatik listeler, gereken Geri Dönüşümcü (GD) sayısını hesaplar ve eşik üstü harabelerde sesle uyarır.',
+            tab_tip_title_expedition: '🧭 Keşif Asistanı',
+            tab_tip_desc_expedition: 'Başlangıç sisteminden spiral rota oluşturarak 16. slotlara keşif filoları hazırlar; kayıtlı filo şablonlarını otomatik yükleyip Space tuşu ile ardışık seferler düzenler.',
+            tab_tip_title_scanner: '🌌 Galaxy Scanner',
+            tab_tip_desc_scanner: 'Evren verilerini tarayarak belirlediğiniz slot kriterlerine (örn. Slot 8, Deut yuvaları) uyan boş sistem ve gezegen yerlerini tek tıkla listeler ve haritaya yönlendirir.',
+            tab_tip_title_finder: '🔍 Player Finder',
+            tab_tip_desc_finder: 'Oyuncu veya gezegen adına göre arama yaparak oyuncuların tüm kolonilerini, koordinatlarını ve ittifak bilgilerini tek ekranda haritalandırır.',
+            tab_tip_title_alarm: '🚨 Tehdit Bildirimi',
+            tab_tip_desc_alarm: 'Gezegenlerinize yönelik saldırı veya casus sondası tehditlerini ekran güncellendiğinde anında algılar; yüksek sesli alarm ve masaüstü bildirimiyle sizi uyarır.',
+            tab_tip_title_settings: '⚙️ Ayarlar',
+            tab_tip_desc_settings: 'Dil (TR / ENG), panel teması, saydamlık kaydırıcısı ve fare üzerine gelince tam görünürlük (Hover to Focus) gibi genel eklenti tercihlerini yönetir.',
+
             // Header
             header_title: 'LuckyStrike Helper',
             stop_alarm: '⏹️ Sustur',
@@ -333,6 +353,26 @@
             tab_finder: 'Finder',
             tab_alarm: 'Alarm',
             tab_settings: 'Settings',
+
+            // Tab Tooltips (Hover 3s)
+            tab_tip_title_cart: '🏗️ Cost Cart',
+            tab_tip_desc_cart: 'Calculates multi-level resource costs for buildings and researches, deducts current planet stock to find deficits, and prepares cargo fleets for dispatch with Space.',
+            tab_tip_title_collector: '📦 Resource Collector',
+            tab_tip_desc_collector: 'Collects accumulated resources across all empire colonies (respecting protected deuterium reserves) to a single destination base with automatic cargo sizing and Spacebar dispatch.',
+            tab_tip_title_courier: '📬 Resource Courier',
+            tab_tip_desc_courier: 'Distributes resources (Metal, Crystal, Deuterium) from a central origin base to selected colonies using global fill or custom amounts with sequential Spacebar dispatch.',
+            tab_tip_title_debris: '🛰️ Debris Tracker',
+            tab_tip_desc_debris: 'Tracks debris fields and slot 16 expedition debris while browsing the galaxy view, calculates required Recyclers, and alerts on debris exceeding your threshold.',
+            tab_tip_title_expedition: '🧭 Expedition Assistant',
+            tab_tip_desc_expedition: 'Routes expedition fleets to slot 16 in an outward spiral from a starting system, applies your saved fleet templates, and dispatches missions sequentially with Space.',
+            tab_tip_title_scanner: '🌌 Galaxy Scanner',
+            tab_tip_desc_scanner: 'Scans universe data to find empty slots matching your criteria (e.g. slot 8, deuterium slots) for colonization or relocation with direct galaxy shortcuts.',
+            tab_tip_title_finder: '🔍 Player Finder',
+            tab_tip_desc_finder: 'Searches players or planet names to map out all colonies, coordinates, and alliance affiliations on a single screen using official public data.',
+            tab_tip_title_alarm: '🚨 Threat Alert',
+            tab_tip_desc_alarm: 'Detects incoming attacks and espionage probes whenever the screen updates, alerting you with distinct audio klaxons and desktop notifications.',
+            tab_tip_title_settings: '⚙️ Settings',
+            tab_tip_desc_settings: 'Configures language (TR / ENG), panel theme, opacity slider, and hover-to-focus visibility preferences.',
 
             // Header
             header_title: 'LuckyStrike Helper',
@@ -653,7 +693,7 @@
 
         const langBtnText = document.querySelector('#ls-setting-lang-button .ui-selectmenu-status, #ls-setting-lang-button .ui-selectmenu-text');
         if (langBtnText) {
-            langBtnText.textContent = (currentLang === 'en') ? '🇬🇧 English' : '🇹🇷 Türkçe';
+            langBtnText.textContent = (currentLang === 'en') ? '🇬🇧 ENG' : '🇹🇷 TR';
         }
         const themeBtnText = document.querySelector('#ls-setting-theme-button .ui-selectmenu-status, #ls-setting-theme-button .ui-selectmenu-text');
         if (themeBtnText) {
@@ -6676,7 +6716,16 @@
         if (originBtn && ddEl) {
             originBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                ddEl.classList.toggle('show');
+                const isShown = ddEl.style.display === 'block' || ddEl.classList.contains('show');
+                ddEl.style.display = isShown ? 'none' : 'block';
+                ddEl.classList.toggle('show', !isShown);
+            });
+
+            document.addEventListener('click', (e) => {
+                if (ddEl && !ddEl.contains(e.target) && !originBtn.contains(e.target)) {
+                    ddEl.style.display = 'none';
+                    ddEl.classList.remove('show');
+                }
             });
 
             ddEl.addEventListener('click', (e) => {
@@ -6698,6 +6747,7 @@
                         saveCourierSettings();
                         renderCourier();
                     }
+                    ddEl.style.display = 'none';
                     ddEl.classList.remove('show');
                     return;
                 }
@@ -6707,14 +6757,9 @@
                 courierSettings.originType = parseInt(item.getAttribute('data-type'), 10) || 1;
                 courierSettings.originName = item.getAttribute('data-name');
                 saveCourierSettings();
+                ddEl.style.display = 'none';
                 ddEl.classList.remove('show');
                 renderCourier();
-            });
-
-            document.addEventListener('click', (e) => {
-                if (!e.target.closest('#ls-cour-origin-btn') && !e.target.closest('#ls-cour-origin-dd')) {
-                    ddEl.classList.remove('show');
-                }
             });
         }
 
@@ -8630,6 +8675,11 @@
             '.ls-coll-sel b{color:#fff}',
             '.ls-coll-sel .crd{color:#ffbe3b;font-family:monospace;margin-left:6px}',
             '.ls-coll-dd{position:absolute;left:0;right:0;top:30px;background:#0d1520 !important;border:1px solid #00bcff !important;border-radius:4px;z-index:1002 !important;box-shadow:0 10px 30px rgba(0,0,0,0.95) !important;max-height:220px;overflow-y:auto;display:none}',
+            '.ls-coll-dd.show{display:block !important}',
+            '#ls-tab-tooltip{position:absolute;top:66px;left:8px;right:8px;background:rgba(10,16,26,0.98);border:1px solid #00bcff;border-radius:6px;padding:8px 10px;box-shadow:0 8px 24px rgba(0,0,0,0.9),0 0 12px rgba(0,188,255,0.25);z-index:999999;pointer-events:none;display:none;animation:lsFadeIn .18s ease}',
+            '#ls-tab-tooltip-title{font-size:11.5px;font-weight:bold;color:#00bcff;margin-bottom:4px;display:flex;align-items:center;gap:5px}',
+            '#ls-tab-tooltip-desc{font-size:10.5px;color:#c9d6e3;line-height:1.45}',
+            '@keyframes lsFadeIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}',
             '.ls-coll-dd-item{padding:6px 8px;font-size:11px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #16222f;cursor:pointer;transition:background .15s;background:#0d1520}',
             '.ls-coll-dd-item:hover{background:rgba(0,188,255,0.22) !important}',
             '.ls-coll-dd-item.active{background:rgba(0,188,255,0.32) !important}',
@@ -8682,7 +8732,7 @@
             '.ls-ship-pill:hover{border-color:#00bcff}',
 
             /* Courier Tab Styles */
-            '#ls-cour-card-origin{position:relative !important;z-index:900 !important;overflow:visible !important}',
+            '#ls-cour-card-origin{position:relative !important;z-index:1005 !important;overflow:visible !important}',
             '.ls-cour-inputs-wrap{display:flex;gap:3px;align-items:center;flex-shrink:0}',
             '.ls-cour-inp{width:46px;padding:2px 3px;font-size:10px;text-align:right;font-family:monospace;border-radius:3px;box-sizing:border-box}',
             '.ls-cour-inp-m{color:#ffbe3b;border:1px solid #4a3b1a;background:#0a0e17}',
@@ -8730,6 +8780,7 @@
                 '<div class="ls-tab" data-tab="alarm"><span class="ls-tab-icon">🚨</span><span class="ls-tab-label" data-i18n="tab_alarm">Alarm</span></div>' +
                 '<div class="ls-tab" data-tab="settings"><span class="ls-tab-icon">⚙️</span><span class="ls-tab-label" data-i18n="tab_settings">Ayarlar</span></div>' +
             '</div>' +
+            '<div id="ls-tab-tooltip"><div id="ls-tab-tooltip-title"></div><div id="ls-tab-tooltip-desc"></div></div>' +
             '<div id="ls-body">' +
 
                 // CART TAB
@@ -9132,8 +9183,8 @@
                         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
                             '<span style="font-size:11px;color:#d1d8e0" data-i18n="settings_lang">🌐 Dil / Language:</span>' +
                             '<select id="ls-setting-lang" class="ls-inp" style="width:160px;padding:3px 6px;font-size:11px">' +
-                                '<option value="tr">🇹🇷 Türkçe</option>' +
-                                '<option value="en">🇬🇧 English</option>' +
+                                '<option value="tr">🇹🇷 TR (Türkçe)</option>' +
+                                '<option value="en">🇬🇧 ENG (English)</option>' +
                             '</select>' +
                         '</div>' +
                         '<div style="display:flex;justify-content:space-between;align-items:center">' +
@@ -9424,8 +9475,46 @@
             }
         });
 
+        let tabHoverTimer = null;
+        const tabTooltip = document.getElementById('ls-tab-tooltip');
+        const tabTooltipTitle = document.getElementById('ls-tab-tooltip-title');
+        const tabTooltipDesc = document.getElementById('ls-tab-tooltip-desc');
+
+        function hideTabTooltip() {
+            if (tabHoverTimer) {
+                clearTimeout(tabHoverTimer);
+                tabHoverTimer = null;
+            }
+            if (tabTooltip) tabTooltip.style.display = 'none';
+        }
+
+        const tabsContainer = document.getElementById('ls-tabs');
+        if (tabsContainer) {
+            tabsContainer.addEventListener('mouseleave', hideTabTooltip);
+        }
+
         document.querySelectorAll('.ls-tab').forEach(tab => {
+            const tabKey = tab.getAttribute('data-tab');
+
+            tab.addEventListener('mouseenter', () => {
+                hideTabTooltip();
+                tabHoverTimer = setTimeout(() => {
+                    if (tabTooltip && tabTooltipTitle && tabTooltipDesc) {
+                        const titleText = t('tab_tip_title_' + tabKey, '');
+                        const descText = t('tab_tip_desc_' + tabKey, '');
+                        if (titleText && descText) {
+                            tabTooltipTitle.textContent = titleText;
+                            tabTooltipDesc.textContent = descText;
+                            tabTooltip.style.display = 'block';
+                        }
+                    }
+                }, 3000);
+            });
+
+            tab.addEventListener('mouseleave', hideTabTooltip);
+
             tab.addEventListener('click', () => {
+                hideTabTooltip();
                 const t = tab.getAttribute('data-tab');
                 document.querySelectorAll('.ls-tab').forEach(el => el.classList.remove('active'));
                 document.querySelectorAll('.ls-tc').forEach(el => el.classList.remove('active'));
@@ -10167,8 +10256,8 @@
             const langSelect = document.getElementById('ls-setting-lang');
             if (langSelect) {
                 let targetLang = null;
-                if (txt.includes('English')) targetLang = 'en';
-                else if (txt.includes('Türkçe')) targetLang = 'tr';
+                if (txt.includes('English') || txt.includes('ENG')) targetLang = 'en';
+                else if (txt.includes('Türkçe') || txt.includes('TR')) targetLang = 'tr';
                 if (targetLang && targetLang !== currentLang) {
                     currentLang = targetLang;
                     langSelect.value = targetLang;
