@@ -1,4 +1,4 @@
-# ⚡ LuckyStrike OGame Helper (v12.0)
+# ⚡ LuckyStrike OGame Helper (v12.1)
 
 [English](#-english-description) | [Türkçe](#-türkçe-açıklama)
 
@@ -315,7 +315,7 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ## 🚀 Kurulum / Installation
 
 ### Chrome & Microsoft Edge
-1. İndirin / Download: [`luckystrike-ogame-helper-v12.0.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
+1. İndirin / Download: [`luckystrike-ogame-helper-v12.1.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
 2. Tarayıcıda eklentiler sayfasına gidin / Open extensions page:
    - **Chrome:** `chrome://extensions`
    - **Edge:** `edge://extensions`
@@ -325,6 +325,16 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ---
 
 ## 📝 Sürüm Geçmişi / Changelog
+
+### v12.1
+- **📐 CSS Ölçekleme ve Dar Panel Sözdizimi Düzeltmesi:**
+  - Panelin minimum boyuta (350px ve 310px) küçültüldüğünde tüm buton, başlık, kart ve girdi kutularının eksiksiz ölçeklenmesini engelleyen geçersiz CSS seçici sözdizimi temizlendi.
+- **🟡🔵 Fenerbahçe Skin İyileştirmeleri:**
+  - Dar ekranda büyük işlem butonlarının iki satıra taşmasını engelleyen dinamik emoji optimizasyonu eklendi.
+  - Galaksi Tarayıcısı sonuç satırları ve Oyuncu Arama sonuç kartları Fenerbahçe temasına uygun lacivert/sarı renk şemasına dahil edildi.
+  - Arama sonuçlarındaki yönlendirme butonları temaya uygun futbol topu (`⚽`) simgesiyle güncellendi.
+- **🔍 Oyuncu/Gezegen Arama Geliştirmesi:**
+  - 50 sonuç sınırına ulaşıldığında kullanıcıya net bir şekilde `50+ sonuç bulundu (İlk 50 listeleniyor)` bilgisi gösterilmesi sağlandı.
 
 ### v12.0
 - **🟡🔵 Yeni Görünüm / Skin - Fenerbahçe (Koyu & Kanarya):**
