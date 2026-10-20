@@ -2,7 +2,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v11.2 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v12.0 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -318,6 +318,7 @@
             settings_lang: '🌐 Dil / Language:',
             settings_theme: '🎨 Görünüm / Skin:',
             settings_theme_dark: '🌌 Uzay Karanlığı (Varsayılan)',
+            settings_theme_fb: '🟡🔵 Fenerbahçe (Koyu & Kanarya)',
             settings_theme_light: '☀️ Aydınlık (Çok Yakında)',
             settings_theme_aero: '💎 Aero Glass (Çok Yakında)',
             settings_diag_divider: '🛠️ Sistem & Teşhis Günlükleri',
@@ -616,8 +617,9 @@
             // Settings Tab (Ayarlar)
             settings_general: 'General Preferences',
             settings_lang: '🌐 Dil / Language:',
-            settings_theme: '🎨 Görünüm / Skin:',
+            settings_theme: '🎨 Theme / Skin:',
             settings_theme_dark: '🌌 Deep Space (Default)',
+            settings_theme_fb: '🟡🔵 Fenerbahçe (Dark Canary)',
             settings_theme_light: '☀️ Light (Coming Soon)',
             settings_theme_aero: '💎 Aero Glass (Coming Soon)',
             settings_diag_divider: '🛠️ System & Diagnostic Logs',
@@ -714,7 +716,7 @@
         const themeBtnText = document.querySelector('#ls-setting-theme-button .ui-selectmenu-status, #ls-setting-theme-button .ui-selectmenu-text');
         if (themeBtnText) {
             const curTheme = localStorage.getItem(KEYS.THEME) || 'dark';
-            themeBtnText.textContent = (curTheme === 'dark') ? t('settings_theme_dark') : (curTheme === 'light' ? t('settings_theme_light') : t('settings_theme_aero'));
+            themeBtnText.textContent = (curTheme === 'fb') ? t('settings_theme_fb') : ((curTheme === 'dark') ? t('settings_theme_dark') : (curTheme === 'light' ? t('settings_theme_light') : t('settings_theme_aero')));
         }
     }
 
@@ -1334,6 +1336,35 @@
             panel.style.opacity = '1';
         } else {
             panel.style.opacity = String(targetOpacity);
+        }
+    }
+
+    function applyTheme(themeName) {
+        generalSettings.theme = themeName || 'dark';
+        localStorage.setItem(KEYS.THEME, generalSettings.theme);
+        const panel = document.getElementById('ls-panel');
+        const fab = document.getElementById('ls-fab');
+        if (panel) {
+            if (generalSettings.theme === 'fb') {
+                panel.classList.add('ls-theme-fb');
+            } else {
+                panel.classList.remove('ls-theme-fb');
+            }
+        }
+        if (fab) {
+            if (generalSettings.theme === 'fb') {
+                fab.classList.add('ls-theme-fb');
+            } else {
+                fab.classList.remove('ls-theme-fb');
+            }
+        }
+        const themeSelect = document.getElementById('ls-setting-theme');
+        if (themeSelect && themeSelect.value !== generalSettings.theme) {
+            themeSelect.value = generalSettings.theme;
+        }
+        const themeBtnText = document.querySelector('#ls-setting-theme-button .ui-selectmenu-status, #ls-setting-theme-button .ui-selectmenu-text');
+        if (themeBtnText) {
+            themeBtnText.textContent = (generalSettings.theme === 'fb') ? t('settings_theme_fb') : t('settings_theme_dark');
         }
     }
     let scanSettings = JSON.parse(localStorage.getItem(KEYS.SCAN) || '{}');
@@ -3877,7 +3908,7 @@
     let universeCooldownTimer = null;
 
     function getUniverseCache() {
-        if (universeCacheInMemory && (Date.now() - universeCacheInMemory.ts < 24 * 3600 * 1000)) {
+        if (universeCacheInMemory && (Date.now() - universeCacheInMemory.ts < 24 * 3600 * 1000) && Array.isArray(universeCacheInMemory.coords)) {
             return universeCacheInMemory;
         }
 
@@ -3885,7 +3916,7 @@
         if (raw) {
             try {
                 const cache = JSON.parse(raw);
-                if (cache.ts && (Date.now() - cache.ts < 24 * 3600 * 1000) && Array.isArray(cache.coords)) {
+                if (cache && cache.ts && (Date.now() - cache.ts < 24 * 3600 * 1000) && Array.isArray(cache.coords)) {
                     universeCacheInMemory = cache;
                     return cache;
                 }
@@ -3896,7 +3927,7 @@
         if (apiRaw) {
             try {
                 const apiData = JSON.parse(apiRaw);
-                if (apiData.ts && (Date.now() - apiData.ts < 24 * 3600 * 1000) && Array.isArray(apiData.planets)) {
+                if (apiData && apiData.ts && (Date.now() - apiData.ts < 24 * 3600 * 1000) && Array.isArray(apiData.planets)) {
                     const coords = apiData.planets.map(p => p.coords).filter(Boolean);
                     if (coords.length > 0) {
                         const fallbackCache = { ts: apiData.ts, coords };
@@ -3926,11 +3957,11 @@
         const statusEl = document.getElementById('ls-scan-status');
         if (!statusEl || statusEl.getAttribute('data-busy')) return;
         const cache = getUniverseCache();
-        if (cache && cache.ts) {
+        if (cache && cache.ts && Array.isArray(cache.coords)) {
             const timeStr = new Date(cache.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const pLbl = (currentLang !== 'en') ? 'gezegen' : 'planets';
             const cLbl = t('scan_cached', 'Önbellek');
-            statusEl.innerHTML = '<span style="color:#607d8b">' + cLbl + ': ' + timeStr + ' (' + formatTimeAgo(cache.ts) + ') · ' + cache.coords.length.toLocaleString() + ' ' + pLbl + '</span>';
+            statusEl.innerHTML = '<span style="color:#607d8b">' + cLbl + ': ' + timeStr + ' (' + formatTimeAgo(cache.ts) + ') · ' + (cache.coords.length || 0).toLocaleString() + ' ' + pLbl + '</span>';
         } else {
             statusEl.innerHTML = '<span style="color:#8899aa">' + t('scan_no_data', 'Henüz evren verisi indirilmedi') + '</span>';
         }
@@ -3940,18 +3971,12 @@
         const infoEl = document.getElementById('ls-find-cache-info');
         if (!infoEl || infoEl.getAttribute('data-busy')) return;
 
-        let apiData = apiCacheInMemory;
-        if (!apiData) {
-            const raw = sessionStorage.getItem(KEYS.API) || localStorage.getItem(KEYS.API);
-            if (raw) {
-                try { apiData = JSON.parse(raw); } catch (e) {}
-            }
-        }
+        let apiData = loadApiDataSync();
 
         if (apiData && apiData.ts) {
             const timeStr = new Date(apiData.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const pCount = (apiData.planets && apiData.planets.length) || 0;
-            const uCount = (apiData.players && Object.keys(apiData.players).length) || 0;
+            const pCount = (Array.isArray(apiData.planets) ? apiData.planets.length : 0);
+            const uCount = (apiData.players && typeof apiData.players === 'object' ? Object.keys(apiData.players).length : 0);
             const pLbl = (currentLang !== 'en') ? 'Gezegen' : 'Planets';
             const uLbl = (currentLang !== 'en') ? 'Oyuncu' : 'Players';
             const cLbl = t('find_cached', 'Önbellek');
@@ -4015,11 +4040,14 @@
 
     async function forceRefreshAllUniverseData() {
         const lastRefresh = parseInt(localStorage.getItem(KEYS.UNIVERSE_LAST_REFRESH) || '0', 10);
-        if (Date.now() - lastRefresh < 60000) {
+        const validApi = loadApiDataSync();
+        const validUniverse = getUniverseCache();
+
+        if (Date.now() - lastRefresh < 60000 && validApi && validUniverse) {
             updateRefreshButtonCooldown();
             return {
-                apiData: apiCacheInMemory,
-                universeData: universeCacheInMemory
+                apiData: validApi,
+                universeData: validUniverse
             };
         }
 
@@ -4160,7 +4188,7 @@
             }
         }
         const res = await forceRefreshAllUniverseData();
-        return res.universeData;
+        return res?.universeData || getUniverseCache() || { coords: [] };
     }
 
     async function startScan() {
@@ -4198,6 +4226,9 @@
 
         try {
             const data = await fetchUniverseData(false);
+            if (!data || !Array.isArray(data.coords)) {
+                throw new Error(currentLang === 'tr' ? 'Evren koordinat verisi alınamadı' : 'Universe coordinate data could not be retrieved');
+            }
             statusEl.textContent = (currentLang === 'tr' ? 'Boş slotlar hesaplanıyor...' : 'Calculating empty slots...');
             barEl.style.width = '60%';
 
@@ -4274,8 +4305,8 @@
     // ============================================================
     let apiCacheInMemory = null;
 
-    async function loadApiData() {
-        if (apiCacheInMemory && (Date.now() - apiCacheInMemory.ts < 24 * 3600 * 1000)) {
+    function loadApiDataSync() {
+        if (apiCacheInMemory && (Date.now() - apiCacheInMemory.ts < 24 * 3600 * 1000) && apiCacheInMemory.players && apiCacheInMemory.planets) {
             return apiCacheInMemory;
         }
 
@@ -4283,15 +4314,23 @@
         if (raw) {
             try {
                 const cache = JSON.parse(raw);
-                if (cache.ts && (Date.now() - cache.ts < 24 * 3600 * 1000) && cache.players && cache.planets) {
+                if (cache && cache.ts && (Date.now() - cache.ts < 24 * 3600 * 1000) && cache.players && cache.planets) {
                     apiCacheInMemory = cache;
                     return cache;
                 }
             } catch (e) { /* ignore */ }
         }
+        return null;
+    }
+
+    async function loadApiData(force = false) {
+        if (!force) {
+            const cached = loadApiDataSync();
+            if (cached) return cached;
+        }
 
         const res = await forceRefreshAllUniverseData();
-        return res.apiData;
+        return res?.apiData || loadApiDataSync() || { players: {}, planets: [] };
     }
 
     async function startFinder() {
@@ -4310,16 +4349,19 @@
 
         try {
             const data = await loadApiData();
+            if (!data || !data.players || !Array.isArray(data.planets)) {
+                throw new Error(currentLang === 'tr' ? 'Oyuncu verisi hazır değil' : 'Player data not ready');
+            }
             let html = '';
             let count = 0;
 
             if (type === 'player') {
                 for (const pid in data.players) {
                     const p = data.players[pid];
-                    if (p.name.toLowerCase().includes(query)) {
+                    if (p && p.name && p.name.toLowerCase().includes(query)) {
                         count++;
                         if (count > 50) break;
-                        const pPlanets = data.planets.filter(pl => pl.player === pid);
+                        const pPlanets = data.planets.filter(pl => pl && pl.player === pid);
                         const safePName = escapeHtml(p.name);
                         const sts = p.status ? ' <span style="color:#e74c3c">(' + escapeHtml(p.status) + ')</span>' : ' <span style="color:#2ecc71">(' + t('find_active') + ')</span>';
 
@@ -4327,8 +4369,8 @@
                         html += '<div style="font-weight:bold;color:#fff;margin-bottom:4px">' + safePName + sts + '</div>';
                         pPlanets.forEach(pl => {
                             const parts = (pl.coords || '1:1:1').split(':');
-                            const safePlName = escapeHtml(pl.name);
-                            const safeCoords = escapeHtml(pl.coords);
+                            const safePlName = escapeHtml(pl.name || 'Gezegen');
+                            const safeCoords = escapeHtml(pl.coords || '');
                             html += '<div class="ls-finder-planet">' +
                                 '<span>' + safePlName + ' <span style="color:#888">[' + safeCoords + ']</span></span>' +
                                 '<button class="ls-btn-sm ls-nav-btn" data-g="' + parseInt(parts[0], 10) + '" data-s="' + parseInt(parts[1], 10) + '" title="' + (currentLang === 'tr' ? 'Galaksiye Git' : 'Go to Galaxy') + '">🚀</button>' +
@@ -4339,14 +4381,14 @@
                 }
             } else {
                 for (const pl of data.planets) {
-                    if (pl.name.toLowerCase().includes(query)) {
+                    if (pl && pl.name && pl.name.toLowerCase().includes(query)) {
                         count++;
                         if (count > 50) break;
-                        const owner = data.players[pl.player];
+                        const owner = data.players ? data.players[pl.player] : null;
                         const ownerName = owner ? owner.name : '?';
                         const parts = (pl.coords || '1:1:1').split(':');
-                        const safePlName = escapeHtml(pl.name);
-                        const safeCoords = escapeHtml(pl.coords);
+                        const safePlName = escapeHtml(pl.name || 'Gezegen');
+                        const safeCoords = escapeHtml(pl.coords || '');
                         const safeOwner = escapeHtml(ownerName);
                         html += '<div class="ls-item" style="border-left:3px solid #2ecc71">' +
                             '<div style="flex:1">' +
@@ -9092,6 +9134,70 @@
             '#ls-panel.ls-compact #ls-footer-drag, @container lspanel (max-width: 350px){padding:3px 6px}',
             '#ls-panel.ls-compact #ls-footer-drag-handle span:nth-child(2), @container lspanel (max-width: 350px){font-size:9.5px;letter-spacing:3px}',
             '#ls-panel.ls-compact #ls-alarm-att-sound, #ls-panel.ls-compact #ls-alarm-esp-sound, #ls-panel.ls-compact #ls-setting-lang, #ls-panel.ls-compact #ls-setting-theme, @container lspanel (max-width: 350px){width:auto !important;max-width:140px;flex:1}',
+
+            /* ==================== FENERBAHÇE SKIN (DARK & NAVY-YELLOW) ==================== */
+            '#ls-panel.ls-theme-fb{background:rgba(4,14,28,0.98) !important;border:2px solid #ffd700 !important;box-shadow:0 12px 36px rgba(0,15,40,0.95), 0 0 16px rgba(255,215,0,0.3) !important;color:#e6edf5 !important}',
+            '#ls-panel.ls-theme-fb #ls-header{background:linear-gradient(90deg,#00122e 0%,#002d62 50%,#00122e 100%) !important;border-bottom:2px solid #ffd700 !important}',
+            '#ls-panel.ls-theme-fb #ls-header-title{color:#ffd700 !important;text-shadow:0 0 8px rgba(255,215,0,0.5) !important}',
+            '#ls-fab.ls-theme-fb{background:linear-gradient(135deg,#001736 0%,#002d62 100%) !important;border:2px solid #ffd700 !important;box-shadow:0 4px 16px rgba(0,20,60,0.8), 0 0 12px rgba(255,215,0,0.5) !important}',
+
+            /* Fenerbahçe Tabs & Custom Tab Icons */
+            '#ls-panel.ls-theme-fb #ls-tabs{background:#020914 !important;border-bottom:1px solid #132a4a !important}',
+            '#ls-panel.ls-theme-fb .ls-tab{color:#8da4c4 !important}',
+            '#ls-panel.ls-theme-fb .ls-tab:hover{color:#ffd700 !important;background:rgba(255,215,0,0.08) !important}',
+            '#ls-panel.ls-theme-fb .ls-tab.active{background:#00224d !important;color:#ffd700 !important;border-bottom:2px solid #ffd700 !important;box-shadow:inset 0 -2px 6px rgba(255,215,0,0.25) !important}',
+            '#ls-panel.ls-theme-fb .ls-tab[data-tab="cart"] .ls-tab-icon{visibility:hidden;position:relative}',
+            '#ls-panel.ls-theme-fb .ls-tab[data-tab="cart"] .ls-tab-icon::after{content:"🏟️";visibility:visible;position:absolute;left:0;top:0}',
+            '#ls-panel.ls-theme-fb .ls-tab[data-tab="collector"] .ls-tab-icon{visibility:hidden;position:relative}',
+            '#ls-panel.ls-theme-fb .ls-tab[data-tab="collector"] .ls-tab-icon::after{content:"⚽";visibility:visible;position:absolute;left:0;top:0}',
+            '#ls-panel.ls-theme-fb .ls-tab[data-tab="courier"] .ls-tab-icon{visibility:hidden;position:relative}',
+            '#ls-panel.ls-theme-fb .ls-tab[data-tab="courier"] .ls-tab-icon::after{content:"👟";visibility:visible;position:absolute;left:0;top:0}',
+            '#ls-panel.ls-theme-fb .ls-tab[data-tab="debris"] .ls-tab-icon{visibility:hidden;position:relative}',
+            '#ls-panel.ls-theme-fb .ls-tab[data-tab="debris"] .ls-tab-icon::after{content:"🧤";visibility:visible;position:absolute;left:0;top:0}',
+            '#ls-panel.ls-theme-fb .ls-tab[data-tab="expedition"] .ls-tab-icon{visibility:hidden;position:relative}',
+            '#ls-panel.ls-theme-fb .ls-tab[data-tab="expedition"] .ls-tab-icon::after{content:"🏆";visibility:visible;position:absolute;left:0;top:0}',
+            '#ls-panel.ls-theme-fb .ls-tab[data-tab="scanner"] .ls-tab-icon{visibility:hidden;position:relative}',
+            '#ls-panel.ls-theme-fb .ls-tab[data-tab="scanner"] .ls-tab-icon::after{content:"🦅";visibility:visible;position:absolute;left:0;top:0}',
+            '#ls-panel.ls-theme-fb .ls-tab[data-tab="finder"] .ls-tab-icon{visibility:hidden;position:relative}',
+            '#ls-panel.ls-theme-fb .ls-tab[data-tab="finder"] .ls-tab-icon::after{content:"⭐";visibility:visible;position:absolute;left:0;top:0}',
+            '#ls-panel.ls-theme-fb .ls-tab[data-tab="alarm"] .ls-tab-icon{visibility:hidden;position:relative}',
+            '#ls-panel.ls-theme-fb .ls-tab[data-tab="alarm"] .ls-tab-icon::after{content:"📢";visibility:visible;position:absolute;left:0;top:0}',
+            '#ls-panel.ls-theme-fb .ls-tab[data-tab="settings"] .ls-tab-icon{visibility:hidden;position:relative}',
+            '#ls-panel.ls-theme-fb .ls-tab[data-tab="settings"] .ls-tab-icon::after{content:"⚙️";visibility:visible;position:absolute;left:0;top:0}',
+
+            /* Fenerbahçe Küçük Butonlar (Futbol Topu ⚽) */
+            '#ls-panel.ls-theme-fb .ls-coll-jump{visibility:hidden;position:relative;background:#ffd700 !important;color:#001736 !important;border:1px solid #ffe600 !important;border-radius:4px !important;box-shadow:0 0 6px rgba(255,215,0,0.4) !important}',
+            '#ls-panel.ls-theme-fb .ls-coll-jump::after{content:"⚽";visibility:visible;position:absolute;left:0;top:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:11px}',
+            '#ls-panel.ls-theme-fb .ls-coll-jump:hover{background:#ffffff !important;box-shadow:0 0 10px rgba(255,255,255,0.8) !important;transform:rotate(45deg);transition:transform .2s ease, background .15s !important}',
+            '#ls-panel.ls-theme-fb .ls-coll-selbar .ls-btn-sm{background:#091a33 !important;border:1px solid #1a3a66 !important;color:#ffd700 !important}',
+            '#ls-panel.ls-theme-fb .ls-coll-selbar .ls-btn-sm:hover{background:#002d62 !important;border-color:#ffd700 !important;color:#ffffff !important;box-shadow:0 0 6px rgba(255,215,0,0.3) !important}',
+            '#ls-panel.ls-theme-fb #ls-cour-sync-apply, #ls-panel.ls-theme-fb #ls-cart-add-extra-btn{background:linear-gradient(180deg,#002d62,#001736) !important;border:1px solid #ffd700 !important;color:#ffd700 !important;font-weight:bold !important}',
+            '#ls-panel.ls-theme-fb #ls-cour-sync-apply:hover, #ls-panel.ls-theme-fb #ls-cart-add-extra-btn:hover{background:linear-gradient(180deg,#003e87,#00224d) !important;color:#ffffff !important;box-shadow:0 0 8px rgba(255,215,0,0.4) !important}',
+            '#ls-panel.ls-theme-fb .ls-ship-pill{background:#091a33 !important;border-color:#1a3a66 !important;color:#9cb2cd !important}',
+            '#ls-panel.ls-theme-fb .ls-ship-pill.active{background:#ffd700 !important;color:#001736 !important;border-color:#ffe600 !important;box-shadow:0 0 8px rgba(255,215,0,0.5) !important}',
+            '#ls-panel.ls-theme-fb .ls-cart-mbtn{background:#091a33 !important;border-color:#1a3a66 !important;color:#9cb2cd !important}',
+            '#ls-panel.ls-theme-fb .ls-cart-mbtn.active{background:#ffd700 !important;color:#001736 !important;border-color:#ffd700 !important}',
+            '#ls-panel.ls-theme-fb .ls-cart-mbtn.deploy.active{background:#00387a !important;color:#ffd700 !important;border-color:#ffd700 !important}',
+
+            /* Fenerbahçe En Alttaki Büyük Butonlar (Kale Ağları Deseni 🥅) */
+            '#ls-panel.ls-theme-fb .ls-coll-go, #ls-panel.ls-theme-fb .ls-cour-go, #ls-panel.ls-theme-fb .ls-exp-go, #ls-panel.ls-theme-fb #ls-cart-bulk-send-btn{background-color:#041024 !important;background-image:repeating-linear-gradient(45deg,rgba(255,215,0,0.22) 0,rgba(255,215,0,0.22) 1.5px,transparent 0,transparent 9px),repeating-linear-gradient(-45deg,rgba(255,215,0,0.22) 0,rgba(255,215,0,0.22) 1.5px,transparent 0,transparent 9px),linear-gradient(180deg,#002654 0%,#00122e 100%) !important;border:2px solid #ffd700 !important;color:#ffffff !important;text-shadow:0 1px 3px #000, 0 0 6px rgba(0,0,0,0.9) !important;box-shadow:0 0 14px rgba(255,215,0,0.35), inset 0 0 10px rgba(0,0,0,0.6) !important;letter-spacing:0.5px !important}',
+            '#ls-panel.ls-theme-fb .ls-coll-go::before, #ls-panel.ls-theme-fb .ls-cour-go::before, #ls-panel.ls-theme-fb .ls-exp-go::before, #ls-panel.ls-theme-fb #ls-cart-bulk-send-btn::before{content:"🥅 ⚽ "}',
+            '#ls-panel.ls-theme-fb .ls-coll-go::after, #ls-panel.ls-theme-fb .ls-cour-go::after, #ls-panel.ls-theme-fb .ls-exp-go::after, #ls-panel.ls-theme-fb #ls-cart-bulk-send-btn::after{content:" ⚽ 🥅"}',
+            '#ls-panel.ls-theme-fb .ls-coll-go:hover, #ls-panel.ls-theme-fb .ls-cour-go:hover, #ls-panel.ls-theme-fb .ls-exp-go:hover, #ls-panel.ls-theme-fb #ls-cart-bulk-send-btn:hover{background-color:#002d62 !important;background-image:repeating-linear-gradient(45deg,rgba(255,255,255,0.3) 0,rgba(255,255,255,0.3) 1.5px,transparent 0,transparent 9px),repeating-linear-gradient(-45deg,rgba(255,255,255,0.3) 0,rgba(255,255,255,0.3) 1.5px,transparent 0,transparent 9px),linear-gradient(180deg,#003b80 0%,#001736 100%) !important;border-color:#ffffff !important;color:#ffd700 !important;box-shadow:0 0 20px rgba(255,215,0,0.65), inset 0 0 12px rgba(255,215,0,0.35) !important;filter:brightness(1.15) !important}',
+
+            /* Fenerbahçe Kartlar, Satırlar, Kaydırma Çubuğu & Arayüz */
+            '#ls-panel.ls-theme-fb .ls-coll-card, #ls-panel.ls-theme-fb .ls-cart-card, #ls-panel.ls-theme-fb #tc-alarm > div, #ls-panel.ls-theme-fb #tc-debris > div, #ls-panel.ls-theme-fb #tc-settings > div{background:#06152b !important;border-color:#132a4a !important}',
+            '#ls-panel.ls-theme-fb .ls-coll-prow, #ls-panel.ls-theme-fb .ls-coll-mrow{background:rgba(0,45,98,0.18) !important;border:1px solid rgba(255,215,0,0.08) !important}',
+            '#ls-panel.ls-theme-fb .ls-coll-prow:hover, #ls-panel.ls-theme-fb .ls-coll-mrow:hover{background:rgba(255,215,0,0.09) !important;border-color:rgba(255,215,0,0.25) !important}',
+            '#ls-panel.ls-theme-fb .ls-coll-prow input[type=checkbox], #ls-panel.ls-theme-fb .ls-coll-mrow input[type=checkbox]{accent-color:#ffd700 !important}',
+            '#ls-panel.ls-theme-fb .ls-coll-name .crd{color:#ffd700 !important}',
+            '#ls-panel.ls-theme-fb .ls-coll-head span:first-child{color:#ffd700 !important}',
+            '#ls-panel.ls-theme-fb .ls-cour-origin-badge, #ls-panel.ls-theme-fb .ls-coll-dest .note{color:#ffd700 !important}',
+            '#ls-panel.ls-theme-fb #ls-footer-drag{background:linear-gradient(90deg,#00122e,#002d62) !important;border-top:1px solid #ffd700 !important;color:#ffd700 !important}',
+            '#ls-panel.ls-theme-fb #ls-footer-drag-handle span:nth-child(2){color:#ffd700 !important;text-shadow:0 0 6px rgba(255,215,0,0.5) !important}',
+            '#ls-panel.ls-theme-fb #ls-body::-webkit-scrollbar-track, #ls-panel.ls-theme-fb .ls-coll-list::-webkit-scrollbar-track, #ls-panel.ls-theme-fb #ls-cart-list::-webkit-scrollbar-track{background:#020914 !important}',
+            '#ls-panel.ls-theme-fb #ls-body::-webkit-scrollbar-thumb, #ls-panel.ls-theme-fb .ls-coll-list::-webkit-scrollbar-thumb, #ls-panel.ls-theme-fb #ls-cart-list::-webkit-scrollbar-thumb{background:#ffd700 !important}',
+            '#ls-panel.ls-theme-fb .ls-toggle-switch input:checked + .ls-toggle-slider{background-color:#ffd700 !important}',
         ].join('\n');
         document.head.appendChild(style);
 
@@ -9110,7 +9216,7 @@
         panel.id = 'ls-panel';
         panel.innerHTML =
             '<div id="ls-header">' +
-                '<span id="ls-header-title">' + boltSvg + ' LuckyStrike Helper <span style="font-size:10px;color:#8899aa;font-weight:normal;opacity:0.8">v11.2</span></span>' +
+                '<span id="ls-header-title">' + boltSvg + ' LuckyStrike Helper <span style="font-size:10px;color:#8899aa;font-weight:normal;opacity:0.8">v12.0</span></span>' +
                 '<div style="display:flex;align-items:center;gap:6px">' +
                     '<button id="ls-header-stop-btn" class="ls-btn-d ls-btn-sm" style="display:none;padding:2px 7px;font-size:10px;align-items:center;gap:3px;cursor:pointer" title="Tekrarlayan bu alarmı sustur">⏹️ Sustur</button>' +
                     '<span id="ls-close">✖</span>' +
@@ -9562,6 +9668,7 @@
                             '<span style="font-size:11px;color:#d1d8e0" data-i18n="settings_theme">🎨 Görünüm / Skin:</span>' +
                             '<select id="ls-setting-theme" class="ls-inp" style="width:160px;padding:3px 6px;font-size:11px">' +
                                 '<option value="dark" data-i18n="settings_theme_dark">🌌 Uzay Karanlığı (Varsayılan)</option>' +
+                                '<option value="fb" data-i18n="settings_theme_fb">🟡🔵 Fenerbahçe (Koyu & Kanarya)</option>' +
                                 '<option value="light" disabled data-i18n="settings_theme_light">☀️ Aydınlık (Çok Yakında)</option>' +
                                 '<option value="aero" disabled data-i18n="settings_theme_aero">💎 Aero Glass (Çok Yakında)</option>' +
                             '</select>' +
@@ -9702,6 +9809,7 @@
             panel.style.display = 'flex';
         }
         applyPanelOpacity();
+        applyTheme(generalSettings.theme);
 
         panel.addEventListener('mouseenter', () => {
             isPanelHovered = true;
@@ -10313,7 +10421,7 @@
             const r3 = Array.from(debugFilterState.row3).join(', ');
 
             let out = '==================================================\n' +
-                      '  LuckyStrike OGame Helper v11.2 - Log Kayıtları\n' +
+                      '  LuckyStrike OGame Helper v12.0 - Log Kayıtları\n' +
                       '  Tarih: ' + nowStr + '\n' +
                       '  URL: ' + window.location.href + '\n' +
                       '  Filtreler: [Akış: ' + r1 + '] [Kapsam: ' + r2 + '] [Seviye: ' + r3 + ']\n' +
@@ -10648,7 +10756,7 @@
         if (themeSelect) {
             themeSelect.value = localStorage.getItem(KEYS.THEME) || 'dark';
             themeSelect.addEventListener('change', () => {
-                localStorage.setItem(KEYS.THEME, themeSelect.value);
+                applyTheme(themeSelect.value);
                 LS_LOGGER.action('SETTINGS', 'Theme changed: ' + themeSelect.value);
             });
         }
@@ -10696,6 +10804,17 @@
                     LS_LOGGER.action('SETTINGS', 'Language changed: ' + currentLang);
                     applyTranslations();
                     updateButtonLabel();
+                }
+            }
+
+            const themeSelect = document.getElementById('ls-setting-theme');
+            if (themeSelect) {
+                let targetTheme = null;
+                if (txt.includes('Fenerbahçe') || txt.includes('Kanarya') || txt.includes('Yellow & Navy') || txt.includes('Dark Canary')) targetTheme = 'fb';
+                else if (txt.includes('Uzay Karanlığı') || txt.includes('Deep Space') || txt.includes('Varsayılan') || txt.includes('Default')) targetTheme = 'dark';
+                if (targetTheme && targetTheme !== generalSettings.theme) {
+                    applyTheme(targetTheme);
+                    LS_LOGGER.action('SETTINGS', 'Theme changed via selectmenu: ' + targetTheme);
                 }
             }
         }, true);
@@ -10847,6 +10966,6 @@
     checkAndRunCourierAssistant();
     checkAndRunExpeditionAssistant();
     scanAndSaveExpeditionTemplates();
-    console.log(LS, 'LuckyStrike OGame Helper v11.2 hazır!');
+    console.log(LS, 'LuckyStrike OGame Helper v12.0 hazır!');
 
 })();

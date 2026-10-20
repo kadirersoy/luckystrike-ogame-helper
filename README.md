@@ -1,4 +1,4 @@
-# ⚡ LuckyStrike OGame Helper (v11.1)
+# ⚡ LuckyStrike OGame Helper (v12.0)
 
 [English](#-english-description) | [Türkçe](#-türkçe-açıklama)
 
@@ -315,7 +315,7 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ## 🚀 Kurulum / Installation
 
 ### Chrome & Microsoft Edge
-1. İndirin / Download: [`luckystrike-ogame-helper-v11.1.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
+1. İndirin / Download: [`luckystrike-ogame-helper-v12.0.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
 2. Tarayıcıda eklentiler sayfasına gidin / Open extensions page:
    - **Chrome:** `chrome://extensions`
    - **Edge:** `edge://extensions`
@@ -325,6 +325,26 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ---
 
 ## 📝 Sürüm Geçmişi / Changelog
+
+### v12.0
+- **🟡🔵 Yeni Görünüm / Skin - Fenerbahçe (Koyu & Kanarya):**
+  - Ayarlar sekmesine yeni `🟡🔵 Fenerbahçe (Koyu & Kanarya)` teması eklendi.
+  - Gece mavisi & lacivert zemin, sarı kanarya vurguları, kale ağı desenli dağıt butonları, futbol topu zıplama ikonları (`⚽`), stadyum (`🏟️`) ve kanarya (`🦅`) detaylarıyla zenginleştirilmiş koyu temalı yeni skin.
+  - Varsayılan `🌌 Uzay Karanlığı (Dark)` teması bozulmadan korundu.
+- **🛡️ Evren & Oyuncu Tarayıcısı Hata Düzeltmeleri:**
+  - 60 saniyelik güncelleme beklemesinde (cooldown) sayfa yenilendiğinde önbelleğin boş (`null`) dönmesi ve koordinat/oyuncu verilerini okurken oluşan istisnalar giderildi.
+  - Önbellek durum göstergelerindeki koordinat ve oyuncu sayısı kontrolleri `null-safe` hale getirildi.
+  - Arama modülünde adı boş gelen oyuncu ve gezegen kayıtları için küçük harfe çevirme (`toLowerCase`) hata koruması sağlandı.
+
+### v11.2
+- **🏗️ Maliyet Sepetine Ek Maliyet Desteği:**
+  - Gönderim yapılacak her bir gezegen sepetine otomatik eklenecek sabit maden tutarları (Metal, Kristal, Deu) tanımlama özelliği eklendi.
+- **☑️ Sepet Kolay Seçim Çubuğu:**
+  - Sepetteki gezegenleri tek hamlede yönetmek için `☑️ Tümünü Seç` ve `◻️ Seçimi Temizle` butonları eklendi.
+- **📐 Ölçekleme & Panel Hover İyileştirmeleri:**
+  - Panel boyutu küçültüldüğünde butonların taşmasını ve yatay kaydırma çubuğunun oluşmasını engelleyen dinamik ölçekleme yapıldı.
+- **📬 Postacı & Alarm Hizalamaları:**
+  - Postacı sekmesindeki maden kutucukları ve ikon hizalamaları düzeltildi, minimum panel boyutu optimize edildi.
 
 ### v11.1
 - **📬 Postacı Asistanı İyileştirmeleri & Dağıtım Üssü Seçimi:**
