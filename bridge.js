@@ -22,6 +22,7 @@
 
     var isDebugEnabled = false;
     var isTraceEnabled = false;
+    var lastFleetSubmitTime = 0;
     try {
         isDebugEnabled = (localStorage.getItem('LS_DEBUG_ENABLED') === 'true');
         isTraceEnabled = (localStorage.getItem('LS_TRACE_ENABLED') === 'true');
@@ -160,10 +161,15 @@
                     }
 
                     if (changed) {
-                        if (window.fleetDispatcher && typeof window.fleetDispatcher.updateTarget === 'function') {
-                            window.fleetDispatcher.updateTarget();
-                        } else {
-                            if ($p.length) $p.trigger('change');
+                        if ($g.length) $g.trigger('change').trigger('input');
+                        if ($s.length) $s.trigger('change').trigger('input');
+                        if ($p.length) $p.trigger('change').trigger('input');
+                        if (window.fleetDispatcher) {
+                            if (typeof window.fleetDispatcher.checkTarget === 'function') {
+                                window.fleetDispatcher.checkTarget();
+                            } else if (typeof window.fleetDispatcher.updateTarget === 'function') {
+                                window.fleetDispatcher.updateTarget();
+                            }
                         }
                     }
                 }
@@ -184,6 +190,12 @@
                     $('#continueToFleet2, button.continue, a.continue').trigger('click');
                 }
             } else if (d.type === 'SUBMIT_FLEET2') {
+                var now = Date.now();
+                if (now - lastFleetSubmitTime < 1500) {
+                    bridgeLog('WARN', 'BRIDGE', 'SUBMIT_FLEET2 engellendi (çift gönderim koruması).');
+                    return;
+                }
+                lastFleetSubmitTime = now;
                 bridgeLog('DISPATCH', 'BRIDGE', 'SUBMIT_FLEET2 tetiklendi.');
                 var submitted = false;
                 if (window.fleetDispatcher) {
@@ -204,6 +216,7 @@
                 if (!submitted && window.$ && $('#sendFleet').length) {
                     bridgeLog('DISPATCH', 'BRIDGE', '$("#sendFleet").trigger("click") çağrıldı.');
                     $('#sendFleet').trigger('click');
+                    submitted = true;
                 }
             } else if (d.type === 'FILL_RESOURCES') {
                 bridgeLog('ACTION', 'BRIDGE', 'Kaynaklar dolduruldu: M:' + (d.m||0) + ' C:' + (d.c||0) + ' D:' + (d.d||0));
@@ -333,6 +346,15 @@
                 }
             });
             $(document).ajaxComplete(function(event, xhr, settings) {
+                if (settings && settings.url && (settings.url.indexOf('eventList') !== -1 || settings.url.indexOf('component=eventList') !== -1)) {
+                    if (xhr && xhr.responseText) {
+                        try {
+                            window.dispatchEvent(new CustomEvent('LS_EVENT_LIST_RECEIVED', {
+                                detail: { html: xhr.responseText }
+                            }));
+                        } catch (e) {}
+                    }
+                }
                 var isTrace = !!window.LS_TRACE_ENABLED;
                 var isDebug = !!window.LS_DEBUG_ENABLED;
                 if ((isTrace || isDebug) && settings && settings.url) {

@@ -2,7 +2,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v11.1 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v11.2 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -34,6 +34,8 @@
         TRACE_LOGS: 'LS_TRACE_LOGS',
         CART_SHIPS: 'LS_CART_SHIPS',
         CART_PLANET_PREFS: 'LS_CART_PLANET_PREFS',
+        CART_ORIGIN: 'LS_CART_ORIGIN',
+        CART_EXTRA_COST: 'LS_CART_EXTRA_COST',
         CART_QUEUE: 'LS_CART_QUEUE',
         UNIVERSE_CACHE: 'LS_UNIVERSE_CACHE',
         UNIVERSE_LAST_REFRESH: 'LS_UNIVERSE_LAST_REFRESH',
@@ -87,6 +89,8 @@
             stop_alarm_title: 'Tekrarlayan bu alarmı sustur',
 
             // Cart Tab
+            cart_sel_all: '☑️ Tümünü Seç',
+            cart_sel_none: '◻️ Seçimi Temizle',
             cart_copy: '📋 Panoya Kopyala',
             cart_clear: '🗑️ Temizle',
             cart_empty: 'Sepet boş.<br><span style="font-size:10px;color:#555">Bina veya teknoloji detayından "Sepete Ekle" diyerek ekleyebilirsiniz.</span>',
@@ -117,6 +121,11 @@
             cart_crystal: '🔵 Kristal:',
             cart_deuterium: '🟢 Deuterium:',
             cart_ship_pref_hint: 'Gemi Tercihi (Öncelik: Rehber > KN > BN):',
+            cart_extra_title: 'Ek Maliyet',
+            cart_extra_hint: 'Aktif olduğunda girilen tutarlar gönderim yapılacak her bir seçili gezegen sepetine eklenir',
+            cart_metal_ph: 'Metal',
+            cart_crys_ph: 'Kristal',
+            cart_deut_ph: 'Deu',
             cart_bulk_distribute: '⚡ SEÇİLİ GEZEGENLERE SIRAYLA DAĞIT',
             cart_copy_hint: 'Kopyala',
             cart_btn_add: 'Sepete Ekle',
@@ -380,6 +389,8 @@
             stop_alarm_title: 'Silence this recurring alarm',
 
             // Cart Tab
+            cart_sel_all: '☑️ Select All',
+            cart_sel_none: '◻️ Clear Selection',
             cart_copy: '📋 Copy to Clipboard',
             cart_clear: '🗑️ Clear',
             cart_empty: 'Cart is empty.<br><span style="font-size:10px;color:#555">You can add items by clicking "Add to Cart" in building or tech details.</span>',
@@ -410,6 +421,11 @@
             cart_crystal: '🔵 Crystal:',
             cart_deuterium: '🟢 Deuterium:',
             cart_ship_pref_hint: 'Ship Preference (Priority: Pathfinder > SC > LC):',
+            cart_extra_title: 'Extra Cost',
+            cart_extra_hint: 'When active, entered amounts are added on top of each selected planet cart for delivery',
+            cart_metal_ph: 'Metal',
+            cart_crys_ph: 'Crystal',
+            cart_deut_ph: 'Deut',
             cart_bulk_distribute: '⚡ DISTRIBUTE TO SELECTED PLANETS',
             cart_copy_hint: 'Copy',
             cart_btn_add: 'Add to Cart',
@@ -1371,7 +1387,6 @@
     let alarmSettings = Object.assign({
         attackEnabled: true,
         espionageEnabled: true,
-        desktopNotification: false,
         attackSound: 'klaxon',
         espionageSound: 'sonar_deep',
         volume: 70,
@@ -1845,13 +1860,14 @@
                          popup.querySelector('input[name="amount"]') ||
                          popup.querySelector('input#amount');
         if (qtyInput) {
-            const q = parseInt(qtyInput.value, 10);
-            if (q > 0) result.count = q;
+            const rawVal = qtyInput.value ? qtyInput.value.replace(/\./g, '').replace(/,/g, '').trim() : '';
+            const q = parseInt(rawVal, 10);
+            if (!isNaN(q) && q > 0) result.count = q;
             const base = parseNextLevelBaseCost(popup);
             result.metal = base.metal * result.count;
             result.crystal = base.crystal * result.count;
             result.deuterium = base.deuterium * result.count;
-            result.level = null;
+            result.level = 'x' + fmt(result.count);
             return result;
         }
 
@@ -1995,6 +2011,13 @@
             isDeduction: false,
             checked: true
         });
+        const cartKey = metaCoords + '_' + (isMoon ? 3 : 1);
+        const pPrefs = getCartPlanetPrefs();
+        if (!pPrefs[cartKey]) pPrefs[cartKey] = {};
+        if (!pPrefs[cartKey].mission) {
+            pPrefs[cartKey].mission = getCartOrigin().mission || 3;
+            saveCartPlanetPrefs(pPrefs);
+        }
         saveCart();
         renderCart();
         LS_LOGGER.action('CART', `Sepete eklendi: ${data.name} (${data.level || 'x' + data.count})`, { metal: data.metal, crystal: data.crystal, deuterium: data.deuterium, coords: metaCoords });
@@ -2046,6 +2069,13 @@
             isDeduction: true,
             checked: true
         });
+        const cartKey = metaCoords + '_' + (isMoon ? 3 : 1);
+        const pPrefs = getCartPlanetPrefs();
+        if (!pPrefs[cartKey]) pPrefs[cartKey] = {};
+        if (!pPrefs[cartKey].mission) {
+            pPrefs[cartKey].mission = getCartOrigin().mission || 3;
+            saveCartPlanetPrefs(pPrefs);
+        }
         saveCart();
         renderCart();
         showCollectorToast(`✓ ${pName || metaCoords} mevcut kaynakları sepetten düşüldü.`);
@@ -2364,6 +2394,11 @@
         setVal(posInp, p);
         if (typeInp) setVal(typeInp, targetType);
 
+        if (galInp) { galInp.dispatchEvent(new Event('input', { bubbles: true })); galInp.dispatchEvent(new Event('change', { bubbles: true })); }
+        if (sysInp) { sysInp.dispatchEvent(new Event('input', { bubbles: true })); sysInp.dispatchEvent(new Event('change', { bubbles: true })); }
+        if (posInp) { posInp.dispatchEvent(new Event('input', { bubbles: true })); posInp.dispatchEvent(new Event('change', { bubbles: true })); }
+        if (typeInp) { typeInp.dispatchEvent(new Event('change', { bubbles: true })); }
+
         if (targetType === 3) {
             const moonBtn = document.querySelector('#mbutton, [data-type="3"], [data-planet-type="3"], #fleet2 .moon');
             if (moonBtn && !moonBtn.classList.contains('selected') && !moonBtn.classList.contains('active')) {
@@ -2549,6 +2584,33 @@
         localStorage.setItem(KEYS.CART_PLANET_PREFS, JSON.stringify(prefs));
     }
 
+    function getCartOrigin() {
+        let origin = { originId: null, originCoord: null, originType: 1, originName: null, mission: 3 };
+        try {
+            const raw = localStorage.getItem(KEYS.CART_ORIGIN);
+            if (raw) origin = Object.assign(origin, JSON.parse(raw));
+        } catch (e) {}
+        if (!origin.mission) origin.mission = 3;
+        return origin;
+    }
+
+    function saveCartOrigin(origin) {
+        localStorage.setItem(KEYS.CART_ORIGIN, JSON.stringify(origin));
+    }
+
+    function getCartExtraCost() {
+        let extra = { enabled: false, met: 0, cri: 0, deu: 0 };
+        try {
+            const raw = localStorage.getItem(KEYS.CART_EXTRA_COST);
+            if (raw) extra = Object.assign(extra, JSON.parse(raw));
+        } catch (e) {}
+        return extra;
+    }
+
+    function saveCartExtraCost(extra) {
+        localStorage.setItem(KEYS.CART_EXTRA_COST, JSON.stringify(extra));
+    }
+
     function getCartGroups() {
         const prefs = getCartPlanetPrefs();
         const groupsMap = new Map();
@@ -2581,7 +2643,7 @@
                     type: type,
                     planetName: pName,
                     selected: planetPref.selected !== undefined ? planetPref.selected : true, // Level 1 Checkbox
-                    mission: planetPref.mission || 3, // 3: Nakliye, 4: Konuşlandır
+                    mission: planetPref.mission || (getCartOrigin().mission || 3), // 3: Nakliye, 4: Konuşlandır
                     items: []
                 });
             }
@@ -2595,39 +2657,48 @@
 
         // Calculate group totals
         groups.forEach(grp => {
-            let rawM = 0, rawC = 0, rawD = 0;
-            let posM = 0, posC = 0, posD = 0;
+            let buildM = 0, buildC = 0, buildD = 0;
+            let deductM = 0, deductC = 0, deductD = 0;
+            let extraM = 0, extraC = 0, extraD = 0;
             let hasDeduction = false;
 
             grp.items.forEach(({ item }) => {
                 if (item.checked !== false) {
-                    rawM += item.metal;
-                    rawC += item.crystal;
-                    rawD += item.deuterium;
                     if (item.isDeduction) {
                         hasDeduction = true;
+                        deductM += Math.abs(item.metal || 0);
+                        deductC += Math.abs(item.crystal || 0);
+                        deductD += Math.abs(item.deuterium || 0);
+                    } else if (item.isExtraCost) {
+                        extraM += Math.max(0, item.metal || 0);
+                        extraC += Math.max(0, item.crystal || 0);
+                        extraD += Math.max(0, item.deuterium || 0);
                     } else {
-                        posM += Math.max(0, item.metal);
-                        posC += Math.max(0, item.crystal);
-                        posD += Math.max(0, item.deuterium);
+                        buildM += Math.max(0, item.metal || 0);
+                        buildC += Math.max(0, item.crystal || 0);
+                        buildD += Math.max(0, item.deuterium || 0);
                     }
                 }
             });
 
             grp.hasDeduction = hasDeduction;
-            grp.rawM = rawM;
-            grp.rawC = rawC;
-            grp.rawD = rawD;
+            grp.buildM = buildM;
+            grp.buildC = buildC;
+            grp.buildD = buildD;
+            grp.deductM = deductM;
+            grp.deductC = deductC;
+            grp.deductD = deductD;
+            grp.extraM = extraM;
+            grp.extraC = extraC;
+            grp.extraD = extraD;
+            grp.rawM = buildM - deductM + extraM;
+            grp.rawC = buildC - deductC + extraC;
+            grp.rawD = buildD - deductD + extraD;
 
-            if (hasDeduction) {
-                grp.netDeficitM = Math.max(0, rawM);
-                grp.netDeficitC = Math.max(0, rawC);
-                grp.netDeficitD = Math.max(0, rawD);
-            } else {
-                grp.netDeficitM = Math.max(0, posM);
-                grp.netDeficitC = Math.max(0, posC);
-                grp.netDeficitD = Math.max(0, posD);
-            }
+            // Net ihtiyaç: İnşaat ihtiyacı (eksiye düşmez) + Ek Maliyet (her zaman eksiksiz eklenir)
+            grp.netDeficitM = Math.max(0, buildM - deductM) + extraM;
+            grp.netDeficitC = Math.max(0, buildC - deductC) + extraC;
+            grp.netDeficitD = Math.max(0, buildD - deductD) + extraD;
             grp.totalCargoNeeded = grp.netDeficitM + grp.netDeficitC + grp.netDeficitD;
         });
 
@@ -2675,6 +2746,18 @@
         };
     }
 
+    function selectAllCartPlanets(mode) {
+        const groups = getCartGroups();
+        const prefs = getCartPlanetPrefs();
+        const isSelected = (mode === 'all');
+        groups.forEach(grp => {
+            if (!prefs[grp.key]) prefs[grp.key] = {};
+            prefs[grp.key].selected = isSelected;
+        });
+        saveCartPlanetPrefs(prefs);
+        renderCart();
+    }
+
     function startCartDelivery(mode, targetKey) {
         const groups = getCartGroups();
         let queue = [];
@@ -2692,7 +2775,7 @@
             queue = [target];
         } else {
             // mode === 'bulk'
-            queue = groups.filter(g => g.selected && g.totalCargoNeeded > 0);
+            queue = groups.filter(g => g.selected && (g.totalCargoNeeded > 0));
             if (queue.length === 0) {
                 alert(currentLang === 'tr' ? 'Lütfen gönderim yapılacak en az bir gezegen seçin!' : 'Please select at least one planet to distribute to!');
                 return;
@@ -2705,19 +2788,34 @@
             return;
         }
 
+        let cartOrigin = getCartOrigin();
+        if (!cartOrigin.originCoord || !cartOrigin.originId) {
+            const cur = getCurrentActiveTarget(getEmpirePlanetsAndMoons());
+            if (cur) {
+                cartOrigin = { originId: cur.id, originCoord: cur.coords, originType: cur.type, originName: cur.name };
+                saveCartOrigin(cartOrigin);
+            }
+        }
+
         const session = {
             active: true,
-            queue: queue.map(g => ({
-                key: g.key,
-                coords: g.coords,
-                type: g.type,
-                name: g.planetName,
-                mission: g.mission || 3,
-                m: g.netDeficitM,
-                c: g.netDeficitC,
-                d: g.netDeficitD,
-                totalCargoNeeded: g.totalCargoNeeded
-            })),
+            originId: cartOrigin.originId,
+            originCoord: cartOrigin.originCoord,
+            originType: cartOrigin.originType || 1,
+            originName: cartOrigin.originName,
+            queue: queue.map(g => {
+                return {
+                    key: g.key,
+                    coords: g.coords,
+                    type: g.type,
+                    name: g.planetName,
+                    mission: g.mission || 3,
+                    m: g.netDeficitM,
+                    c: g.netDeficitC,
+                    d: g.netDeficitD,
+                    totalCargoNeeded: g.totalCargoNeeded
+                };
+            }),
             currentIndex: 0,
             startedAt: Date.now()
         };
@@ -2726,17 +2824,12 @@
 
         const first = session.queue[0];
         const [g, s, p] = first.coords.split(':');
-        const url = `/game/index.php?page=ingame&component=fleetdispatch&galaxy=${g}&system=${s}&position=${p}&type=${first.type}&mission=${first.mission}`;
+        const originParam = (session.originId && session.originId !== 'manual') ? `&cp=${session.originId}` : '';
+        const url = `/game/index.php?page=ingame&component=fleetdispatch${originParam}&galaxy=${g}&system=${s}&position=${p}&type=${first.type}&mission=${first.mission}`;
 
-        const isFleetPage = window.location.href.includes('component=fleetdispatch') ||
-                            document.getElementById('fleetdispatchcomponent') ||
-                            document.getElementById('fleet1');
-
-        if (isFleetPage) {
-            checkAndApplyCartDelivery();
-        } else {
-            window.location.href = url;
-        }
+        // Her zaman ilgili hedefin temiz filo sayfasına yönlendir
+        // Bu sayede formdaki eski/hatalı koordinatlar ve takılı kalmış Fleet2 durumları tamamen sıfırlanır
+        window.location.href = url;
     }
 
     function checkAndApplyCartDelivery() {
@@ -2771,6 +2864,19 @@
                             document.getElementById('fleetdispatchcomponent') ||
                             document.getElementById('fleet1');
         if (!isFleetPage) return false;
+
+        // Çıkış üssünde miyiz kontrol et (cp kontrolü)
+        if (session.originId && session.originId !== 'manual') {
+            const currentCp = document.querySelector('meta[name="ogame-planet-id"]')?.getAttribute('content');
+            if (currentCp && String(currentCp) !== String(session.originId)) {
+                LS_LOGGER.dispatch('CART', `Dağıtım üssüne geçiliyor (cp: ${session.originId})...`);
+                const currentItem = session.queue[session.currentIndex];
+                const [g, s, p] = currentItem.coords.split(':');
+                const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${session.originId}&galaxy=${g}&system=${s}&position=${p}&type=${currentItem.type}&mission=${currentItem.mission}`;
+                window.location.href = url;
+                return true;
+            }
+        }
 
         const currentItem = session.queue[session.currentIndex];
 
@@ -2833,7 +2939,24 @@
 
         const missionId = currentItem.mission || 3;
 
+        let isStepCancelled = false;
+        let ensureShipsTimer = null;
+        let step2Interval = null;
+        let step2CheckTimer = null;
+
+        const updateCartBannerReady = () => {
+            const btn = document.getElementById('ls-cart-banner-send-btn');
+            if (btn) {
+                btn.disabled = false;
+                btn.style.background = '#27ae60';
+                btn.style.color = '#fff';
+                btn.style.cursor = 'pointer';
+                btn.innerText = '🚀 ' + t('coll_hud_send') + ' (Space)';
+            }
+        };
+
         const prepareStep2 = () => {
+            if (isStepCancelled) return;
             if (g && s && p) {
                 setFleetTargetCoords(g, s, p, currentItem.type || 1);
             }
@@ -2845,49 +2968,136 @@
             window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
                 detail: { type: 'CARGO_REFRESH' }
             }));
-            setTimeout(() => {
-                setFleetMission(missionId);
+
+            let checkCount = 0;
+            step2CheckTimer = setInterval(() => {
+                if (isStepCancelled) {
+                    clearInterval(step2CheckTimer);
+                    return;
+                }
+                checkCount++;
+                const mBtn = document.querySelector('#missionButton' + missionId + ', [data-mission="' + missionId + '"]');
+                const isMissionActive = mBtn && (mBtn.classList.contains('selected') || mBtn.classList.contains('active'));
+                if (!isMissionActive) setFleetMission(missionId);
+                fillFleetResources(metLoad, criLoad, deuLoad);
+
+                const sendBtn = findSendFleetButton();
+                const isSendBtnReady = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
+
+                if ((isMissionActive && isSendBtnReady && checkCount >= 2) || checkCount > 15) {
+                    clearInterval(step2CheckTimer);
+                    updateCartBannerReady();
+                }
             }, 100);
         };
 
-        setTimeout(() => {
-            clickDevamButton();
-            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                detail: { type: 'SUBMIT_FLEET1' }
-            }));
+        const targetShipTotal = (shipCounts.bn || 0) + (shipCounts.kn || 0) + (shipCounts.rehber || 0);
+        if (targetShipTotal > 0) {
+            let shipTries = 0;
+            ensureShipsTimer = setInterval(() => {
+                if (isStepCancelled) {
+                    clearInterval(ensureShipsTimer);
+                    return;
+                }
+                shipTries++;
+                const { total } = getSelectedShipsSummary();
+                if (total > 0 || shipTries > 6) {
+                    clearInterval(ensureShipsTimer);
+                    setTimeout(() => {
+                        if (isStepCancelled) return;
+                        clickDevamButton();
+                        window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                            detail: { type: 'SUBMIT_FLEET1' }
+                        }));
 
-            let step2Tries = 0;
-            const step2Interval = setInterval(() => {
-                step2Tries++;
-                const devamBtn = document.getElementById('continueToFleet2') || document.querySelector('button.continue') || document.querySelector('a.continue');
-                const isStep1StillActive = devamBtn && (devamBtn.offsetWidth > 0 || window.getComputedStyle(devamBtn).display !== 'none');
-                const sendBtn = findSendFleetButton();
-                const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
-                const isStep2Active = (!isStep1StillActive && isSendBtnVisible) || document.getElementById('fleet2');
+                        let step2Tries = 0;
+                        step2Interval = setInterval(() => {
+                            if (isStepCancelled) {
+                                clearInterval(step2Interval);
+                                return;
+                            }
+                            step2Tries++;
+                            const devamBtn = document.getElementById('continueToFleet2') || document.querySelector('button.continue') || document.querySelector('a.continue');
+                            const isStep1StillActive = devamBtn && (devamBtn.offsetWidth > 0 || window.getComputedStyle(devamBtn).display !== 'none');
+                            const sendBtn = findSendFleetButton();
+                            const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
+                            const isStep2Active = !isStep1StillActive && isSendBtnVisible;
 
-                if (isStep2Active) {
-                    const briefingText = document.querySelector('#briefing, #fleet2, #fleetdispatchcomponent')?.innerText || '';
-                    const isInquiryPending = briefingText.includes('sonsuz uzaklar') || briefingText.includes('Bu görevi başlatamazsın');
-                    const durationEl = document.getElementById('duration') || document.querySelector('.duration');
-                    const hasDuration = durationEl && durationEl.innerText && durationEl.innerText.trim() !== '-' && durationEl.innerText.trim() !== '';
+                            if (isStep2Active) {
+                                clearInterval(step2Interval);
+                                setTimeout(prepareStep2, 100);
+                            } else {
+                                if (step2Tries % 5 === 0) {
+                                    clickDevamButton();
+                                    window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                                        detail: { type: 'SUBMIT_FLEET1' }
+                                    }));
+                                }
+                                if (step2Tries > 30) {
+                                    clearInterval(step2Interval);
+                                    setTimeout(prepareStep2, 100);
+                                }
+                            }
+                        }, 100);
+                    }, 200);
+                } else {
+                    setShipAmount(219, shipCounts.rehber);
+                    setShipAmount(202, shipCounts.kn);
+                    setShipAmount(203, shipCounts.bn);
+                }
+            }, 150);
+        } else {
+            setTimeout(() => {
+                if (isStepCancelled) return;
+                clickDevamButton();
+                window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                    detail: { type: 'SUBMIT_FLEET1' }
+                }));
 
-                    if ((!isInquiryPending && hasDuration) || step2Tries > 20) {
+                let step2Tries = 0;
+                step2Interval = setInterval(() => {
+                    if (isStepCancelled) {
+                        clearInterval(step2Interval);
+                        return;
+                    }
+                    step2Tries++;
+                    const devamBtn = document.getElementById('continueToFleet2') || document.querySelector('button.continue') || document.querySelector('a.continue');
+                    const isStep1StillActive = devamBtn && (devamBtn.offsetWidth > 0 || window.getComputedStyle(devamBtn).display !== 'none');
+                    const sendBtn = findSendFleetButton();
+                    const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
+                    const isStep2Active = !isStep1StillActive && isSendBtnVisible;
+
+                    if (isStep2Active) {
                         clearInterval(step2Interval);
                         setTimeout(prepareStep2, 100);
+                    } else {
+                        if (step2Tries % 5 === 0) {
+                            clickDevamButton();
+                            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                                detail: { type: 'SUBMIT_FLEET1' }
+                            }));
+                        }
+                        if (step2Tries > 30) {
+                            clearInterval(step2Interval);
+                            setTimeout(prepareStep2, 100);
+                        }
                     }
-                } else if (step2Tries > 35) {
-                    clearInterval(step2Interval);
-                    setTimeout(prepareStep2, 100);
-                }
-            }, 100);
-        }, 350);
+                }, 100);
+            }, 200);
+        }
 
         renderCartHUD(session, currentItem, {
             shipCounts,
             deuLoad, criLoad, metLoad,
             missingM, missingC, missingD,
             hasResourceShortage, hasShipShortage,
-            prepareStep2
+            prepareStep2,
+            cancel: () => {
+                isStepCancelled = true;
+                if (ensureShipsTimer) clearInterval(ensureShipsTimer);
+                if (step2Interval) clearInterval(step2Interval);
+                if (step2CheckTimer) clearInterval(step2CheckTimer);
+            }
         });
     }
 
@@ -2901,9 +3111,9 @@
 
         const totalItems = session.queue.length;
         const currentStep = session.currentIndex + 1;
-        const currentMetaType = document.querySelector('meta[name="ogame-planet-type"]')?.getAttribute('content');
-        const currentIcon = (currentMetaType === 'moon') ? '🌕' : '🪐';
-        const currentName = getCurrentPlanetName() || t('exp_here');
+        const originIcon = (session.originType === 3) ? '🌕' : '🪐';
+        const originName = session.originName || getCurrentPlanetName() || t('exp_here');
+        const originCoordText = session.originCoord ? ' <span style="color:#00bcff;font-family:monospace">[' + session.originCoord + ']</span>' : '';
 
         const targetIcon = (currentItem.type === 3) ? '🌕' : '🪐';
         const cleanTName = (currentItem.name || '').replace(/^[\s\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]+/u, '').trim();
@@ -2954,10 +3164,12 @@
                 '</div>';
         }
 
+        const hasShips = (details.shipCounts.totalCap > 0) || (details.shipCounts.bn > 0 || details.shipCounts.kn > 0 || details.shipCounts.rehber > 0);
+
         banner.innerHTML =
             '<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1a2c3f;padding-bottom:6px;margin-bottom:8px">' +
                 '<span style="font-size:12px;font-weight:bold;color:#2ecc71">🛒 ' + t('cart_hud_title') + ' [' + currentStep + ' / ' + totalItems + ']</span>' +
-                '<span style="font-size:11px;color:#fff">' + currentIcon + ' ' + escapeHtml(currentName) + ' ➔ ' + targetIcon + ' ' + escapeHtml(displayTargetTitle) + coordText + '</span>' +
+                '<span style="font-size:11px;color:#fff">' + originIcon + ' ' + escapeHtml(originName) + originCoordText + ' ➔ ' + targetIcon + ' ' + escapeHtml(displayTargetTitle) + coordText + '</span>' +
             '</div>' +
             warningHtml +
             '<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;margin-bottom:6px">' +
@@ -2971,15 +3183,19 @@
                 '<span style="color:#2ecc71">' + formatShort(details.deuLoad) + ' ' + t('coll_deut') + '</span>' +
             '</div>' +
             '<div id="ls-cart-hud-controls" style="display:flex;gap:6px;justify-content:center;align-items:center;' + (hasAnyShortage ? 'display:none;' : '') + '">' +
-                '<button id="ls-cart-banner-send-btn" style="background:#27ae60;color:#fff;border:none;padding:5px 12px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.5)">🚀 ' + t('coll_hud_send') + ' (Space)</button>' +
+                (hasShips ?
+                    '<button id="ls-cart-banner-send-btn" disabled style="background:#445566;color:#8899aa;border:none;padding:5px 12px;border-radius:4px;font-weight:bold;font-size:11px;cursor:not-allowed;box-shadow:0 2px 6px rgba(0,0,0,0.5)">' + t('exp_hud_preparing') + '</button>'
+                    : '<button class="ls-cart-banner-skip-btn" style="background:#f39c12;color:#000;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏭️ ' + t('coll_hud_skip') + ' (Space)</button>') +
                 '<button id="ls-cart-banner-retry-btn" style="background:#e67e22;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer" title="' + t('coll_hud_retry') + '">🔄 ' + t('coll_hud_retry') + '</button>' +
-                '<button id="ls-cart-banner-skip-btn" style="background:#34495e;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏭️ ' + t('coll_hud_skip') + '</button>' +
+                (hasShips ? '<button class="ls-cart-banner-skip-btn" style="background:#34495e;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏭️ ' + t('coll_hud_skip') + '</button>' : '') +
                 '<button id="ls-cart-banner-cancel-btn" style="background:#7f8c8d;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏹️ ' + t('coll_hud_cancel') + '</button>' +
             '</div>';
 
         let isSending = false;
 
         const sendFleet = () => {
+            const sendBtnEl = document.getElementById('ls-cart-banner-send-btn');
+            if (sendBtnEl && sendBtnEl.disabled) return;
             if (isSending) return;
             if (document.activeElement && document.activeElement.blur) {
                 document.activeElement.blur();
@@ -2998,9 +3214,6 @@
                 if (typeof details.prepareStep2 === 'function') {
                     details.prepareStep2();
                 }
-                setTimeout(() => {
-                    dispatchSendCartFleet();
-                }, 350);
             }
         };
 
@@ -3008,6 +3221,7 @@
             if (isSending) return;
             isSending = true;
             window.removeEventListener('keydown', keyListener);
+            if (typeof details.cancel === 'function') details.cancel();
 
             // 1. Gönderilen gezegenin Level 1 Checkbox'ını uncheck yap
             const pPrefs = getCartPlanetPrefs();
@@ -3043,33 +3257,40 @@
                 detail: { type: 'SUBMIT_FLEET2' }
             }));
 
-            // Sıradaki adıma geçiş
+            // Sıradaki adıma geçiş (AJAX isteğinin tamamlanması için güvenli bekleme)
             setTimeout(() => {
                 if (session.currentIndex < session.queue.length) {
                     const nextItem = session.queue[session.currentIndex];
                     const [nextG, nextS, nextP] = nextItem.coords.split(':');
-                    const url = `/game/index.php?page=ingame&component=fleetdispatch&galaxy=${nextG}&system=${nextS}&position=${nextP}&type=${nextItem.type}&mission=${nextItem.mission}`;
+                    const originParam = (session.originId && session.originId !== 'manual') ? `&cp=${session.originId}` : '';
+                    const url = `/game/index.php?page=ingame&component=fleetdispatch${originParam}&galaxy=${nextG}&system=${nextS}&position=${nextP}&type=${nextItem.type}&mission=${nextItem.mission}`;
                     window.location.href = url;
                 } else {
                     sessionStorage.removeItem(KEYS.CART_QUEUE);
                     if (banner) banner.remove();
                     showCollectorToast('🎉 Sepetteki tüm seçili gezegenlere nakliye başarıyla tamamlandı!', 6000);
                 }
-            }, 800);
+            }, 1100);
         };
 
         const retryDispatch = () => {
             window.removeEventListener('keydown', keyListener);
+            if (typeof details.cancel === 'function') details.cancel();
             if (banner) {
-                banner.innerHTML = '<div style="font-size:12px;color:#e67e22;padding:6px;font-weight:bold">🔄 Yeniden hazırlanıyor...</div>';
+                banner.innerHTML = '<div style="font-size:12px;color:#e67e22;padding:6px;font-weight:bold">🔄 ' + (currentLang === 'tr' ? 'Bu adım baştan yükleniyor...' : 'Reloading step from scratch...') + '</div>';
             }
+            // Hata veya takılma durumunda bu adımı temiz URL ile baştan yükle
+            const [g, s, p] = currentItem.coords.split(':');
+            const originParam = (session.originId && session.originId !== 'manual') ? `&cp=${session.originId}` : '';
+            const url = `/game/index.php?page=ingame&component=fleetdispatch${originParam}&galaxy=${g}&system=${s}&position=${p}&type=${currentItem.type}&mission=${currentItem.mission}`;
             setTimeout(() => {
-                executeCartDeliveryStep(session, currentItem);
+                window.location.href = url;
             }, 150);
         };
 
         const skipStep = () => {
             window.removeEventListener('keydown', keyListener);
+            if (typeof details.cancel === 'function') details.cancel();
             // 1. Atlanan gezegenin Level 1 Checkbox'ını uncheck yap
             const pPrefs = getCartPlanetPrefs();
             if (!pPrefs[currentItem.key]) pPrefs[currentItem.key] = {};
@@ -3097,7 +3318,8 @@
                 if (session.currentIndex < session.queue.length) {
                     const nextItem = session.queue[session.currentIndex];
                     const [nextG, nextS, nextP] = nextItem.coords.split(':');
-                    const url = `/game/index.php?page=ingame&component=fleetdispatch&galaxy=${nextG}&system=${nextS}&position=${nextP}&type=${nextItem.type}&mission=${nextItem.mission}`;
+                    const originParam = (session.originId && session.originId !== 'manual') ? `&cp=${session.originId}` : '';
+                    const url = `/game/index.php?page=ingame&component=fleetdispatch${originParam}&galaxy=${nextG}&system=${nextS}&position=${nextP}&type=${nextItem.type}&mission=${nextItem.mission}`;
                     window.location.href = url;
                 } else {
                     sessionStorage.removeItem(KEYS.CART_QUEUE);
@@ -3109,11 +3331,13 @@
 
         const closeBanner = () => {
             window.removeEventListener('keydown', keyListener);
+            if (typeof details.cancel === 'function') details.cancel();
             sessionStorage.removeItem(KEYS.CART_QUEUE);
             if (banner) banner.remove();
         };
 
         const keyListener = (e) => {
+            if (e.repeat) return;
             if (e.code === 'Space' || e.key === ' ' || e.keyCode === 32) {
                 const tag = (document.activeElement && document.activeElement.tagName) || '';
                 if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
@@ -3125,7 +3349,11 @@
                     // Uyarı açıkken Space doğrudan gönderemez, kullanıcı onay vermelidir
                     return;
                 }
-                sendFleet();
+                if (!hasShips) {
+                    skipStep();
+                } else {
+                    sendFleet();
+                }
             }
         };
 
@@ -3133,7 +3361,9 @@
 
         document.getElementById('ls-cart-banner-send-btn')?.addEventListener('click', sendFleet);
         document.getElementById('ls-cart-banner-retry-btn')?.addEventListener('click', retryDispatch);
-        document.getElementById('ls-cart-banner-skip-btn')?.addEventListener('click', skipStep);
+        document.querySelectorAll('.ls-cart-banner-skip-btn, #ls-cart-banner-skip-btn').forEach(btn => {
+            btn.addEventListener('click', skipStep);
+        });
         document.getElementById('ls-cart-banner-cancel-btn')?.addEventListener('click', closeBanner);
 
         document.getElementById('ls-cart-stop-btn')?.addEventListener('click', () => {
@@ -3149,10 +3379,195 @@
         });
     }
 
+    function renderCartOrigin() {
+        let cartOrigin = getCartOrigin();
+        const originLabelEl = document.getElementById('ls-cart-origin-label');
+        const ddEl = document.getElementById('ls-cart-origin-dd');
+        const m3 = document.getElementById('ls-cart-mission-3');
+        const m4 = document.getElementById('ls-cart-mission-4');
+
+        if (m3 && m4) {
+            const activeMission = cartOrigin.mission || 3;
+            m3.classList.toggle('active', activeMission === 3);
+            m4.classList.toggle('active', activeMission === 4);
+        }
+
+        if (!originLabelEl || !ddEl) return;
+
+        const empire = getEmpirePlanetsAndMoons();
+
+        const hasValidOrigin = cartOrigin.originCoord && /^\d+:\d+:\d+$/.test(cartOrigin.originCoord);
+        const isSessionRunning = !!sessionStorage.getItem(KEYS.CART_QUEUE);
+        if (empire.length > 0 && !hasValidOrigin && !isSessionRunning) {
+            const cur = getCurrentActiveTarget(empire);
+            if (cur) {
+                cartOrigin.originId = cur.id;
+                cartOrigin.originCoord = cur.coords;
+                cartOrigin.originType = cur.type;
+                cartOrigin.originName = cur.name;
+                saveCartOrigin(cartOrigin);
+            }
+        }
+
+        let originIcon = '🪐';
+        if (cartOrigin.originType === 3) originIcon = '🌕';
+        let rawOriginTitle = cartOrigin.originName || 'Dağıtım Üssü';
+        let cleanOriginTitle = rawOriginTitle.replace(/^[\s\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]+/u, '').trim();
+        if (!cleanOriginTitle || cleanOriginTitle === 'Ay') {
+            if (cartOrigin.originType === 3) {
+                const parentP = empire.find(p => p.coords === cartOrigin.originCoord);
+                cleanOriginTitle = parentP ? `${parentP.name} ( Ay )` : 'Ay ( Ay )';
+            } else {
+                cleanOriginTitle = 'Gezegen';
+            }
+        }
+        if (cartOrigin.originId === 'manual') {
+            cleanOriginTitle = (cartOrigin.originType === 3 ? 'Manuel Ay' : 'Manuel Gezegen');
+        }
+
+        originLabelEl.innerHTML = `<span><b>${originIcon} ${escapeHtml(cleanOriginTitle)}</b><span class="crd">${cartOrigin.originCoord || ''}</span></span>`;
+
+        let ddHtml = '';
+        empire.forEach(p => {
+            const isPActive = (cartOrigin.originCoord === p.coords && cartOrigin.originType === 1);
+            ddHtml += `<div class="ls-coll-dd-item ${isPActive ? 'active' : ''}" data-id="${p.id}" data-coord="${p.coords}" data-type="1" data-name="${escapeHtml(p.name)}">` +
+                `<span>🪐 ${escapeHtml(p.name)}</span><span class="crd">${p.coords}</span></div>`;
+            if (p.moon) {
+                const isMActive = (cartOrigin.originCoord === p.coords && cartOrigin.originType === 3);
+                const mTitle = p.moon.name || `${p.name} ( Ay )`;
+                ddHtml += `<div class="ls-coll-dd-item moon ${isMActive ? 'active' : ''}" data-id="${p.moon.id}" data-coord="${p.coords}" data-type="3" data-name="${escapeHtml(mTitle)}">` +
+                    `<span>🌕 ${escapeHtml(mTitle)}</span><span class="crd">${p.coords}</span></div>`;
+            }
+        });
+        ddHtml += `<div class="ls-coll-dd-item ls-coll-dd-manual" data-manual="1" data-type="1"><span>🪐 ${t('coll_manual_planet', 'Manuel Gezegen...')}</span><span></span></div>`;
+        ddHtml += `<div class="ls-coll-dd-item ls-coll-dd-manual" data-manual="1" data-type="3"><span>🌕 ${t('coll_manual_moon', 'Manuel Ay...')}</span><span></span></div>`;
+        ddEl.innerHTML = ddHtml;
+    }
+
+    let cartOriginEventsInitialized = false;
+    function initCartOriginEvents() {
+        if (cartOriginEventsInitialized) return;
+        cartOriginEventsInitialized = true;
+
+        const ddEl = document.getElementById('ls-cart-origin-dd');
+        const originBtn = document.getElementById('ls-cart-origin-btn');
+        const cartCurBtn = document.getElementById('ls-cart-cur-btn');
+        const m3 = document.getElementById('ls-cart-mission-3');
+        const m4 = document.getElementById('ls-cart-mission-4');
+
+        if (m3 && m4) {
+            m3.addEventListener('click', () => {
+                let cartOrigin = getCartOrigin();
+                cartOrigin.mission = 3;
+                saveCartOrigin(cartOrigin);
+                m3.classList.add('active');
+                m4.classList.remove('active');
+
+                const prefs = getCartPlanetPrefs();
+                const groups = getCartGroups();
+                groups.forEach(g => {
+                    if (!prefs[g.key]) prefs[g.key] = {};
+                    prefs[g.key].mission = 3;
+                });
+                saveCartPlanetPrefs(prefs);
+                renderCart();
+            });
+
+            m4.addEventListener('click', () => {
+                let cartOrigin = getCartOrigin();
+                cartOrigin.mission = 4;
+                saveCartOrigin(cartOrigin);
+                m4.classList.add('active');
+                m3.classList.remove('active');
+
+                const prefs = getCartPlanetPrefs();
+                const groups = getCartGroups();
+                groups.forEach(g => {
+                    if (!prefs[g.key]) prefs[g.key] = {};
+                    prefs[g.key].mission = 4;
+                });
+                saveCartPlanetPrefs(prefs);
+                renderCart();
+            });
+        }
+
+        if (cartCurBtn) {
+            cartCurBtn.addEventListener('click', () => {
+                const cur = getCurrentActiveTarget(getEmpirePlanetsAndMoons());
+                if (cur) {
+                    const cartOrigin = {
+                        originId: cur.id,
+                        originCoord: cur.coords,
+                        originType: cur.type,
+                        originName: cur.name
+                    };
+                    saveCartOrigin(cartOrigin);
+                    renderCartOrigin();
+                    showCollectorToast('📮 Dağıtım üssü güncellendi: ' + (cur.type === 3 ? '🌕 ' : '🪐 ') + cur.name);
+                }
+            });
+        }
+
+        if (originBtn && ddEl) {
+            originBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isShown = ddEl.style.display === 'block' || ddEl.classList.contains('show');
+                ddEl.style.display = isShown ? 'none' : 'block';
+                ddEl.classList.toggle('show', !isShown);
+            });
+
+            document.addEventListener('click', (e) => {
+                if (ddEl && !ddEl.contains(e.target) && !originBtn.contains(e.target)) {
+                    ddEl.style.display = 'none';
+                    ddEl.classList.remove('show');
+                }
+            });
+
+            ddEl.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const item = e.target.closest('.ls-coll-dd-item');
+                if (!item) return;
+
+                let cartOrigin = getCartOrigin();
+
+                if (item.classList.contains('ls-coll-dd-manual')) {
+                    const reqType = parseInt(item.getAttribute('data-type'), 10) || 1;
+                    const promptMsg = (reqType === 3)
+                        ? 'Dağıtım üssü olacak Ay koordinatını girin (Örn: 1:20:5):'
+                        : 'Dağıtım üssü olacak Gezegen koordinatını girin (Örn: 1:20:5):';
+                    const manualCoord = window.prompt(promptMsg, cartOrigin.originCoord || '');
+                    if (manualCoord && /^\d+:\d+:\d+$/.test(manualCoord.trim())) {
+                        cartOrigin.originCoord = manualCoord.trim();
+                        cartOrigin.originType = reqType;
+                        cartOrigin.originId = 'manual';
+                        cartOrigin.originName = (reqType === 3 ? 'Manuel Ay' : 'Manuel Gezegen');
+                        saveCartOrigin(cartOrigin);
+                        renderCartOrigin();
+                    }
+                    ddEl.style.display = 'none';
+                    ddEl.classList.remove('show');
+                    return;
+                }
+
+                cartOrigin.originId = item.getAttribute('data-id');
+                cartOrigin.originCoord = item.getAttribute('data-coord');
+                cartOrigin.originType = parseInt(item.getAttribute('data-type'), 10) || 1;
+                cartOrigin.originName = item.getAttribute('data-name');
+                saveCartOrigin(cartOrigin);
+                renderCartOrigin();
+                ddEl.style.display = 'none';
+                ddEl.classList.remove('show');
+            });
+        }
+    }
+
     function renderCart() {
         const listEl = document.getElementById('ls-cart-list');
         const totalsEl = document.getElementById('ls-cart-totals');
         if (!listEl || !totalsEl) return;
+
+        renderCartOrigin();
+        initCartOriginEvents();
 
         listEl.innerHTML = '';
         totalsEl.innerHTML = '';
@@ -3160,6 +3575,14 @@
         const groups = getCartGroups();
         const shipPrefs = getCartShipPrefs();
         const caps = calculateShipCapacities();
+
+        // Üst panel kontrollerini senkronize et
+        const bnChk = document.getElementById('ls-cart-ship-bn');
+        const knChk = document.getElementById('ls-cart-ship-kn');
+        const rehberChk = document.getElementById('ls-cart-ship-rehber');
+        if (bnChk) bnChk.checked = !!shipPrefs.bn;
+        if (knChk) knChk.checked = !!shipPrefs.kn;
+        if (rehberChk) rehberChk.checked = !!shipPrefs.rehber;
 
         if (cart.length === 0 || groups.length === 0) {
             listEl.innerHTML = '<div style="text-align:center;color:#666;padding:25px;font-size:11px">' + t('cart_empty') + '</div>';
@@ -3170,11 +3593,13 @@
         let grandTotalCargo = 0;
 
         groups.forEach(grp => {
+            const targetCargo = grp.totalCargoNeeded;
+
             if (grp.selected) {
                 grandM += grp.netDeficitM;
                 grandC += grp.netDeficitC;
                 grandD += grp.netDeficitD;
-                grandTotalCargo += grp.totalCargoNeeded;
+                grandTotalCargo += targetCargo;
             }
 
             const card = document.createElement('div');
@@ -3187,11 +3612,11 @@
 
             // Gemi tahmini hesapla
             let shipEstimateText = '';
-            if (grp.totalCargoNeeded > 0) {
+            if (targetCargo > 0) {
                 let parts = [];
-                if (shipPrefs.rehber) parts.push(fmt(Math.ceil(grp.totalCargoNeeded / caps.rehber)) + ' ' + t('cart_ships_pathfinder', 'Rehber'));
-                if (shipPrefs.kn) parts.push(fmt(Math.ceil(grp.totalCargoNeeded / caps.kn)) + ' ' + t('cart_ships_sc', 'KN'));
-                if (shipPrefs.bn) parts.push(fmt(Math.ceil(grp.totalCargoNeeded / caps.bn)) + ' ' + t('cart_ships_lc', 'BN'));
+                if (shipPrefs.rehber) parts.push(fmt(Math.ceil(targetCargo / caps.rehber)) + ' ' + t('cart_ships_pathfinder', 'Rehber'));
+                if (shipPrefs.kn) parts.push(fmt(Math.ceil(targetCargo / caps.kn)) + ' ' + t('cart_ships_sc', 'KN'));
+                if (shipPrefs.bn) parts.push(fmt(Math.ceil(targetCargo / caps.bn)) + ' ' + t('cart_ships_lc', 'BN'));
                 shipEstimateText = parts.length > 0 ? parts.join(' | ') : t('cart_no_ships', 'Gemi seçilmedi');
             } else {
                 shipEstimateText = '<span style="color:#2ecc71">' + t('cart_enough_res', 'Yeterli Kaynak Var ✓') + '</span>';
@@ -3209,7 +3634,7 @@
                     '<div style="display:flex;align-items:center;gap:4px;flex-shrink:0">' +
                         '<button class="ls-cart-mbtn ' + (grp.mission === 3 ? 'active' : '') + '" data-action="mission" data-key="' + grp.key + '" data-val="3" title="' + t('cart_transport_title', 'Nakliye: Boş geri döner') + '">' + t('cart_transport', '🚚 Nakliye') + '</button>' +
                         '<button class="ls-cart-mbtn deploy ' + (grp.mission === 4 ? 'active' : '') + '" data-action="mission" data-key="' + grp.key + '" data-val="4" title="' + t('cart_deploy_title', 'Konuşlandır: Hedefte kalır') + '">' + t('cart_deploy', '🚀 Konuşlandır') + '</button>' +
-                        '<button class="ls-btn-sm" data-action="single-send" data-key="' + grp.key + '" style="background:#27ae60;color:#fff;padding:2px 7px" title="' + t('cart_single_send_title', 'Sadece bu gezegene filo gönder') + '">' +
+                        '<button class="ls-btn-sm" data-action="single-send" data-key="' + grp.key + '" style="background:#e67e22;color:#fff;padding:2px 7px;border:none;border-radius:3px;cursor:pointer;font-weight:bold" title="' + t('cart_single_send_title', 'Sadece bu gezegene filo gönder') + '">' +
                             t('cart_single_send', '⚡ Gönder') +
                         '</button>' +
                         '<button class="ls-btn-sm" data-action="delete-planet" data-key="' + grp.key + '" style="background:#e74c3c;color:#fff;padding:2px 6px;font-weight:bold" title="' + t('cart_remove_planet', 'Bu gezegenin tüm sepetini kaldır') + '">' +
@@ -3228,7 +3653,7 @@
                         '</span>' +
                     '</div>' +
                     '<div style="display:flex;justify-content:space-between;align-items:center;font-size:9.5px;color:#8899aa;margin-top:2px">' +
-                        '<span>' + t('cart_total', 'Toplam:') + ' <b style="color:#fff">' + formatShort(grp.totalCargoNeeded) + '</b></span>' +
+                        '<span>' + t('cart_total', 'Toplam:') + ' <b style="color:#fff">' + formatShort(targetCargo) + '</b></span>' +
                         '<span>' + shipEstimateText + '</span>' +
                     '</div>' +
                 '</div>';
@@ -3239,7 +3664,19 @@
                 const itemRow = document.createElement('div');
                 itemRow.className = 'ls-item';
                 itemRow.style.cssText = 'padding:3px 6px;margin-bottom:2px;font-size:10.5px;' + (item.checked === false ? 'opacity:0.4;text-decoration:line-through;' : '');
-                if (item.isDeduction) itemRow.style.borderLeft = '3px solid #e67e22';
+                
+                const isExtra = !!item.isExtraCost;
+                let itemColor = '#ffffff';
+                let itemPrefix = '➕ ';
+                if (item.isDeduction) {
+                    itemColor = '#e67e22';
+                    itemPrefix = '📉 ';
+                    itemRow.style.borderLeft = '3px solid #e67e22';
+                } else if (isExtra) {
+                    itemColor = '#00bcff';
+                    itemPrefix = '⚡ ';
+                    itemRow.style.borderLeft = '3px solid #00bcff';
+                }
 
                 const sign = (n) => n < 0 ? fmt(n) : '+' + fmt(n);
                 const mColor = (n) => n < 0 ? '#e67e22' : '#ffbe3b';
@@ -3248,8 +3685,8 @@
 
                 const safeName = escapeHtml(item.name);
                 const safeLevel = item.level ? escapeHtml(item.level) : null;
-                let titleHtml = '<span style="color:' + (item.isDeduction ? '#e67e22' : '#ffffff') + ';font-weight:bold">' +
-                    (item.isDeduction ? '📉 ' : '➕ ') + safeName +
+                let titleHtml = '<span style="color:' + itemColor + ';font-weight:bold">' +
+                    itemPrefix + safeName +
                 '</span>';
                 if (safeLevel) titleHtml += '<span style="color:#b0bec5;margin-left:4px">(' + safeLevel + ')</span>';
 
@@ -3381,36 +3818,10 @@
                 '</div>' +
             '</div>' +
 
-            // Gemi Öncelik ve Switcher Barı
-            '<div style="background:rgba(255,255,255,0.02);border:1px solid #1a2c3f;border-radius:6px;padding:6px 8px;margin-bottom:6px">' +
-                '<div style="font-size:10px;color:#8899aa;margin-bottom:4px">' + t('cart_ship_pref_hint', 'Gemi Tercihi (Öncelik: Rehber > KN > BN):') + '</div>' +
-                '<div style="display:flex;gap:4px">' +
-                    '<button id="ls-ship-toggle-rehber" class="ls-ship-pill ' + (shipPrefs.rehber ? 'active' : '') + '">🛰️ ' + t('cart_ships_pathfinder', 'Rehber') + ' ' + (shipPrefs.rehber ? '✓' : '(Off)') + '</button>' +
-                    '<button id="ls-ship-toggle-kn" class="ls-ship-pill ' + (shipPrefs.kn ? 'active' : '') + '">📦 ' + t('cart_ships_sc', 'KN') + ' ' + (shipPrefs.kn ? '✓' : '(Off)') + '</button>' +
-                    '<button id="ls-ship-toggle-bn" class="ls-ship-pill ' + (shipPrefs.bn ? 'active' : '') + '">🚛 ' + t('cart_ships_lc', 'BN') + ' ' + (shipPrefs.bn ? '✓' : '(Off)') + '</button>' +
-                '</div>' +
-            '</div>' +
-
             // Sırayla Dağıtım Butonu
             '<button id="ls-cart-bulk-send-btn" class="ls-btn" style="width:100%;background:linear-gradient(135deg,#00bcff,#0077b6);color:#fff;padding:8px;font-size:11px;font-weight:bold;box-shadow:0 2px 8px rgba(0,188,255,0.4)">' +
                 t('cart_bulk_distribute', '⚡ SEÇİLİ GEZEGENLERE SIRAYLA DAĞIT') +
             '</button>';
-
-        document.getElementById('ls-ship-toggle-rehber')?.addEventListener('click', () => {
-            shipPrefs.rehber = !shipPrefs.rehber;
-            saveCartShipPrefs(shipPrefs);
-            renderCart();
-        });
-        document.getElementById('ls-ship-toggle-kn')?.addEventListener('click', () => {
-            shipPrefs.kn = !shipPrefs.kn;
-            saveCartShipPrefs(shipPrefs);
-            renderCart();
-        });
-        document.getElementById('ls-ship-toggle-bn')?.addEventListener('click', () => {
-            shipPrefs.bn = !shipPrefs.bn;
-            saveCartShipPrefs(shipPrefs);
-            renderCart();
-        });
 
         document.getElementById('ls-cart-bulk-send-btn')?.addEventListener('click', () => {
             startCartDelivery('bulk');
@@ -3432,14 +3843,21 @@
             grp.items.forEach(({ item }) => {
                 let label = item.name;
                 if (item.level) label += ' (' + item.level + ')';
-                const signStr = item.isDeduction ? '📉 ' : '➕ ';
+                const signStr = item.isDeduction ? '📉 ' : (item.isExtraCost ? '⚡ ' : '➕ ');
                 lines.push(`  ${signStr}${label}: M: ${fmt(item.metal)} | K: ${fmt(item.crystal)} | D: ${fmt(item.deuterium)}`);
             });
-            lines.push(`  Net İhtiyaç: M: ${fmt(grp.netDeficitM)} | K: ${fmt(grp.netDeficitC)} | D: ${fmt(grp.netDeficitD)} (Kargo: ${fmt(grp.totalCargoNeeded)})`);
+            const pM = grp.netDeficitM;
+            const pC = grp.netDeficitC;
+            const pD = grp.netDeficitD;
+            const pTotal = grp.totalCargoNeeded;
+            lines.push(`  Net İhtiyaç: M: ${fmt(pM)} | K: ${fmt(pC)} | D: ${fmt(pD)}`);
+            lines.push(`  Toplam Kargo: ${fmt(pTotal)}`);
             lines.push('');
-            tM += grp.netDeficitM;
-            tC += grp.netDeficitC;
-            tD += grp.netDeficitD;
+            if (grp.selected) {
+                tM += pM;
+                tC += pC;
+                tD += pD;
+            }
         });
 
         lines.push('GENEL SEÇİLİ TOPLAM:');
@@ -4332,42 +4750,6 @@
         }
     }
 
-    function triggerDesktopNotification(title, body) {
-        if (!alarmSettings.desktopNotification) return;
-
-        let sentViaExtension = false;
-        try {
-            if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
-                chrome.runtime.sendMessage({
-                    type: 'SHOW_NOTIFICATION',
-                    title: title,
-                    message: body
-                }, (resp) => {
-                    if (chrome.runtime.lastError) {
-                        fallbackDOMNotification(title, body);
-                    }
-                });
-                sentViaExtension = true;
-            }
-        } catch (e) {}
-
-        if (!sentViaExtension) {
-            fallbackDOMNotification(title, body);
-        }
-    }
-
-    function fallbackDOMNotification(title, body) {
-        if (!('Notification' in window)) return;
-        if (Notification.permission === 'granted') {
-            try {
-                const icon = (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getURL)
-                    ? chrome.runtime.getURL('icons/icon128.png')
-                    : '';
-                new Notification(title, { body: body, icon: icon });
-            } catch (e) {}
-        }
-    }
-
     let lastKnownEspionage = false;
     let lastKnownEspionageSig = '';
     let lastKnownEspionageTime = 0;
@@ -4467,11 +4849,9 @@
                 if (isAttackThreat) {
                     LS_LOGGER.warn('ALARM', 'Saldırı alarmı çalındı: ' + alarmSettings.attackSound, currentSig);
                     playAttackAlertSound(alarmSettings.attackSound);
-                    triggerDesktopNotification('🚨 OGame Saldırı Alarmı!', 'Gezegeninize düşman saldırı filosu yaklaşıyor!');
                 } else if (isEspionageThreat) {
                     LS_LOGGER.warn('ALARM', 'Casusluk uyarısı çalındı: ' + alarmSettings.espionageSound, currentSig);
                     playEspionageAlertSound(alarmSettings.espionageSound);
-                    triggerDesktopNotification('📡 OGame Casusluk Uyarısı', 'Gezegeninize casus sondası yaklaşıyor!');
                 }
 
                 setStoredThreatState({
@@ -4506,10 +4886,16 @@
         let hasEspionage = false;
         const hostileIds = [];
 
-        const fleets = doc.querySelectorAll('.eventFleet');
+        // Hem .eventFleet hem de alternatif tablo satırlarını kapsa
+        let fleets = doc.querySelectorAll('.eventFleet');
+        if (fleets.length === 0) {
+            fleets = doc.querySelectorAll('tr[id^="eventRow-"], [data-mission-type]');
+        }
+
         fleets.forEach(fl => {
             // SADECE düşman filoları tehdittir! Oyuncunun kendi filoları 'friendly' class'ına sahiptir
-            const isHostile = fl.classList.contains('hostile') && !fl.classList.contains('friendly');
+            const isHostile = (fl.classList.contains('hostile') || !!fl.querySelector('.hostile, .icon_attack, .icon_espionage')) &&
+                              !fl.classList.contains('friendly') && !fl.querySelector('.friendly');
             const isReturn = fl.getAttribute('data-return-flight') === 'true';
 
             if (isHostile && !isReturn) {
@@ -4518,7 +4904,7 @@
                 const id = fl.id || (mission + '_' + arrival);
                 hostileIds.push(id);
 
-                if (mission === '6' || fl.classList.contains('espionage')) {
+                if (mission === '6' || fl.classList.contains('espionage') || !!fl.querySelector('.espionage, .icon_espionage')) {
                     hasEspionage = true;
                 } else {
                     hasAttack = true;
@@ -4570,9 +4956,34 @@
             const parsed = parseHostileFleets(doc);
             let hasAttack = parsed.hasAttack;
             let hasEspionage = parsed.hasEspionage;
+
+            // Yanıt HTML içinde attack_alert veya hostile başlık var mı denetle
+            const attackAlert = doc.querySelector('#attack_alert, .attack_alert');
+            if (attackAlert) {
+                const isSoon = attackAlert.classList.contains('soon') || attackAlert.classList.contains('attack') || attackAlert.classList.contains('alert');
+                const isNoAttack = attackAlert.classList.contains('noAttack') || attackAlert.classList.contains('hide');
+                if (isSoon && !isNoAttack) hasAttack = true;
+            }
+            if (doc.querySelector('#eventHeader.hostile, #js_eventHeaderBox.hostile, .event_cdr.hostile')) {
+                hasAttack = true;
+            }
+
+            // Ham metin yedek taraması (DOMParser'ın izole tr öğelerini düşürmesi ihtimaline karşı)
+            if (!hasAttack && !hasEspionage && typeof html === 'string') {
+                if (/id=["']attack_alert["'][^>]*class=["'][^"']*(soon|attack|alert)/i.test(html) && !/noAttack/i.test(html)) {
+                    hasAttack = true;
+                } else if (/class=["'][^"']*hostile[^"']*["']/i.test(html) && !/class=["'][^"']*friendly[^"']*["']/i.test(html)) {
+                    if (/data-mission-type=["']6["']/i.test(html) || /class=["'][^"']*espionage[^"']*["']/i.test(html)) {
+                        hasEspionage = true;
+                    } else {
+                        hasAttack = true;
+                    }
+                }
+            }
+
             let sig = '';
-            if (hasAttack) sig = 'ATT:' + parsed.hostileIds.join(',');
-            else if (hasEspionage) sig = 'ESP:' + parsed.hostileIds.join(',');
+            if (hasAttack) sig = 'ATT:' + (parsed.hostileIds.length > 0 ? parsed.hostileIds.join(',') : 'BG_ATTACK');
+            else if (hasEspionage) sig = 'ESP:' + (parsed.hostileIds.length > 0 ? parsed.hostileIds.join(',') : 'BG_ESP');
 
             lastKnownEspionage = hasEspionage;
             lastKnownEspionageSig = sig;
@@ -4582,119 +4993,19 @@
         } catch (e) {}
     }
 
-    // ============================================================
-    // AKILLI ARKA PLAN TEHDİT GÖZCÜSÜ (SMART BACKGROUND THREAT WATCHER)
-    // - OGame'in doğal eventList çağrısını kullanır (Sıfır ban riski)
-    // - 50s ile 80s arasında insan refleksi gibi rastgele dalgalanır (Jitter)
-    // - Kullanıcı aktif gezinirken ekstra istek atmaz
-    // - Tarayıcı arka plandayken / küçültülmüşken Web Worker ile uyumadan korur
-    // ============================================================
-    let lastUserActivityTime = Date.now();
-    let isBgChecking = false;
-    let bgWatcherTimer = null;
-    let bgWatcherWorker = null;
-
-    ['mousemove', 'mousedown', 'keydown', 'scroll', 'click'].forEach(evt => {
-        window.addEventListener(evt, () => {
-            lastUserActivityTime = Date.now();
-        }, { passive: true });
+    // MAIN world'deki bridge.js üzerinden yakalanan doğal OGame etkinliklerini dinle
+    window.addEventListener('LS_EVENT_LIST_RECEIVED', (e) => {
+        if (e.detail && e.detail.html) {
+            parseThreatsFromHTML(e.detail.html);
+        }
     });
 
     document.addEventListener('visibilitychange', () => {
-        if (document.hidden) {
-            scheduleNextBgCheck();
-        } else {
+        if (!document.hidden) {
             stopTitleFlash();
             checkThreatsInDOM();
-            lastUserActivityTime = Date.now();
         }
     });
-
-    async function checkBackgroundThreats() {
-        if (isBgChecking) return;
-        if (!alarmSettings.attackEnabled && !alarmSettings.espionageEnabled) return;
-
-        isBgChecking = true;
-        try {
-            const resp = await fetch('/game/index.php?page=componentOnly&component=eventList', {
-                method: 'GET',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
-            if (resp.ok) {
-                const html = await resp.text();
-                if (html && !html.includes('loginForm') && !html.includes('page=login')) {
-                    parseThreatsFromHTML(html);
-                    LS_LOGGER.trace('ALARM', 'Threat status verified.');
-                }
-            }
-        } catch (err) {
-            // Ağ hataları sessizce yutulur
-        } finally {
-            isBgChecking = false;
-        }
-    }
-
-    function scheduleNextBgCheck() {
-        if (!alarmSettings.attackEnabled && !alarmSettings.espionageEnabled) {
-            if (bgWatcherWorker) bgWatcherWorker.postMessage({ action: 'stop' });
-            if (bgWatcherTimer) clearTimeout(bgWatcherTimer);
-            return;
-        }
-
-        // Dengeli Mod: 50s - 80s rastgele dalgalanma (Jitter)
-        const delay = Math.floor(50000 + Math.random() * 30000);
-
-        if (bgWatcherWorker) {
-            bgWatcherWorker.postMessage({ action: 'wait', delay: delay });
-        } else {
-            if (bgWatcherTimer) clearTimeout(bgWatcherTimer);
-            bgWatcherTimer = setTimeout(() => {
-                handleBgWatcherTick();
-            }, delay);
-        }
-    }
-
-    function handleBgWatcherTick() {
-        const isUserActivelyBrowsing = !document.hidden && (Date.now() - lastUserActivityTime < 45000);
-        if (!isUserActivelyBrowsing) {
-            checkBackgroundThreats().finally(() => {
-                scheduleNextBgCheck();
-            });
-        } else {
-            scheduleNextBgCheck();
-        }
-    }
-
-    function initBgWatcherWorker() {
-        try {
-            const code = `
-                var timer = null;
-                self.onmessage = function(e) {
-                    if (e.data && e.data.action === 'wait') {
-                        if (timer) clearTimeout(timer);
-                        timer = setTimeout(function() {
-                            self.postMessage('tick');
-                        }, e.data.delay || 60000);
-                    } else if (e.data && e.data.action === 'stop') {
-                        if (timer) clearTimeout(timer);
-                        timer = null;
-                    }
-                };
-            `;
-            const blob = new Blob([code], { type: 'application/javascript' });
-            const url = URL.createObjectURL(blob);
-            bgWatcherWorker = new Worker(url);
-            bgWatcherWorker.onmessage = function(e) {
-                if (e.data === 'tick') {
-                    handleBgWatcherTick();
-                }
-            };
-        } catch (e) {
-            bgWatcherWorker = null;
-        }
-    }
 
     // ============================================================
     // DEBRIS HUNTER (HARABE AVCISI)
@@ -6320,17 +6631,6 @@
                 detail: { type: 'SUBMIT_FLEET2' }
             }));
 
-            const sendBtn = findSendFleetButton();
-            if (sendBtn) {
-                try {
-                    sendBtn.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, cancelable: true, view: window }));
-                    sendBtn.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
-                    sendBtn.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
-                    sendBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
-                    sendBtn.click();
-                } catch (e) {}
-            }
-
             // Bir sonraki gezegene yönlendir
             setTimeout(() => {
                 if (session.currentIndex < session.queue.length) {
@@ -6389,6 +6689,7 @@
         };
 
         const keyListener = (e) => {
+            if (e.repeat) return;
             if (e.code === 'Space' || e.key === ' ') {
                 const tag = document.activeElement ? document.activeElement.tagName : '';
                 if (tag === 'TEXTAREA' || tag === 'SELECT') return;
@@ -6526,7 +6827,7 @@
                             `<div class="ls-coll-name"><b>${escapeHtml(p.name)}</b><span class="crd">${p.coords}</span></div>` +
                             `<div class="ls-coll-res"><span class="ls-coll-m">${formatShort(pRes.metal)}</span><span class="ls-coll-k">${formatShort(pRes.crystal)}</span><span class="ls-coll-d">${formatShort(pRes.deuterium)}</span></div>` +
                         `</div>` +
-                        `<span class="note" style="color:#00bcff;font-weight:bold">${t('cour_origin_badge', '📍 Dağıtım Merkezi')}</span>` +
+                        `<span class="ls-cour-origin-badge note">${t('cour_origin_badge', '📍 Dağıtım Merkezi')}</span>` +
                         `<button class="ls-coll-jump" data-cp="${p.id}" title="${t('coll_jump_hint', 'Gezegene geç')}">🚀</button>` +
                     `</div>`;
                 } else {
@@ -6536,7 +6837,7 @@
                             `<div class="ls-coll-name"><b>${escapeHtml(p.name)}</b><span class="crd">${p.coords}</span></div>` +
                             `<div class="ls-coll-res"><span class="ls-coll-m">${formatShort(pRes.metal)}</span><span class="ls-coll-k">${formatShort(pRes.crystal)}</span><span class="ls-coll-d">${formatShort(pRes.deuterium)}</span></div>` +
                         `</div>` +
-                        `<div class="ls-cour-inputs-wrap">` +
+                        `<div class="ls-cour-inputs-wrap ls-cour-row-inputs">` +
                             `<input type="text" class="ls-cour-inp ls-cour-inp-m" data-id="${p.id}" data-res="met" value="${pTarget.met > 0 ? fmt(pTarget.met) : ''}" placeholder="M" title="Metal">` +
                             `<input type="text" class="ls-cour-inp ls-cour-inp-c" data-id="${p.id}" data-res="cri" value="${pTarget.cri > 0 ? fmt(pTarget.cri) : ''}" placeholder="K" title="Kristal">` +
                             `<input type="text" class="ls-cour-inp ls-cour-inp-d" data-id="${p.id}" data-res="deu" value="${pTarget.deu > 0 ? fmt(pTarget.deu) : ''}" placeholder="D" title="Deuterium">` +
@@ -6559,7 +6860,7 @@
                                 `<div class="ls-coll-name"><b>🌕 ${escapeHtml(mTitle)}</b></div>` +
                                 `<div class="ls-coll-res"><span class="ls-coll-m">${formatShort(mRes.metal)}</span><span class="ls-coll-k">${formatShort(mRes.crystal)}</span><span class="ls-coll-d">${formatShort(mRes.deuterium)}</span></div>` +
                             `</div>` +
-                            `<span class="note" style="color:#00bcff;font-weight:bold">${t('cour_origin_badge', '📍 Dağıtım Merkezi')}</span>` +
+                            `<span class="ls-cour-origin-badge note">${t('cour_origin_badge', '📍 Dağıtım Merkezi')}</span>` +
                             `<button class="ls-coll-jump" data-cp="${p.moon.id}" title="${t('coll_jump_moon_hint', 'Aya geç')}">🚀</button>` +
                         `</div>`;
                     } else {
@@ -6569,7 +6870,7 @@
                                 `<div class="ls-coll-name"><b>🌕 ${escapeHtml(mTitle)}</b></div>` +
                                 `<div class="ls-coll-res"><span class="ls-coll-m">${formatShort(mRes.metal)}</span><span class="ls-coll-k">${formatShort(mRes.crystal)}</span><span class="ls-coll-d">${formatShort(mRes.deuterium)}</span></div>` +
                             `</div>` +
-                            `<div class="ls-cour-inputs-wrap">` +
+                            `<div class="ls-cour-inputs-wrap ls-cour-row-inputs">` +
                                 `<input type="text" class="ls-cour-inp ls-cour-inp-m" data-id="${p.moon.id}" data-res="met" value="${mTarget.met > 0 ? fmt(mTarget.met) : ''}" placeholder="M" title="Metal">` +
                                 `<input type="text" class="ls-cour-inp ls-cour-inp-c" data-id="${p.moon.id}" data-res="cri" value="${mTarget.cri > 0 ? fmt(mTarget.cri) : ''}" placeholder="K" title="Kristal">` +
                                 `<input type="text" class="ls-cour-inp ls-cour-inp-d" data-id="${p.moon.id}" data-res="deu" value="${mTarget.deu > 0 ? fmt(mTarget.deu) : ''}" placeholder="D" title="Deuterium">` +
@@ -7421,17 +7722,6 @@
                 detail: { type: 'SUBMIT_FLEET2' }
             }));
 
-            const sendBtn = findSendFleetButton();
-            if (sendBtn) {
-                try {
-                    sendBtn.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, cancelable: true, view: window }));
-                    sendBtn.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
-                    sendBtn.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
-                    sendBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
-                    sendBtn.click();
-                } catch (e) {}
-            }
-
             setTimeout(() => {
                 if (session.currentIndex < session.queue.length) {
                     const nextItem = session.queue[session.currentIndex];
@@ -7487,6 +7777,7 @@
         };
 
         const keyListener = (e) => {
+            if (e.repeat) return;
             if (e.code === 'Space' || e.key === ' ') {
                 const tag = document.activeElement ? document.activeElement.tagName : '';
                 if (tag === 'TEXTAREA' || tag === 'SELECT') return;
@@ -8402,6 +8693,11 @@
             }
 
             isDispatching = true;
+            const bannerSendBtn = document.getElementById('ls-exp-banner-send-btn');
+            if (bannerSendBtn) {
+                bannerSendBtn.disabled = true;
+                bannerSendBtn.style.opacity = '0.5';
+            }
             LS_LOGGER.action('EXPEDITION', `Keşif gönder emri verildi (Space/Tık). [${currentItem.g}:${currentItem.s}:16]`);
             dispatchSendExpeditionFleet();
         };
@@ -8441,17 +8737,6 @@
                     type: 'SUBMIT_FLEET2'
                 }
             }));
-
-            const sendBtn = findSendFleetButton();
-            if (sendBtn) {
-                try {
-                    sendBtn.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, cancelable: true, view: window }));
-                    sendBtn.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
-                    sendBtn.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
-                    sendBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
-                    sendBtn.click();
-                } catch (e) {}
-            }
 
             setTimeout(() => {
                 if (session.currentIndex < session.queue.length) {
@@ -8500,6 +8785,7 @@
         };
 
         const keyListener = (e) => {
+            if (e.repeat) return;
             if (e.code === 'Space' || e.key === ' ' || e.keyCode === 32) {
                 const tag = (document.activeElement && document.activeElement.tagName) || '';
                 if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
@@ -8531,10 +8817,10 @@
             '#ls-fab svg{filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5))}',
 
             '#ls-panel, #ls-panel *{box-sizing:border-box}',
-            '#ls-panel{position:fixed;bottom:120px;right:15px;width:340px;min-width:280px;max-width:calc(100vw - 30px);',
-            'min-height:260px;max-height:calc(100vh - 30px);background:rgba(11,16,26,0.97);',
+            '#ls-panel{position:fixed;bottom:120px;right:15px;width:340px;min-width:320px;max-width:calc(100vw - 30px);',
+            'min-height:500px;max-height:calc(100vh - 30px);background:rgba(11,16,26,0.97);',
             'border:1px solid #1a2c3f;border-radius:8px;color:#d1d8e0;font-family:sans-serif;font-size:12px;',
-            'z-index:999998;box-shadow:0 10px 30px rgba(0,0,0,0.8);display:none;flex-direction:column;transition:opacity .2s ease}',
+            'z-index:999998;box-shadow:0 10px 30px rgba(0,0,0,0.8);display:none;flex-direction:column;transition:opacity .2s ease;container-type:inline-size;container-name:lspanel}',
 
             '.ls-resize-h{position:absolute;z-index:999999}',
             '.ls-rh-se{right:0;bottom:0;width:14px;height:14px;cursor:nwse-resize}',
@@ -8689,12 +8975,31 @@
             '.ls-coll-dd-item.moon{padding-left:18px;color:#c9d6e3}',
             '.ls-coll-dd-manual{color:#8899aa;font-style:italic;border-bottom:none}',
             '.ls-coll-mbtn{background:#1a2c3f;color:#8899aa;border:1px solid #2c3e50;padding:2px 8px;border-radius:3px;cursor:pointer;font-size:10px;font-weight:bold;transition:all .15s}',
-            '.ls-coll-mbtn.active{background:#00bcff;color:#000;border-color:#00bcff}',
+            '.ls-coll-mbtn.active, #ls-coll-mission-3.active, #ls-cour-mission-3.active, #ls-cart-mission-3.active{background:#27ae60 !important;color:#fff !important;border-color:#2ecc71 !important}',
+            '.ls-coll-mbtn.deploy.active, #ls-coll-mission-4.active, #ls-cour-mission-4.active, #ls-cart-mission-4.active{background:#2980b9 !important;color:#fff !important;border-color:#3498db !important}',
             '.ls-coll-mbtn:hover:not(.active){background:#243a52;color:#fff}',
-            '.ls-coll-selbar{display:flex;gap:4px;margin-bottom:6px;flex-shrink:0}',
-            '.ls-coll-selbar .ls-btn-sm{flex:1;text-align:center;padding:3px 2px}',
+            '.ls-btn-here, #ls-cart-cur-btn, #ls-coll-cur-btn, #ls-cour-cur-btn{background:#8e44ad !important;color:#fff !important;border:1px solid #9b59b6 !important;border-radius:3px;cursor:pointer;font-size:10px;font-weight:bold;padding:2px 7px;transition:all .15s}',
+            '.ls-btn-here:hover, #ls-cart-cur-btn:hover, #ls-coll-cur-btn:hover, #ls-cour-cur-btn:hover{background:#9b59b6 !important;border-color:#bb86fc !important}',
+
+            /* Origin Card Responsive Header Row */
+            '.ls-origin-head-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:nowrap;gap:4px}',
+            '#ls-panel.ls-compact .ls-origin-head-row, @container lspanel (max-width: 350px){.ls-origin-head-row{flex-wrap:wrap;gap:3px}.ls-origin-head-row .ls-label{flex:1 1 100%;font-size:10.5px;margin-bottom:2px}.ls-origin-head-row .ls-btn-here{margin-left:0;margin-right:auto}}',
+
+            /* Extra Cost & Generic Distribution Rows */
+            '.ls-extra-row{display:flex;align-items:center;gap:4px;width:100%}',
+            '#ls-panel.ls-compact .ls-extra-row, @container lspanel (max-width: 350px){.ls-extra-row{flex-wrap:wrap;gap:3px}.ls-extra-row > span, .ls-extra-row > label{font-size:10px}.ls-extra-row .ls-btn-sm{padding:2px 5px;font-size:9px}}',
+
+            /* Selection Bar */
+            '.ls-coll-selbar{display:flex;gap:4px;margin-bottom:6px;flex-shrink:0;width:100%}',
+            '.ls-coll-selbar .ls-btn-sm{flex:1 1 0;text-align:center;padding:3px 2px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10px}',
+            '#ls-panel.ls-compact .ls-coll-selbar .ls-btn-sm, @container lspanel (max-width: 350px){.ls-coll-selbar .ls-btn-sm{font-size:9px;padding:3px 1px}}',
+            '#ls-panel.ls-narrow .ls-coll-selbar, @container lspanel (max-width: 320px){.ls-coll-selbar{flex-wrap:wrap;gap:3px}.ls-coll-selbar .ls-btn-sm{flex:1 1 calc(50% - 2px);max-width:calc(50% - 2px);font-size:9.5px;padding:4px 2px}}',
+
             '.ls-coll-head{display:flex;justify-content:space-between;align-items:center;padding:0 2px 4px 2px;border-bottom:1px solid #1a2c3f;margin-bottom:6px;flex-shrink:0}',
-            '.ls-coll-list{flex:1;min-height:80px;overflow-y:auto;padding-right:2px}',
+            '#ls-panel.ls-compact .ls-coll-head span{font-size:9.5px !important;margin-right:20px !important}',
+            '#ls-panel.ls-narrow .ls-coll-head span{font-size:9px !important;margin-right:14px !important}',
+
+            '.ls-coll-list{flex:1;min-height:40px;overflow-y:auto;overflow-x:hidden !important;padding-right:2px}',
             '.ls-coll-grp{margin-bottom:5px}',
             '.ls-coll-prow{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.04);border-radius:4px;padding:5px 6px;transition:background .15s}',
             '.ls-coll-prow:hover{background:rgba(255,255,255,0.07)}',
@@ -8702,51 +9007,91 @@
             '.ls-coll-mrow:hover{background:rgba(255,255,255,0.05)}',
             '.ls-coll-mrow:before{content:"";position:absolute;left:-10px;top:-6px;width:8px;height:18px;border-left:1px solid #2f5f86;border-bottom:1px solid #2f5f86}',
             '.ls-coll-prow input[type=checkbox],.ls-coll-mrow input[type=checkbox]{accent-color:#00bcff;margin:0;width:13px;height:13px;flex-shrink:0;cursor:pointer}',
-            '.ls-coll-info{flex:1;min-width:0}',
+            '.ls-coll-info{flex:1 1 auto;min-width:0}',
             '.ls-coll-name{display:flex;align-items:baseline;gap:5px;white-space:nowrap;overflow:hidden}',
             '.ls-coll-name b{color:#fff;font-size:11.5px;overflow:hidden;text-overflow:ellipsis}',
             '.ls-coll-name .crd{color:#00bcff;font-size:10px;font-family:monospace}',
             '.ls-coll-mrow .ls-coll-name b{color:#c9d6e3;font-weight:normal;font-size:11px}',
-            '.ls-coll-res{display:flex;gap:7px;font-family:monospace;font-size:10.5px;margin-top:2px}',
+            '.ls-coll-res{display:flex;gap:7px;font-family:monospace;font-size:10.5px;margin-top:2px;white-space:nowrap;overflow:hidden}',
             '.ls-coll-m{color:#ffbe3b}.ls-coll-k{color:#5dade2}.ls-coll-d{color:#2ecc71}',
             '.ls-coll-rez{width:68px;text-align:right;color:#2ecc71;font-family:monospace;font-weight:bold;flex-shrink:0;padding:2px 4px;font-size:10.5px}',
-            '.ls-coll-jump{background:#00bcff;color:#000;border:none;padding:3px 6px;border-radius:3px;font-size:11px;line-height:14px;flex-shrink:0;cursor:pointer;font-weight:bold}',
+            '.ls-coll-jump{background:#00bcff;color:#000;border:none;padding:2px 5px;border-radius:3px;font-size:10px;line-height:16px;flex-shrink:0;cursor:pointer;font-weight:bold;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center}',
             '.ls-coll-jump:hover{background:#33cfff}',
             '.ls-coll-dest{opacity:0.6}',
             '.ls-coll-dest .note{font-size:9.5px;color:#8899aa;width:68px;text-align:center;flex-shrink:0}',
             '.ls-coll-sum{display:flex;justify-content:space-between;align-items:center;font-size:11px;margin:8px 0 6px 0;flex-shrink:0}',
-            '.ls-coll-go{flex-shrink:0;width:100%;background:linear-gradient(180deg,#ff8c00,#f57c00);color:#fff;border:none;border-radius:3px;padding:8px;font-weight:bold;font-size:12px;cursor:pointer;transition:transform .15s, background .15s}',
-            '.ls-coll-go:hover{background:linear-gradient(180deg,#ffa024,#f57c00);transform:scale(1.01)}',
-            '.ls-coll-go:active{transform:scale(0.99)}',
+
+            /* Collector & Courier Rows Scaling */
+            '#ls-panel.ls-compact .ls-coll-prow, #ls-panel.ls-compact .ls-coll-mrow, @container lspanel (max-width: 350px){.ls-coll-prow, .ls-coll-mrow{gap:4px;padding:3px 4px}.ls-coll-mrow{margin-left:10px}.ls-coll-name b{font-size:10.5px}.ls-coll-name .crd{font-size:9px}.ls-coll-res{font-size:8px;gap:3px}.ls-coll-jump{width:18px;height:18px;font-size:9px}.ls-coll-rez{width:50px;font-size:9px;padding:1px 2px}.ls-coll-dest .note{width:50px;font-size:8.5px}}',
+            '#ls-panel.ls-narrow .ls-coll-prow, #ls-panel.ls-narrow .ls-coll-mrow, @container lspanel (max-width: 300px){.ls-coll-name b{max-width:75px}.ls-coll-res{display:none}}',
+
+            /* Action Buttons (Collector, Expedition, Courier, Cart) - ZERO TRANSFORM SCALE */
+            '.ls-coll-go{flex-shrink:0;width:100%;background:linear-gradient(180deg,#ff8c00,#f57c00);color:#fff;border:none;border-radius:3px;padding:8px;font-weight:bold;font-size:12px;cursor:pointer;transition:background .15s, filter .15s, box-shadow .15s}',
+            '.ls-coll-go:hover{background:linear-gradient(180deg,#ffa024,#f57c00);filter:brightness(1.15);box-shadow:0 0 10px rgba(255,140,0,0.4)}',
+            '.ls-coll-go:active{filter:brightness(0.9)}',
             '.ls-coll-go:disabled{opacity:0.5;cursor:not-allowed}',
-            '.ls-exp-go{flex-shrink:0;width:100%;background:linear-gradient(180deg,#8e44ad,#6c3483);color:#fff;border:none;border-radius:4px;padding:9px;font-weight:bold;font-size:12px;cursor:pointer;transition:transform .15s, background .15s;box-shadow:0 2px 8px rgba(142,68,173,0.4)}',
-            '.ls-exp-go:hover{background:linear-gradient(180deg,#9b59b6,#7d3c98);transform:scale(1.01)}',
-            '.ls-exp-go:active{transform:scale(0.99)}',
+
+            '.ls-exp-go{flex-shrink:0;width:100%;background:linear-gradient(180deg,#8e44ad,#6c3483);color:#fff;border:none;border-radius:4px;padding:9px;font-weight:bold;font-size:12px;cursor:pointer;transition:background .15s, filter .15s, box-shadow .15s;box-shadow:0 2px 8px rgba(142,68,173,0.4)}',
+            '.ls-exp-go:hover{background:linear-gradient(180deg,#9b59b6,#7d3c98);filter:brightness(1.15);box-shadow:0 0 10px rgba(142,68,173,0.6)}',
+            '.ls-exp-go:active{filter:brightness(0.9)}',
             '.ls-exp-go:disabled{opacity:0.5;cursor:not-allowed}',
+
+            '.ls-cour-go{flex-shrink:0;width:100%;background:linear-gradient(180deg,#2980b9,#1f618d);color:#fff;border:none;border-radius:3px;padding:8px;font-weight:bold;font-size:12px;cursor:pointer;transition:background .15s, filter .15s, box-shadow .15s}',
+            '.ls-cour-go:hover{background:linear-gradient(180deg,#3498db,#2980b9);filter:brightness(1.15);box-shadow:0 0 10px rgba(41,128,185,0.4)}',
+            '.ls-cour-go:active{filter:brightness(0.9)}',
+            '.ls-cour-go:disabled{opacity:0.5;cursor:not-allowed}',
+
+            '#ls-cart-bulk-send-btn{transition:background .15s, filter .15s, box-shadow .15s}',
+            '#ls-cart-bulk-send-btn:hover{filter:brightness(1.15);box-shadow:0 0 10px rgba(0,188,255,0.5)}',
+            '#ls-cart-bulk-send-btn:active{filter:brightness(0.9)}',
+
+            /* Cart Card Styles */
             '.ls-cart-card{background:#131d2a;border:1px solid #233446;border-radius:6px;padding:8px;margin-bottom:8px;flex-shrink:0}',
             '.ls-cart-card-head{display:flex;align-items:center;justify-content:space-between;gap:6px;border-bottom:1px solid #1a2c3f;padding-bottom:5px;margin-bottom:6px}',
             '.ls-cart-mbtn{background:#1a2c3f;color:#8899aa;border:1px solid #2c3e50;padding:2px 6px;border-radius:3px;cursor:pointer;font-size:9.5px;font-weight:bold;transition:all .15s;line-height:1.2}',
             '.ls-cart-mbtn.active{background:#27ae60;color:#fff;border-color:#2ecc71}',
             '.ls-cart-mbtn.deploy.active{background:#2980b9;color:#fff;border-color:#3498db}',
             '.ls-cart-mbtn:hover:not(.active){background:#243a52;color:#fff}',
+            '#ls-panel.ls-compact .ls-cart-card, @container lspanel (max-width: 350px){padding:6px;margin-bottom:6px}',
+            '#ls-panel.ls-compact .ls-cart-card-head, @container lspanel (max-width: 350px){flex-wrap:wrap;gap:3px}',
+            '#ls-panel.ls-compact .ls-cart-card-head > div:first-child, @container lspanel (max-width: 350px){flex:1 1 100%;margin-bottom:2px}',
+            '#ls-panel.ls-compact .ls-cart-card-head > div:last-child, @container lspanel (max-width: 350px){margin-left:auto;gap:2px}',
+            '#ls-panel.ls-compact .ls-cart-mbtn, @container lspanel (max-width: 350px){padding:1px 4px;font-size:8.5px}',
+
             '.ls-ship-pill{background:#1a2c3f;color:#8899aa;border:1px solid #2c3e50;padding:2px 8px;border-radius:12px;cursor:pointer;font-size:10px;font-weight:bold;transition:all .15s;user-select:none;line-height:1.3}',
             '.ls-ship-pill.active{background:#00bcff;color:#000;border-color:#00bcff;box-shadow:0 0 6px rgba(0,188,255,0.4)}',
             '.ls-ship-pill:hover{border-color:#00bcff}',
 
-            /* Courier Tab Styles */
-            '#ls-cour-card-origin{position:relative !important;z-index:1005 !important;overflow:visible !important}',
-            '.ls-cour-inputs-wrap{display:flex;gap:3px;align-items:center;flex-shrink:0}',
-            '.ls-cour-inp{width:46px;padding:2px 3px;font-size:10px;text-align:right;font-family:monospace;border-radius:3px;box-sizing:border-box}',
+            /* Origin Card Styles & Courier Inputs */
+            '#ls-cart-card-origin, #ls-cour-card-origin{position:relative !important;z-index:1005 !important;overflow:visible !important}',
+            '.ls-cour-inputs-wrap{display:flex;gap:3px;align-items:center}',
+            '.ls-extra-row .ls-cour-inputs-wrap{flex:1 1 auto;min-width:0}',
+            '.ls-extra-row .ls-cour-inp{flex:1 1 0;width:40px;min-width:24px;max-width:48px}',
+            '.ls-cour-row-inputs{display:inline-flex;gap:3px;align-items:center;flex-shrink:0;margin-left:auto}',
+            '.ls-cour-row-inputs .ls-cour-inp{width:44px;flex-shrink:0;padding:2px 3px;font-size:10px;text-align:right}',
+            '.ls-cour-origin-badge{margin-left:auto;flex-shrink:0;text-align:right;font-size:9.5px;color:#00bcff;font-weight:bold;white-space:nowrap}',
+            '.ls-cour-inp{font-family:monospace;border-radius:3px;box-sizing:border-box;padding:2px 3px;font-size:10px;text-align:right}',
             '.ls-cour-inp-m{color:#ffbe3b;border:1px solid #4a3b1a;background:#0a0e17}',
             '.ls-cour-inp-m:focus{border-color:#ffbe3b;outline:none}',
             '.ls-cour-inp-c{color:#5dade2;border:1px solid #1c3952;background:#0a0e17}',
             '.ls-cour-inp-c:focus{border-color:#5dade2;outline:none}',
             '.ls-cour-inp-d{color:#2ecc71;border:1px solid #174229;background:#0a0e17}',
             '.ls-cour-inp-d:focus{border-color:#2ecc71;outline:none}',
-            '.ls-cour-go{flex-shrink:0;width:100%;background:linear-gradient(180deg,#2980b9,#1f618d);color:#fff;border:none;border-radius:3px;padding:8px;font-weight:bold;font-size:12px;cursor:pointer;transition:transform .15s, background .15s}',
-            '.ls-cour-go:hover{background:linear-gradient(180deg,#3498db,#2980b9);transform:scale(1.01)}',
-            '.ls-cour-go:active{transform:scale(0.99)}',
-            '.ls-cour-go:disabled{opacity:0.5;cursor:not-allowed}',
+            '#ls-panel.ls-compact .ls-cour-row-inputs .ls-cour-inp, @container lspanel (max-width: 350px){width:36px;padding:1px 2px;font-size:9px}',
+            '#ls-panel.ls-narrow .ls-cour-row-inputs .ls-cour-inp, @container lspanel (max-width: 310px){width:28px;padding:1px 1px;font-size:8.5px}',
+            '#ls-panel.ls-compact .ls-extra-row .ls-cour-inp, @container lspanel (max-width: 350px){width:32px;max-width:38px;min-width:22px;padding:1px 1px;font-size:9px}',
+            '#ls-panel.ls-narrow .ls-extra-row .ls-cour-inp, @container lspanel (max-width: 310px){width:26px;max-width:32px;min-width:20px;padding:1px 1px;font-size:8.5px}',
+
+            /* Global Panel Scaling Rules */
+            '#ls-panel.ls-compact #ls-body, @container lspanel (max-width: 350px){padding:6px 8px}',
+            '#ls-panel.ls-compact .ls-coll-card, @container lspanel (max-width: 350px){padding:6px 8px;margin-bottom:6px}',
+            '#ls-panel.ls-compact #ls-header, @container lspanel (max-width: 350px){padding:6px 8px}',
+            '#ls-panel.ls-compact #ls-header-title, @container lspanel (max-width: 350px){font-size:11.5px}',
+            '#ls-panel.ls-compact .ls-coll-go, #ls-panel.ls-compact .ls-cour-go, #ls-panel.ls-compact .ls-exp-go, #ls-panel.ls-compact #ls-cart-bulk-send-btn, @container lspanel (max-width: 350px){padding:6px 4px;font-size:11px}',
+            '#ls-panel.ls-narrow .ls-coll-go, #ls-panel.ls-narrow .ls-cour-go, #ls-panel.ls-narrow .ls-exp-go, #ls-panel.ls-narrow #ls-cart-bulk-send-btn, @container lspanel (max-width: 310px){padding:5px 2px;font-size:10px}',
+            '#ls-panel.ls-compact #ls-footer-drag, @container lspanel (max-width: 350px){padding:3px 6px}',
+            '#ls-panel.ls-compact #ls-footer-drag-handle span:nth-child(2), @container lspanel (max-width: 350px){font-size:9.5px;letter-spacing:3px}',
+            '#ls-panel.ls-compact #ls-alarm-att-sound, #ls-panel.ls-compact #ls-alarm-esp-sound, #ls-panel.ls-compact #ls-setting-lang, #ls-panel.ls-compact #ls-setting-theme, @container lspanel (max-width: 350px){width:auto !important;max-width:140px;flex:1}',
         ].join('\n');
         document.head.appendChild(style);
 
@@ -8765,7 +9110,7 @@
         panel.id = 'ls-panel';
         panel.innerHTML =
             '<div id="ls-header">' +
-                '<span id="ls-header-title">' + boltSvg + ' LuckyStrike Helper <span style="font-size:10px;color:#8899aa;font-weight:normal;opacity:0.8">v11.1</span></span>' +
+                '<span id="ls-header-title">' + boltSvg + ' LuckyStrike Helper <span style="font-size:10px;color:#8899aa;font-weight:normal;opacity:0.8">v11.2</span></span>' +
                 '<div style="display:flex;align-items:center;gap:6px">' +
                     '<button id="ls-header-stop-btn" class="ls-btn-d ls-btn-sm" style="display:none;padding:2px 7px;font-size:10px;align-items:center;gap:3px;cursor:pointer" title="Tekrarlayan bu alarmı sustur">⏹️ Sustur</button>' +
                     '<span id="ls-close">✖</span>' +
@@ -8787,11 +9132,49 @@
 
                 // CART TAB
                 '<div id="tc-cart" class="ls-tc">' +
-                    '<div style="display:flex;gap:6px;margin-bottom:8px;flex-shrink:0">' +
-                        '<button id="ls-cart-copy" class="ls-btn" style="flex:1" data-i18n="cart_copy">📋 Panoya Kopyala</button>' +
-                        '<button id="ls-cart-clear" class="ls-btn ls-btn-d" style="flex:1" data-i18n="cart_clear">🗑️ Temizle</button>' +
+                    '<div id="ls-cart-card-origin" class="ls-coll-card" style="margin-bottom:8px;flex-shrink:0">' +
+                        '<div class="ls-origin-head-row">' +
+                            '<span class="ls-label" data-i18n="cour_origin_head">📮 Dağıtım Üssü (Çıkış Noktası)</span>' +
+                            '<button type="button" id="ls-cart-cur-btn" class="ls-btn-sm ls-btn-here" style="background:#8e44ad;color:#fff;padding:2px 7px;font-size:10px;margin-left:auto;margin-right:6px;border:1px solid #9b59b6;border-radius:3px;cursor:pointer;font-weight:bold" title="Çıkış noktasını şu an bulunduğunuz gezegen/ay yapar" data-i18n-title="cour_here_title" data-i18n="cour_here">Burası</button>' +
+                            '<div style="display:flex;gap:4px">' +
+                                '<button type="button" id="ls-cart-mission-3" class="ls-coll-mbtn active" data-i18n="coll_transport">Nakliye</button>' +
+                                '<button type="button" id="ls-cart-mission-4" class="ls-coll-mbtn deploy" data-i18n="coll_deploy">Konuşlandır</button>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div class="ls-coll-row">' +
+                            '<div class="ls-coll-combo">' +
+                                '<div id="ls-cart-origin-btn" class="ls-coll-sel">' +
+                                    '<span id="ls-cart-origin-label"><b data-i18n="cour_loading">🪐 Yükleniyor...</b></span>' +
+                                    '<span style="color:#00bcff;font-size:9px">▼</span>' +
+                                '</div>' +
+                                '<div id="ls-cart-origin-dd" class="ls-coll-dd"></div>' +
+                            '</div>' +
+                        '</div>' +
                     '</div>' +
-                    '<div id="ls-cart-list" style="flex:1;min-height:60px;overflow-y:auto;overflow-x:hidden;margin-bottom:8px"></div>' +
+                    '<div class="ls-coll-card" style="margin-bottom:8px;flex-shrink:0">' +
+                        '<div class="ls-coll-row" style="margin-bottom:5px">' +
+                            '<span class="ls-label" style="width:52px" data-i18n="cour_ships">🚀 Gemi</span>' +
+                            '<label class="ls-coll-chk"><input type="checkbox" id="ls-cart-ship-bn"> <span data-i18n="cour_bn">BN</span></label>' +
+                            '<label class="ls-coll-chk"><input type="checkbox" id="ls-cart-ship-kn"> <span data-i18n="cour_kn">KN</span></label>' +
+                            '<label class="ls-coll-chk"><input type="checkbox" id="ls-cart-ship-rehber"> <span data-i18n="cour_rehber">Rehber</span></label>' +
+                        '</div>' +
+                        '<div class="ls-extra-row">' +
+                            '<span style="color:#00bcff;font-weight:bold;font-size:11px;white-space:nowrap" data-i18n="cart_extra_title">⚡ Ek Maliyet</span>' +
+                            '<div class="ls-cour-inputs-wrap" style="flex:1">' +
+                                '<input type="text" id="ls-cart-extra-m" class="ls-cour-inp ls-cour-inp-m" placeholder="Metal" data-i18n-placeholder="cart_metal_ph" title="Her hedefe eklenecek Metal miktarı (örn: 1m, 500k)">' +
+                                '<input type="text" id="ls-cart-extra-c" class="ls-cour-inp ls-cour-inp-c" placeholder="Kristal" data-i18n-placeholder="cart_crys_ph" title="Her hedefe eklenecek Kristal miktarı (örn: 2m, 250k)">' +
+                                '<input type="text" id="ls-cart-extra-d" class="ls-cour-inp ls-cour-inp-d" placeholder="Deu" data-i18n-placeholder="cart_deut_ph" title="Her hedefe eklenecek Deuterium miktarı (örn: 3m, 100k)">' +
+                            '</div>' +
+                            '<button type="button" id="ls-cart-add-extra-btn" class="ls-btn-sm" style="background:#27ae60;color:#fff;border:none;padding:3px 7px;font-size:10px;font-weight:bold;border-radius:3px;cursor:pointer;white-space:nowrap" title="Girilen ek maliyeti seçili gezegen sepetlerine kalem olarak ekler">📥 Sepete Ekle</button>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="ls-coll-selbar">' +
+                        '<button id="ls-cart-sel-all" class="ls-btn-sm" title="Tüm gezegen sepetlerini seç" data-i18n="cart_sel_all">☑️ Tümünü Seç</button>' +
+                        '<button id="ls-cart-sel-none" class="ls-btn-sm" title="Tüm gezegen sepetlerinin seçimini kaldır" data-i18n="cart_sel_none">◻️ Seçimi Temizle</button>' +
+                        '<button id="ls-cart-copy" class="ls-btn-sm" title="Sepeti panoya kopyala" data-i18n="cart_copy">📋 Panoya Kopyala</button>' +
+                        '<button id="ls-cart-clear" class="ls-btn-sm" style="color:#e74c3c" title="Tüm sepeti temizle" data-i18n="cart_clear">🗑️ Temizle</button>' +
+                    '</div>' +
+                    '<div id="ls-cart-list" style="flex:1;min-height:40px;overflow-y:auto;overflow-x:hidden;margin-bottom:8px"></div>' +
                     '<div id="ls-cart-totals" style="flex-shrink:0;margin-top:auto"></div>' +
                 '</div>' +
 
@@ -8850,7 +9233,7 @@
 
                 // FINDER TAB
                 '<div id="tc-finder" class="ls-tc">' +
-                    '<div style="max-width:270px;margin:0 auto;text-align:center">' +
+                    '<div style="width:100%;max-width:320px;margin:0 auto;text-align:center">' +
                         '<div style="font-size:10px;color:#8899aa;margin-bottom:8px" data-i18n="find_desc">Evrendeki tüm oyuncuları ve gezegenlerini bulun.</div>' +
                         '<input type="text" id="ls-find-q" class="ls-inp" style="width:100%;margin-bottom:8px;padding:6px 10px;font-size:11px;text-align:center;border-radius:4px" placeholder="Oyuncu veya gezegen adı..." data-i18n-placeholder="find_ph">' +
                         '<div style="display:flex;justify-content:center;gap:14px;margin-bottom:8px;font-size:11px">' +
@@ -8916,20 +9299,6 @@
                             '</select>' +
                         '</div>' +
                         '<button id="ls-alarm-esp-test" class="ls-btn-sm" style="background:#2980b9;color:#fff;border:none;padding:5px 10px;width:100%" data-i18n="alarm_esp_test">🔊 Sonda Sesini Test Et</button>' +
-                    '</div>' +
-
-                    // Desktop notification card
-                    '<div style="background:#131d2a;border:1px solid #233446;border-radius:6px;padding:10px;margin-bottom:8px">' +
-                        '<div style="display:flex;justify-content:space-between;align-items:center">' +
-                            '<div>' +
-                                '<div style="font-weight:bold;color:#f39c12;font-size:12px" data-i18n="alarm_desktop_title">🖥️ Masaüstü Bildirimi</div>' +
-                                '<div style="font-size:10px;color:#8899aa;margin-top:2px" data-i18n="alarm_desktop_desc">Sekme arka plandayken bildirim gönder</div>' +
-                            '</div>' +
-                            '<label class="ls-toggle-switch">' +
-                                '<input type="checkbox" id="ls-alarm-desktop-toggle">' +
-                                '<span class="ls-toggle-slider"></span>' +
-                            '</label>' +
-                        '</div>' +
                     '</div>' +
 
                     // Volume slider card
@@ -9008,12 +9377,12 @@
                 // COLLECTOR TAB
                 '<div id="tc-collector" class="ls-tc">' +
                     '<div id="ls-coll-card-target" class="ls-coll-card">' +
-                        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">' +
+                        '<div class="ls-origin-head-row">' +
                             '<span class="ls-label" data-i18n="coll_target_head">🎯 Toplama Hedefi</span>' +
-                            '<button type="button" id="ls-coll-cur-btn" class="ls-btn-sm" style="background:#2c3e50;color:#00bcff;padding:2px 7px;font-size:10px;margin-left:auto;margin-right:6px;border:1px solid #334455;border-radius:3px;cursor:pointer" title="Hedefi şu an bulunduğunuz gezegen/ay yapar" data-i18n-title="coll_here_title" data-i18n="coll_here">Burası</button>' +
+                            '<button type="button" id="ls-coll-cur-btn" class="ls-btn-sm ls-btn-here" style="background:#8e44ad;color:#fff;padding:2px 7px;font-size:10px;margin-left:auto;margin-right:6px;border:1px solid #9b59b6;border-radius:3px;cursor:pointer;font-weight:bold" title="Hedefi şu an bulunduğunuz gezegen/ay yapar" data-i18n-title="coll_here_title" data-i18n="coll_here">Burası</button>' +
                             '<div style="display:flex;gap:4px">' +
                                 '<button type="button" id="ls-coll-mission-3" class="ls-coll-mbtn ' + (collectorSettings.mission === 3 ? 'active' : '') + '" data-i18n="coll_transport">Nakliye</button>' +
-                                '<button type="button" id="ls-coll-mission-4" class="ls-coll-mbtn ' + (collectorSettings.mission === 4 ? 'active' : '') + '" data-i18n="coll_deploy">Konuşlandır</button>' +
+                                '<button type="button" id="ls-coll-mission-4" class="ls-coll-mbtn deploy ' + (collectorSettings.mission === 4 ? 'active' : '') + '" data-i18n="coll_deploy">Konuşlandır</button>' +
                             '</div>' +
                         '</div>' +
                         '<div class="ls-coll-row">' +
@@ -9067,12 +9436,12 @@
                 // COURIER TAB (POSTACI)
                 '<div id="tc-courier" class="ls-tc">' +
                     '<div id="ls-cour-card-origin" class="ls-coll-card">' +
-                        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">' +
+                        '<div class="ls-origin-head-row">' +
                             '<span class="ls-label" data-i18n="cour_origin_head">📮 Dağıtım Üssü (Çıkış Noktası)</span>' +
-                            '<button type="button" id="ls-cour-cur-btn" class="ls-btn-sm" style="background:#2c3e50;color:#00bcff;padding:2px 7px;font-size:10px;margin-left:auto;margin-right:6px;border:1px solid #334455;border-radius:3px;cursor:pointer" title="Çıkış noktasını şu an bulunduğunuz gezegen/ay yapar" data-i18n-title="cour_here_title" data-i18n="cour_here">Burası</button>' +
+                            '<button type="button" id="ls-cour-cur-btn" class="ls-btn-sm ls-btn-here" style="background:#8e44ad;color:#fff;padding:2px 7px;font-size:10px;margin-left:auto;margin-right:6px;border:1px solid #9b59b6;border-radius:3px;cursor:pointer;font-weight:bold" title="Çıkış noktasını şu an bulunduğunuz gezegen/ay yapar" data-i18n-title="cour_here_title" data-i18n="cour_here">Burası</button>' +
                             '<div style="display:flex;gap:4px">' +
                                 '<button type="button" id="ls-cour-mission-3" class="ls-coll-mbtn ' + (courierSettings.mission === 3 ? 'active' : '') + '" data-i18n="cour_transport">Nakliye</button>' +
-                                '<button type="button" id="ls-cour-mission-4" class="ls-coll-mbtn ' + (courierSettings.mission === 4 ? 'active' : '') + '" data-i18n="cour_deploy">Konuşlandır</button>' +
+                                '<button type="button" id="ls-cour-mission-4" class="ls-coll-mbtn deploy ' + (courierSettings.mission === 4 ? 'active' : '') + '" data-i18n="cour_deploy">Konuşlandır</button>' +
                             '</div>' +
                         '</div>' +
                         '<div class="ls-coll-row">' +
@@ -9093,7 +9462,7 @@
                             '<label class="ls-coll-chk"><input type="checkbox" id="ls-cour-ship-kn"> <span data-i18n="cour_kn">KN</span></label>' +
                             '<label class="ls-coll-chk"><input type="checkbox" id="ls-cour-ship-rehber"> <span data-i18n="cour_rehber">Rehber</span></label>' +
                         '</div>' +
-                        '<div class="ls-coll-row" style="align-items:center;gap:4px">' +
+                        '<div class="ls-extra-row">' +
                             '<label class="ls-coll-chk" style="width:96px;flex-shrink:0" title="Aktif olduğunda girilen tutarlar tüm seçili hedeflere otomatik uygulanır">' +
                                 '<input type="checkbox" id="ls-cour-sync-chk">' +
                                 '<span style="color:#00bcff;font-weight:bold" data-i18n="cour_sync_title">Genel Dağıtım</span>' +
@@ -9162,7 +9531,7 @@
                         '</div>' +
                     '</div>' +
 
-                    '<div class="ls-coll-card" style="background:#101b2b;border:1px dashed #2c3e50;flex:1;min-height:60px;display:flex;flex-direction:column">' +
+                    '<div class="ls-coll-card" style="background:#101b2b;border:1px dashed #2c3e50;flex:1;min-height:40px;display:flex;flex-direction:column">' +
                         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">' +
                             '<span style="font-size:11px;font-weight:bold;color:#d1d8e0" data-i18n="exp_preview_title">🧭 Rota Dağılımı Önizlemesi:</span>' +
                             '<span id="ls-exp-total-steps" style="font-size:10.5px;color:#bb86fc;font-weight:bold">0 Sefer</span>' +
@@ -9324,8 +9693,8 @@
         if (savedSize) {
             try {
                 const s = JSON.parse(savedSize);
-                if (s.w) panel.style.width = Math.max(280, Math.min(window.innerWidth - 30, s.w)) + 'px';
-                if (s.h) panel.style.height = Math.max(260, Math.min(window.innerHeight - 30, s.h)) + 'px';
+                if (s.w) panel.style.width = Math.max(320, Math.min(window.innerWidth - 30, s.w)) + 'px';
+                if (s.h) panel.style.height = Math.max(500, Math.min(window.innerHeight - 30, s.h)) + 'px';
             } catch (e) {}
         }
 
@@ -9371,6 +9740,30 @@
                 panel.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
             } catch (e) {}
         }
+
+        function updatePanelLayout() {
+            if (!panel) return;
+            const w = panel.offsetWidth;
+            const tabsEl = document.getElementById('ls-tabs');
+            if (tabsEl) {
+                if (w > 0 && w < 440) {
+                    tabsEl.classList.add('ls-tabs-stacked');
+                } else if (w >= 440) {
+                    tabsEl.classList.remove('ls-tabs-stacked');
+                }
+            }
+            if (w > 0 && w < 350) {
+                panel.classList.add('ls-compact');
+            } else {
+                panel.classList.remove('ls-compact');
+            }
+            if (w > 0 && w < 320) {
+                panel.classList.add('ls-narrow');
+            } else {
+                panel.classList.remove('ls-narrow');
+            }
+        }
+        updatePanelLayout();
 
         function ensurePanelInView() {
             if (panel.style.display === 'none') return;
@@ -9426,8 +9819,8 @@
                 let newDx = startDx;
                 let newDy = startDy;
 
-                const minW = 280, maxW = Math.max(minW, window.innerWidth - 30);
-                const minH = 260, maxH = Math.max(minH, window.innerHeight - 30);
+                const minW = 320, maxW = Math.max(minW, window.innerWidth - 30);
+                const minH = 500, maxH = Math.max(minH, window.innerHeight - 30);
 
                 if (resizing.includes('e')) {
                     const candidateW = Math.min(maxW, Math.max(minW, startW + deltaX));
@@ -9453,6 +9846,7 @@
                 panel.style.width = newW + 'px';
                 panel.style.height = newH + 'px';
                 panel.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+                updatePanelLayout();
                 return;
             }
 
@@ -9467,6 +9861,7 @@
             if (resizing) {
                 resizing = null;
                 ensurePanelInView();
+                updatePanelLayout();
                 localStorage.setItem(KEYS.POS, JSON.stringify({ x: dx, y: dy }));
                 localStorage.setItem(KEYS.SIZE, JSON.stringify({ w: panel.offsetWidth, h: panel.offsetHeight }));
             }
@@ -9553,24 +9948,94 @@
             if (first) { first.classList.add('active'); document.getElementById('tc-cart').classList.add('active'); }
         }
 
-        const tabsEl = document.getElementById('ls-tabs');
-        if (tabsEl) {
-            const updateTabsLayout = () => {
-                const w = tabsEl.offsetWidth;
-                if (w > 0 && w < 440) {
-                    tabsEl.classList.add('ls-tabs-stacked');
-                } else if (w >= 440) {
-                    tabsEl.classList.remove('ls-tabs-stacked');
-                }
-            };
-            if (typeof ResizeObserver !== 'undefined') {
-                new ResizeObserver(updateTabsLayout).observe(tabsEl);
+        if (typeof ResizeObserver !== 'undefined' && panel) {
+            new ResizeObserver(updatePanelLayout).observe(panel);
+        }
+        updatePanelLayout();
+
+        document.getElementById('ls-cart-sel-all')?.addEventListener('click', () => selectAllCartPlanets('all'));
+        document.getElementById('ls-cart-sel-none')?.addEventListener('click', () => selectAllCartPlanets('none'));
+        document.getElementById('ls-cart-copy')?.addEventListener('click', copyCart);
+        document.getElementById('ls-cart-clear')?.addEventListener('click', () => { cart = []; saveCart(); renderCart(); });
+
+        // Cart Ship Checkbox'ları (BN, KN, Rehber)
+        ['bn', 'kn', 'rehber'].forEach(st => {
+            const el = document.getElementById('ls-cart-ship-' + st);
+            if (el) {
+                el.addEventListener('change', () => {
+                    const prefs = getCartShipPrefs();
+                    prefs[st] = el.checked;
+                    saveCartShipPrefs(prefs);
+                    renderCart();
+                });
             }
-            updateTabsLayout();
+        });
+
+        // Ek Maliyet Sepete Ekle Butonu
+        const addExtraBtn = document.getElementById('ls-cart-add-extra-btn');
+        if (addExtraBtn) {
+            addExtraBtn.addEventListener('click', () => {
+                const mInput = document.getElementById('ls-cart-extra-m');
+                const cInput = document.getElementById('ls-cart-extra-c');
+                const dInput = document.getElementById('ls-cart-extra-d');
+
+                const m = mInput ? parseOgNum(mInput.value) : 0;
+                const c = cInput ? parseOgNum(cInput.value) : 0;
+                const d = dInput ? parseOgNum(dInput.value) : 0;
+
+                if (m <= 0 && c <= 0 && d <= 0) {
+                    alert(currentLang === 'tr' ? 'Lütfen eklenecek en az bir kaynak miktarı (Metal, Kristal veya Deuterium) girin!' : 'Please enter at least one resource amount (Metal, Crystal or Deuterium)!');
+                    return;
+                }
+
+                const groups = getCartGroups();
+                const selectedGroups = groups.filter(g => g.selected);
+
+                if (selectedGroups.length === 0) {
+                    alert(currentLang === 'tr' ? 'Lütfen ek maliyet eklenecek en az bir gezegen seçin (kutucukları işaretleyin)!' : 'Please select at least one planet to add extra cost to!');
+                    return;
+                }
+
+                selectedGroups.forEach(grp => {
+                    cart.push({
+                        id: Date.now() + Math.random().toString(36).substring(2, 6),
+                        name: t('cart_extra_title', 'Ek Maliyet'),
+                        level: null,
+                        planet: grp.planetName,
+                        coords: grp.coords,
+                        type: grp.type,
+                        metal: m,
+                        crystal: c,
+                        deuterium: d,
+                        count: 1,
+                        isDeduction: false,
+                        isExtraCost: true,
+                        checked: true
+                    });
+                });
+
+                saveCart();
+                renderCart();
+
+                if (mInput) mInput.value = '';
+                if (cInput) cInput.value = '';
+                if (dInput) dInput.value = '';
+
+                showCollectorToast(currentLang === 'tr' ? `⚡ Ek maliyet ${selectedGroups.length} gezegen sepetine eklendi!` : `⚡ Extra cost added to ${selectedGroups.length} planet carts!`);
+            });
         }
 
-        document.getElementById('ls-cart-clear').addEventListener('click', () => { cart = []; saveCart(); renderCart(); });
-        document.getElementById('ls-cart-copy').addEventListener('click', copyCart);
+        // Ek maliyet girdi kutularında blur olduğunda sayı formatlama
+        ['m', 'c', 'd'].forEach(k => {
+            const inp = document.getElementById('ls-cart-extra-' + k);
+            if (inp) {
+                inp.addEventListener('blur', () => {
+                    const val = parseOgNum(inp.value);
+                    if (val > 0) inp.value = fmt(val);
+                });
+            }
+        });
+
         renderCart();
 
         document.getElementById('ls-sg1').value = scanSettings.gStart;
@@ -9623,7 +10088,6 @@
                 alarmSettings.attackEnabled = attToggle.checked;
                 saveAlarmSettings();
                 checkThreatsInDOM();
-                scheduleNextBgCheck();
             });
         }
 
@@ -9633,22 +10097,6 @@
                 alarmSettings.espionageEnabled = espToggle.checked;
                 saveAlarmSettings();
                 checkThreatsInDOM();
-                scheduleNextBgCheck();
-            });
-        }
-
-        const desktopToggle = document.getElementById('ls-alarm-desktop-toggle');
-        if (desktopToggle) {
-            desktopToggle.checked = !!alarmSettings.desktopNotification;
-            desktopToggle.addEventListener('change', () => {
-                alarmSettings.desktopNotification = desktopToggle.checked;
-                saveAlarmSettings();
-                if (alarmSettings.desktopNotification) {
-                    triggerDesktopNotification(
-                        'LuckyStrike OGame Helper',
-                        currentLang === 'tr' ? '🔔 Masaüstü bildirimleri aktif edildi! Saldırı ve casusluklarda Windows bildirimi alacaksınız.' : '🔔 Desktop notifications enabled! You will receive Windows notifications on incoming attacks and espionage.'
-                    );
-                }
             });
         }
 
@@ -9698,21 +10146,23 @@
             muteCurrentThreat();
         });
 
-        document.getElementById('ls-alarm-att-test')?.addEventListener('click', async (e) => {
+        document.getElementById('ls-alarm-att-test')?.addEventListener('click', (e) => {
             e.preventDefault();
             try {
                 const sel = document.getElementById('ls-alarm-att-sound');
-                await playAttackAlertSound(sel ? sel.value : null);
+                const sound = sel ? sel.value : (alarmSettings.attackSound || 'klaxon');
+                playAttackAlertSound(sound);
             } catch (err) {
                 console.error('[LS] Saldırı testi hatası:', err);
             }
         });
 
-        document.getElementById('ls-alarm-esp-test')?.addEventListener('click', async (e) => {
+        document.getElementById('ls-alarm-esp-test')?.addEventListener('click', (e) => {
             e.preventDefault();
             try {
                 const sel = document.getElementById('ls-alarm-esp-sound');
-                await playEspionageAlertSound(sel ? sel.value : null);
+                const sound = sel ? sel.value : (alarmSettings.espionageSound || 'sonar_deep');
+                playEspionageAlertSound(sound);
             } catch (err) {
                 console.error('[LS] Sonda testi hatası:', err);
             }
@@ -9806,28 +10256,7 @@
         // Oyuncunun açık olan sekmesinde DOM'daki tehdit durumunu hafifçe tara (sadece yerel DOM)
         setInterval(checkThreatsInDOM, 2500);
 
-        // OGame'in kendi yaptığı AJAX çağrılarından eventList içeriğini pasif olarak yakala
-        try {
-            if (window.$ && typeof window.$.fn === 'object') {
-                window.$(document).ajaxComplete((event, xhr, settings) => {
-                    if (settings && settings.url && (settings.url.includes('eventList') || settings.url.includes('component=eventList'))) {
-                        if (xhr && xhr.responseText) parseThreatsFromHTML(xhr.responseText);
-                    }
-                });
-            }
-        } catch (e) {}
-
-        try {
-            const origXhrOpen = XMLHttpRequest.prototype.open;
-            XMLHttpRequest.prototype.open = function(method, url) {
-                if (url && typeof url === 'string' && (url.includes('eventList') || url.includes('component=eventList'))) {
-                    this.addEventListener('load', () => {
-                        if (this.responseText) parseThreatsFromHTML(this.responseText);
-                    });
-                }
-                return origXhrOpen.apply(this, arguments);
-            };
-        } catch (e) {}
+        // OGame'in kendi yaptığı AJAX çağrılarından eventList içeriği bridge.js (MAIN world) üzerinden LS_EVENT_LIST_RECEIVED ile yakalanır
 
         // ============================================================
         // DEBUG & TRACE LOGS LOGIC & CONTROLS
@@ -9884,7 +10313,7 @@
             const r3 = Array.from(debugFilterState.row3).join(', ');
 
             let out = '==================================================\n' +
-                      '  LuckyStrike OGame Helper v11.1 - Log Kayıtları\n' +
+                      '  LuckyStrike OGame Helper v11.2 - Log Kayıtları\n' +
                       '  Tarih: ' + nowStr + '\n' +
                       '  URL: ' + window.location.href + '\n' +
                       '  Filtreler: [Akış: ' + r1 + '] [Kapsam: ' + r2 + '] [Seviye: ' + r3 + ']\n' +
@@ -10275,8 +10704,6 @@
 
         setTimeout(() => {
             checkThreatsInDOM();
-            initBgWatcherWorker();
-            scheduleNextBgCheck();
         }, 1000);
     }
 
@@ -10295,8 +10722,8 @@
         let newText = `📥 ${baseText}`;
         if (data && data.level) {
             newText = `📥 ${baseText} (${data.level})`;
-        } else if (data && data.count > 1) {
-            newText = `📥 ${baseText} (x${data.count})`;
+        } else if (data && data.count > 0) {
+            newText = `📥 ${baseText} (x${fmt(data.count)})`;
         }
 
         if (btn.textContent !== newText) {
@@ -10361,6 +10788,21 @@
             stepperBox.appendChild(display);
             stepperBox.appendChild(upBtn);
             group.appendChild(stepperBox);
+        } else {
+            const qtyInput = popup.querySelector('#build_amount') ||
+                             popup.querySelector('input[name="amount"]') ||
+                             popup.querySelector('input#amount');
+            if (qtyInput) {
+                qtyInput.addEventListener('input', updateButtonLabel);
+                qtyInput.addEventListener('change', updateButtonLabel);
+                qtyInput.addEventListener('keyup', updateButtonLabel);
+            }
+            popup.addEventListener('click', (e) => {
+                if (e.target.closest('.allnone, .btn_fill, [data-action="max"], #allnone, .icon_max, .all, button')) {
+                    setTimeout(updateButtonLabel, 50);
+                    setTimeout(updateButtonLabel, 150);
+                }
+            });
         }
 
         const newBtn = document.createElement('button');
@@ -10405,6 +10847,6 @@
     checkAndRunCourierAssistant();
     checkAndRunExpeditionAssistant();
     scanAndSaveExpeditionTemplates();
-    console.log(LS, 'LuckyStrike OGame Helper v11.1 hazır!');
+    console.log(LS, 'LuckyStrike OGame Helper v11.2 hazır!');
 
 })();
