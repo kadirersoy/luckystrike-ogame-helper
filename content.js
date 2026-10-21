@@ -2,7 +2,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v12.1 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v12.2 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -2380,33 +2380,9 @@
 
         const targetType = parseInt(type, 10) || 1;
 
-        let needsChange = false;
-        if (galInp && String(galInp.value).trim() !== String(g).trim()) needsChange = true;
-        if (sysInp && String(sysInp.value).trim() !== String(s).trim()) needsChange = true;
-        if (posInp && String(posInp.value).trim() !== String(p).trim()) needsChange = true;
-        if (typeInp && String(typeInp.value).trim() !== String(targetType).trim()) needsChange = true;
-
-        if (targetType === 3) {
-            const moonBtn = document.querySelector('#mbutton, [data-type="3"], [data-planet-type="3"], #fleet2 .moon');
-            if (moonBtn && !moonBtn.classList.contains('selected') && !moonBtn.classList.contains('active')) {
-                needsChange = true;
-            }
-        } else {
-            const planetBtn = document.querySelector('#pbutton, [data-type="1"], [data-planet-type="1"], #fleet2 .planet');
-            if (planetBtn && !planetBtn.classList.contains('selected') && !planetBtn.classList.contains('active')) {
-                needsChange = true;
-            }
-        }
-
-        // Eğer zaten tüm koordinatlar ve tip doğruysa hiçbir şey yapma!
-        if (!needsChange) {
-            return;
-        }
-
         const setVal = (el, val) => {
             if (!el) return;
             const targetVal = String(val);
-            if (el.value === targetVal) return;
             try {
                 const proto = window.HTMLInputElement.prototype;
                 const nativeSetter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
@@ -2418,25 +2394,30 @@
             } catch (e) {
                 el.value = targetVal;
             }
+            try {
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+                el.dispatchEvent(new Event('change', { bubbles: true }));
+                el.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+            } catch (e) {}
         };
 
-        setVal(galInp, g);
-        setVal(sysInp, s);
-        setVal(posInp, p);
+        if (galInp && g) setVal(galInp, g);
+        if (sysInp && s) setVal(sysInp, s);
+        if (posInp && p) setVal(posInp, p);
         if (typeInp) setVal(typeInp, targetType);
 
-        if (galInp) { galInp.dispatchEvent(new Event('input', { bubbles: true })); galInp.dispatchEvent(new Event('change', { bubbles: true })); }
-        if (sysInp) { sysInp.dispatchEvent(new Event('input', { bubbles: true })); sysInp.dispatchEvent(new Event('change', { bubbles: true })); }
-        if (posInp) { posInp.dispatchEvent(new Event('input', { bubbles: true })); posInp.dispatchEvent(new Event('change', { bubbles: true })); }
-        if (typeInp) { typeInp.dispatchEvent(new Event('change', { bubbles: true })); }
-
         if (targetType === 3) {
-            const moonBtn = document.querySelector('#mbutton, [data-type="3"], [data-planet-type="3"], #fleet2 .moon');
+            const moonBtn = document.querySelector('#mbutton, [data-type="3"], [data-planet-type="3"], #fleet2 .moon, #fleet2 .planetType .moon');
             if (moonBtn && !moonBtn.classList.contains('selected') && !moonBtn.classList.contains('active')) {
                 try { moonBtn.click(); } catch (e) {}
             }
+        } else if (targetType === 2) {
+            const debrisBtn = document.querySelector('#dbutton, [data-type="2"], [data-planet-type="2"], #fleet2 .debris');
+            if (debrisBtn && !debrisBtn.classList.contains('selected') && !debrisBtn.classList.contains('active')) {
+                try { debrisBtn.click(); } catch (e) {}
+            }
         } else {
-            const planetBtn = document.querySelector('#pbutton, [data-type="1"], [data-planet-type="1"], #fleet2 .planet');
+            const planetBtn = document.querySelector('#pbutton, [data-type="1"], [data-planet-type="1"], #fleet2 .planet, #fleet2 .planetType .planet');
             if (planetBtn && !planetBtn.classList.contains('selected') && !planetBtn.classList.contains('active')) {
                 try { planetBtn.click(); } catch (e) {}
             }
@@ -6996,12 +6977,12 @@
         }
 
         summaryEl.innerHTML =
-            '<div style="display:flex;justify-content:space-between;align-items:center;width:100%">' +
+            '<div class="ls-cour-sum-row" style="font-size:11px">' +
                 `<span style="color:#8899aa">${checkedCount} ${t('cour_planets_count', 'hedef seçili')}</span>` +
-                `<span style="font-family:monospace"><span class="ls-coll-m">${formatShort(totalM)}</span> · <span class="ls-coll-k">${formatShort(totalC)}</span> · <span class="ls-coll-d">${formatShort(totalD)}</span></span>` +
+                `<span style="font-family:monospace;font-weight:bold"><span class="ls-coll-m">${formatShort(totalM)}</span> · <span class="ls-coll-k">${formatShort(totalC)}</span> · <span class="ls-coll-d">${formatShort(totalD)}</span></span>` +
             '</div>' +
-            '<div style="display:flex;justify-content:space-between;align-items:center;width:100%;font-size:10px;margin-top:2px;border-top:1px dashed #1a2c3f;padding-top:2px">' +
-                `<span style="color:#8899aa">Kargo İhtiyacı: <b style="color:#00bcff">${formatShort(totalCargo)}</b></span>` +
+            '<div class="ls-cour-sum-row ls-cour-sum-sub">' +
+                `<span style="color:#8899aa">Kargo İhtiyacı: <b style="color:#00bcff;font-family:monospace">${formatShort(totalCargo)}</b></span>` +
                 statusText +
             '</div>';
     }
@@ -7375,7 +7356,7 @@
 
         const firstItem = queue[0];
         const [g, s, p] = firstItem.coords.split(':');
-        const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${session.originId}&type=${session.originType}&galaxy=${g}&system=${s}&position=${p}&mission=${session.mission || 3}`;
+        const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${session.originId}&galaxy=${g}&system=${s}&position=${p}&type=${firstItem.type}&mission=${session.mission || 3}`;
         window.location.href = url;
     }
 
@@ -7399,34 +7380,39 @@
         const comp = new URLSearchParams(window.location.search).get('component');
         if (comp !== 'fleetdispatch') return;
 
-        // Çıkış üssünde miyiz kontrol et (cp kontrolü)
+        // Çıkış üssünde miyiz kontrol et (cp ve ay/gezegen tip kontrolü)
         if (session.originId && session.originId !== 'manual') {
             const currentCp = document.querySelector('meta[name="ogame-planet-id"]')?.getAttribute('content');
-            if (currentCp && String(currentCp) !== String(session.originId)) {
-                LS_LOGGER.dispatch('COURIER', `Dağıtım üssüne geçiliyor (cp: ${session.originId})...`);
+            const metaType = document.querySelector('meta[name="ogame-planet-type"]')?.getAttribute('content');
+            const isCurrentOnMoon = (metaType === 'moon');
+            const shouldBeOnMoon = (session.originType === 3);
+            const typeMismatch = (isCurrentOnMoon !== shouldBeOnMoon);
+
+            if ((currentCp && String(currentCp) !== String(session.originId)) || typeMismatch) {
+                LS_LOGGER.dispatch('COURIER', `Dağıtım üssüne geçiliyor (cp: ${session.originId}, tip: ${session.originType})...`);
                 const currentItem = session.queue[session.currentIndex];
                 const [g, s, p] = currentItem.coords.split(':');
-                const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${session.originId}&type=${session.originType}&galaxy=${g}&system=${s}&position=${p}&mission=${session.mission || 3}`;
+                const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${session.originId}&galaxy=${g}&system=${s}&position=${p}&type=${currentItem.type}&mission=${session.mission || 3}`;
                 window.location.href = url;
                 return;
             }
         }
 
-        // Filo 1 formu hazır olana kadar bekle
+        // Filo formu veya Step 2 hazır olana kadar bekle
         let pollCount = 0;
         const pollTimer = setInterval(() => {
             pollCount++;
             const fleetForm = document.getElementById('fleet1') || document.querySelector('form[name="shipsAlternative"]') || document.querySelector('#shipsAlternative');
             const hasInputs = Array.from(document.querySelectorAll('input.military, input.civil, input[name^="am"]')).length > 0;
+            const sendBtn = findSendFleetButton();
+            const isStep2Direct = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
 
-            if (fleetForm && hasInputs) {
+            if ((fleetForm && hasInputs) || isStep2Direct || pollCount > 30) {
                 clearInterval(pollTimer);
-                const currentItem = session.queue[session.currentIndex];
-                executeCourierDispatchStep(session, currentItem);
-            } else if (pollCount > 30) {
-                clearInterval(pollTimer);
-                const currentItem = session.queue[session.currentIndex];
-                executeCourierDispatchStep(session, currentItem);
+                setTimeout(() => {
+                    const currentItem = session.queue[session.currentIndex];
+                    executeCourierDispatchStep(session, currentItem);
+                }, 350);
             }
         }, 150);
     }
@@ -7513,20 +7499,34 @@
         const updateCourierBannerReady = () => {
             const btn = document.getElementById('ls-banner-send-btn');
             if (btn) {
-                btn.disabled = false;
-                btn.style.background = '#27ae60';
-                btn.style.color = '#fff';
-                btn.style.cursor = 'pointer';
-                btn.innerText = '🚀 ' + t('coll_hud_send') + ' (Space)';
+                const sendBtn = findSendFleetButton();
+                const isSendBtnDisabled = sendBtn && (sendBtn.classList.contains('off') || sendBtn.classList.contains('disabled') || sendBtn.hasAttribute('disabled'));
+                const hasError = Array.from(document.querySelectorAll('#fleet2 p, #fleet2 span, #fleet2 div')).some(el => (el.textContent || '').includes('Bu görevi başlatamazsın'));
+
+                if (isSendBtnDisabled || hasError) {
+                    btn.disabled = false;
+                    btn.style.background = '#e67e22';
+                    btn.style.color = '#fff';
+                    btn.style.cursor = 'pointer';
+                    btn.innerText = '⚠️ Hedefi Tekrar Dene';
+                } else {
+                    btn.disabled = false;
+                    btn.style.background = '#27ae60';
+                    btn.style.color = '#fff';
+                    btn.style.cursor = 'pointer';
+                    btn.innerText = '🚀 ' + t('coll_hud_send') + ' (Space)';
+                }
             }
         };
 
         const prepareStep2 = () => {
             if (isStepCancelled) return;
             const missionId = session.mission || 3;
+
             setFleetTargetCoords(g, s, p, currentItem.type);
             setFleetMission(missionId);
             fillFleetResources(metLoad, criLoad, deuLoad);
+
             window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
                 detail: { type: 'SELECT_MISSION', missionId: missionId }
             }));
@@ -7535,83 +7535,140 @@
             }));
 
             let checkCount = 0;
+            let readyStreak = 0;
             const step2CheckTimer = setInterval(() => {
                 if (isStepCancelled) {
                     clearInterval(step2CheckTimer);
                     return;
                 }
                 checkCount++;
+
+                // Hedef koordinatların ve tipin doğruluğunu kontrol et
+                const galInp = document.getElementById('galaxy') || document.querySelector('input[name="galaxy"]');
+                const sysInp = document.getElementById('system') || document.querySelector('input[name="system"]');
+                const posInp = document.getElementById('position') || document.querySelector('input[name="position"]');
+                const typeInp = document.getElementById('type') || document.querySelector('input[name="type"]');
+
+                const targetType = parseInt(currentItem.type, 10) || 1;
+                const coordsMatch = galInp && sysInp && posInp &&
+                                    String(galInp.value).trim() === String(g).trim() &&
+                                    String(sysInp.value).trim() === String(s).trim() &&
+                                    String(posInp.value).trim() === String(p).trim();
+
+                let typeMatch = true;
+                if (typeInp && String(typeInp.value).trim() !== String(targetType).trim()) {
+                    typeMatch = false;
+                }
+                if (targetType === 3) {
+                    const moonBtn = document.querySelector('#mbutton, [data-type="3"], [data-planet-type="3"], #fleet2 .moon, #fleet2 .planetType .moon');
+                    if (moonBtn && !moonBtn.classList.contains('selected') && !moonBtn.classList.contains('active')) {
+                        typeMatch = false;
+                    }
+                } else if (targetType === 1) {
+                    const planetBtn = document.querySelector('#pbutton, [data-type="1"], [data-planet-type="1"], #fleet2 .planet, #fleet2 .planetType .planet');
+                    if (planetBtn && !planetBtn.classList.contains('selected') && !planetBtn.classList.contains('active')) {
+                        typeMatch = false;
+                    }
+                }
+
+                if (!coordsMatch || !typeMatch || checkCount <= 3) {
+                    setFleetTargetCoords(g, s, p, currentItem.type);
+                }
+
                 const mBtn = document.querySelector('#missionButton' + missionId + ', [data-mission="' + missionId + '"]');
                 const isMissionActive = mBtn && (mBtn.classList.contains('selected') || mBtn.classList.contains('active'));
                 if (!isMissionActive) setFleetMission(missionId);
                 fillFleetResources(metLoad, criLoad, deuLoad);
 
                 const sendBtn = findSendFleetButton();
-                const isSendBtnReady = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
+                const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
+                const isSendBtnDisabled = sendBtn && (sendBtn.classList.contains('off') || sendBtn.classList.contains('disabled') || sendBtn.hasAttribute('disabled'));
 
-                if ((isMissionActive && isSendBtnReady && checkCount >= 2) || checkCount > 15) {
+                const missionError = document.querySelector('.fleet_dispatch_error, .dispatchError, #missionError, #fleet2 .error') ||
+                                     Array.from(document.querySelectorAll('#fleet2 p, #fleet2 span, #fleet2 div')).find(el => (el.textContent || '').includes('Bu görevi başlatamazsın'));
+
+                const isActuallyReady = coordsMatch && typeMatch && isMissionActive && isSendBtnVisible && !isSendBtnDisabled && !missionError;
+
+                if (isActuallyReady) {
+                    readyStreak++;
+                } else {
+                    readyStreak = 0;
+                }
+
+                if (readyStreak >= 2 || checkCount > 30) {
                     clearInterval(step2CheckTimer);
                     updateCourierBannerReady();
                 }
             }, 100);
         };
 
+        // Eğer sayfa zaten Step 2'deyse doğrudan Step 2 hazırlığına geç
+        const devamBtnInit = document.getElementById('continueToFleet2') || document.querySelector('button.continue') || document.querySelector('a.continue');
+        const isStep1ActiveInit = devamBtnInit && (devamBtnInit.offsetWidth > 0 || window.getComputedStyle(devamBtnInit).display !== 'none');
+        const sendBtnInit = findSendFleetButton();
+        const isSendBtnVisibleInit = sendBtnInit && (sendBtnInit.offsetWidth > 0 || window.getComputedStyle(sendBtnInit).display !== 'none');
+        const isAlreadyOnStep2 = !isStep1ActiveInit && isSendBtnVisibleInit;
+
         let ensureShipsTimer = null;
-        const targetShipTotal = bnCount + knCount + rehberCount;
-        if (targetShipTotal > 0) {
-            let shipTries = 0;
-            ensureShipsTimer = setInterval(() => {
-                if (isStepCancelled) {
-                    clearInterval(ensureShipsTimer);
-                    return;
-                }
-                shipTries++;
-                const { total } = getSelectedShipsSummary();
-                if (total > 0 || shipTries > 6) {
-                    clearInterval(ensureShipsTimer);
-                    setTimeout(() => {
-                        if (isStepCancelled) return;
-                        clickDevamButton();
-                        window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                            detail: { type: 'SUBMIT_FLEET1' }
-                        }));
+        if (isAlreadyOnStep2) {
+            setTimeout(prepareStep2, 100);
+        } else {
+            const targetShipTotal = bnCount + knCount + rehberCount;
+            if (targetShipTotal > 0) {
+                let shipTries = 0;
+                ensureShipsTimer = setInterval(() => {
+                    if (isStepCancelled) {
+                        clearInterval(ensureShipsTimer);
+                        return;
+                    }
+                    shipTries++;
+                    const { total } = getSelectedShipsSummary();
+                    if (total > 0 || shipTries > 6) {
+                        clearInterval(ensureShipsTimer);
+                        setTimeout(() => {
+                            if (isStepCancelled) return;
+                            clickDevamButton();
+                            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                                detail: { type: 'SUBMIT_FLEET1' }
+                            }));
 
-                        let step2Tries = 0;
-                        const step2Interval = setInterval(() => {
-                            if (isStepCancelled) {
-                                clearInterval(step2Interval);
-                                return;
-                            }
-                            step2Tries++;
-                            const devamBtn = document.getElementById('continueToFleet2') || document.querySelector('button.continue') || document.querySelector('a.continue');
-                            const isStep1StillActive = devamBtn && (devamBtn.offsetWidth > 0 || window.getComputedStyle(devamBtn).display !== 'none');
-                            const sendBtn = findSendFleetButton();
-                            const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
-                            const isStep2Active = !isStep1StillActive && isSendBtnVisible;
-
-                            if (isStep2Active) {
-                                clearInterval(step2Interval);
-                                setTimeout(prepareStep2, 100);
-                            } else {
-                                if (step2Tries % 5 === 0) {
-                                    clickDevamButton();
-                                    window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                                        detail: { type: 'SUBMIT_FLEET1' }
-                                    }));
+                            let step2Tries = 0;
+                            const step2Interval = setInterval(() => {
+                                if (isStepCancelled) {
+                                    clearInterval(step2Interval);
+                                    return;
                                 }
-                                if (step2Tries > 30) {
+                                step2Tries++;
+                                const devamBtn = document.getElementById('continueToFleet2') || document.querySelector('button.continue') || document.querySelector('a.continue');
+                                const isStep1StillActive = devamBtn && (devamBtn.offsetWidth > 0 || window.getComputedStyle(devamBtn).display !== 'none');
+                                const sendBtn = findSendFleetButton();
+                                const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
+                                const isStep2Active = !isStep1StillActive && isSendBtnVisible;
+
+                                if (isStep2Active) {
                                     clearInterval(step2Interval);
                                     setTimeout(prepareStep2, 100);
+                                } else {
+                                    if (step2Tries % 5 === 0) {
+                                        clickDevamButton();
+                                        window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                                            detail: { type: 'SUBMIT_FLEET1' }
+                                        }));
+                                    }
+                                    if (step2Tries > 30) {
+                                        clearInterval(step2Interval);
+                                        setTimeout(prepareStep2, 100);
+                                    }
                                 }
-                            }
-                        }, 100);
-                    }, 200);
-                } else {
-                    setShipAmount(203, bnCount);
-                    setShipAmount(202, knCount);
-                    setShipAmount(219, rehberCount);
-                }
-            }, 150);
+                            }, 100);
+                        }, 200);
+                    } else {
+                        setShipAmount(203, bnCount);
+                        setShipAmount(202, knCount);
+                        setShipAmount(219, rehberCount);
+                    }
+                }, 150);
+            }
         }
 
         // Asistan Banner'ını Çiz
@@ -7718,10 +7775,25 @@
             }
 
             const sendBtn = findSendFleetButton();
-            const isSendBtnReady = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
+            const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
+            const isSendBtnDisabled = sendBtn && (sendBtn.classList.contains('off') || sendBtn.classList.contains('disabled') || sendBtn.hasAttribute('disabled'));
+            const hasMissionError = Array.from(document.querySelectorAll('#fleet2 p, #fleet2 span, #fleet2 div')).some(el => (el.textContent || '').includes('Bu görevi başlatamazsın'));
 
-            if (isSendBtnReady) {
+            if (isSendBtnVisible && !isSendBtnDisabled && !hasMissionError) {
                 dispatchSendFleetButton();
+            } else if (isSendBtnVisible) {
+                if (sendBtnEl) {
+                    sendBtnEl.disabled = true;
+                    sendBtnEl.style.background = '#e67e22';
+                    sendBtnEl.innerText = '⏳ Hedef Doğrulanıyor...';
+                }
+                const [g, s, p] = currentItem.coords.split(':');
+                setFleetTargetCoords(g, s, p, currentItem.type);
+                setFleetMission(session.mission || 3);
+                fillFleetResources(details.met, details.cri, details.deu);
+                if (typeof details.prepareStep2 === 'function') {
+                    setTimeout(details.prepareStep2, 200);
+                }
             } else {
                 clickDevamButton();
                 window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
@@ -7739,9 +7811,9 @@
             if (banner) {
                 banner.innerHTML = '<div style="font-size:12px;color:#e67e22;padding:6px;font-weight:bold">🔄 Adım yeniden deneniyor...</div>';
             }
-            setTimeout(() => {
-                executeCourierDispatchStep(session, currentItem);
-            }, 150);
+            const [g, s, p] = currentItem.coords.split(':');
+            const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${session.originId}&galaxy=${g}&system=${s}&position=${p}&type=${currentItem.type}&mission=${session.mission || 3}`;
+            window.location.href = url;
         };
 
         const dispatchSendFleetButton = () => {
@@ -7775,7 +7847,7 @@
                 if (session.currentIndex < session.queue.length) {
                     const nextItem = session.queue[session.currentIndex];
                     const [ng, ns, np] = nextItem.coords.split(':');
-                    const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${session.originId}&type=${session.originType}&galaxy=${ng}&system=${ns}&position=${np}&mission=${session.mission || 3}`;
+                    const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${session.originId}&galaxy=${ng}&system=${ns}&position=${np}&type=${nextItem.type}&mission=${session.mission || 3}`;
                     window.location.href = url;
                 } else {
                     sessionStorage.removeItem(KEYS.COURIER_RUN);
@@ -7806,7 +7878,7 @@
                 if (session.currentIndex < session.queue.length) {
                     const nextItem = session.queue[session.currentIndex];
                     const [ng, ns, np] = nextItem.coords.split(':');
-                    const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${session.originId}&type=${session.originType}&galaxy=${ng}&system=${ns}&position=${np}&mission=${session.mission || 3}`;
+                    const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${session.originId}&galaxy=${ng}&system=${ns}&position=${np}&type=${nextItem.type}&mission=${session.mission || 3}`;
                     window.location.href = url;
                 } else {
                     sessionStorage.removeItem(KEYS.COURIER_RUN);
@@ -9074,6 +9146,10 @@
             '.ls-coll-dest{opacity:0.6}',
             '.ls-coll-dest .note{font-size:9.5px;color:#8899aa;width:68px;text-align:center;flex-shrink:0}',
             '.ls-coll-sum{display:flex;justify-content:space-between;align-items:center;font-size:11px;margin:8px 0 6px 0;flex-shrink:0}',
+            '#ls-cour-summary{display:flex;flex-direction:column;gap:5px;margin:8px 0 6px 0;flex-shrink:0;width:100%;box-sizing:border-box}',
+            '#ls-cour-summary .ls-cour-sum-row{display:flex;justify-content:space-between;align-items:center;width:100%}',
+            '#ls-cour-summary .ls-cour-sum-sub{border-top:1px dashed rgba(255,255,255,0.12);padding-top:4px;font-size:10.5px}',
+            '#ls-panel.theme-fb #ls-cour-summary .ls-cour-sum-sub{border-top-color:rgba(255,230,0,0.2)}',
 
             /* Collector & Courier Rows Scaling */
             '#ls-panel.ls-compact .ls-coll-prow, #ls-panel.ls-compact .ls-coll-mrow{gap:4px;padding:3px 4px}',
@@ -9239,7 +9315,7 @@
         panel.id = 'ls-panel';
         panel.innerHTML =
             '<div id="ls-header">' +
-                '<span id="ls-header-title">' + boltSvg + ' LuckyStrike Helper <span style="font-size:10px;color:#8899aa;font-weight:normal;opacity:0.8">v12.1</span></span>' +
+                '<span id="ls-header-title">' + boltSvg + ' LuckyStrike Helper <span style="font-size:10px;color:#8899aa;font-weight:normal;opacity:0.8">v12.2</span></span>' +
                 '<div style="display:flex;align-items:center;gap:6px">' +
                     '<button id="ls-header-stop-btn" class="ls-btn-d ls-btn-sm" style="display:none;padding:2px 7px;font-size:10px;align-items:center;gap:3px;cursor:pointer" title="Tekrarlayan bu alarmı sustur">⏹️ Sustur</button>' +
                     '<span id="ls-close">✖</span>' +
@@ -9620,8 +9696,14 @@
                     '<div id="ls-cour-list" class="ls-coll-list"></div>' +
 
                     '<div id="ls-cour-summary" class="ls-coll-sum">' +
-                        '<span style="color:#8899aa">0 hedef seçili</span>' +
-                        '<span style="font-family:monospace"><span class="ls-coll-m">0</span> · <span class="ls-coll-k">0</span> · <span class="ls-coll-d">0</span></span>' +
+                        '<div class="ls-cour-sum-row" style="font-size:11px">' +
+                            '<span style="color:#8899aa">0 hedef seçili</span>' +
+                            '<span style="font-family:monospace;font-weight:bold"><span class="ls-coll-m">0</span> · <span class="ls-coll-k">0</span> · <span class="ls-coll-d">0</span></span>' +
+                        '</div>' +
+                        '<div class="ls-cour-sum-row ls-cour-sum-sub">' +
+                            '<span style="color:#8899aa">Kargo İhtiyacı: <b style="color:#00bcff;font-family:monospace">0</b></span>' +
+                            '<span style="color:#8899aa">Tutar bekleniyor</span>' +
+                        '</div>' +
                     '</div>' +
 
                     '<button id="ls-cour-start-btn" class="ls-cour-go" data-i18n="cour_start_btn">📬 Dağıtımı Başlat</button>' +
@@ -10444,7 +10526,7 @@
             const r3 = Array.from(debugFilterState.row3).join(', ');
 
             let out = '==================================================\n' +
-                      '  LuckyStrike OGame Helper v12.1 - Log Kayıtları\n' +
+                      '  LuckyStrike OGame Helper v12.2 - Log Kayıtları\n' +
                       '  Tarih: ' + nowStr + '\n' +
                       '  URL: ' + window.location.href + '\n' +
                       '  Filtreler: [Akış: ' + r1 + '] [Kapsam: ' + r2 + '] [Seviye: ' + r3 + ']\n' +
@@ -10989,6 +11071,6 @@
     checkAndRunCourierAssistant();
     checkAndRunExpeditionAssistant();
     scanAndSaveExpeditionTemplates();
-    console.log(LS, 'LuckyStrike OGame Helper v12.1 hazır!');
+    console.log(LS, 'LuckyStrike OGame Helper v12.2 hazır!');
 
 })();

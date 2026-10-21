@@ -133,44 +133,51 @@
                 }
             } else if (d.type === 'SET_TARGET') {
                 var targetType = parseInt(d.targetType, 10) || 1;
-                bridgeLog('ACTION', 'BRIDGE', 'Hedef koordinat ayarlandı: [' + d.g + ':' + d.s + ':' + d.p + '] Tip: ' + targetType);
-                var changed = false;
+                bridgeLog('ACTION', 'BRIDGE', 'Hedef koordinat ayarlanıyor: [' + d.g + ':' + d.s + ':' + d.p + '] Tip: ' + targetType);
                 if (window.$) {
                     var $g = $('#galaxy, input[name="galaxy"]');
                     var $s = $('#system, input[name="system"]');
                     var $p = $('#position, input[name="position"]');
                     var $t = $('#type, input[name="type"]');
 
-                    if (d.g && $g.length && String($g.val()).trim() !== String(d.g).trim()) { $g.val(d.g); changed = true; }
-                    if (d.s && $s.length && String($s.val()).trim() !== String(d.s).trim()) { $s.val(d.s); changed = true; }
-                    if (d.p && $p.length && String($p.val()).trim() !== String(d.p).trim()) { $p.val(d.p); changed = true; }
-                    if ($t.length && String($t.val()).trim() !== String(targetType).trim()) { $t.val('' + targetType); changed = true; }
+                    if ($g.length && d.g) $g.val(d.g).trigger('input').trigger('change').trigger('keyup');
+                    if ($s.length && d.s) $s.val(d.s).trigger('input').trigger('change').trigger('keyup');
+                    if ($p.length && d.p) $p.val(d.p).trigger('input').trigger('change').trigger('keyup');
+                    if ($t.length) $t.val('' + targetType).trigger('change');
 
                     if (targetType === 3) {
-                        var $m = $('#mbutton, #fleet2 #mbutton, [data-type="3"], [data-planet-type="3"], a.moon');
+                        var $m = $('#mbutton, #fleet2 #mbutton, [data-type="3"], [data-planet-type="3"], a.moon, .moon, #fleet2 .planetType .moon');
                         if ($m.length && !$m.hasClass('selected') && !$m.hasClass('active')) {
                             $m.trigger('click');
-                            changed = true;
+                        }
+                    } else if (targetType === 2) {
+                        var $d = $('#dbutton, #fleet2 #dbutton, [data-type="2"], [data-planet-type="2"], a.debris, .debris');
+                        if ($d.length && !$d.hasClass('selected') && !$d.hasClass('active')) {
+                            $d.trigger('click');
                         }
                     } else {
-                        var $pb = $('#pbutton, #fleet2 #pbutton, [data-type="1"], [data-planet-type="1"], a.planet');
+                        var $pb = $('#pbutton, #fleet2 #pbutton, [data-type="1"], [data-planet-type="1"], a.planet, .planet, #fleet2 .planetType .planet');
                         if ($pb.length && !$pb.hasClass('selected') && !$pb.hasClass('active')) {
                             $pb.trigger('click');
-                            changed = true;
                         }
                     }
 
-                    if (changed) {
-                        if ($g.length) $g.trigger('change').trigger('input');
-                        if ($s.length) $s.trigger('change').trigger('input');
-                        if ($p.length) $p.trigger('change').trigger('input');
-                        if (window.fleetDispatcher) {
-                            if (typeof window.fleetDispatcher.checkTarget === 'function') {
-                                window.fleetDispatcher.checkTarget();
-                            } else if (typeof window.fleetDispatcher.updateTarget === 'function') {
+                    if (window.fleetDispatcher) {
+                        if (d.g) window.fleetDispatcher.targetGalaxy = parseInt(d.g, 10);
+                        if (d.s) window.fleetDispatcher.targetSystem = parseInt(d.s, 10);
+                        if (d.p) window.fleetDispatcher.targetPosition = parseInt(d.p, 10);
+                        window.fleetDispatcher.targetPlanetType = targetType;
+                        try {
+                            if (typeof window.fleetDispatcher.updateTarget === 'function') {
                                 window.fleetDispatcher.updateTarget();
                             }
-                        }
+                            if (typeof window.fleetDispatcher.checkTarget === 'function') {
+                                window.fleetDispatcher.checkTarget();
+                            }
+                            if (typeof window.fleetDispatcher.refresh === 'function') {
+                                window.fleetDispatcher.refresh();
+                            }
+                        } catch (err) {}
                     }
                 }
             } else if (d.type === 'SELECT_MISSION') {

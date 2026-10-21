@@ -1,4 +1,4 @@
-# ⚡ LuckyStrike OGame Helper (v12.1)
+# ⚡ LuckyStrike OGame Helper (v12.2)
 
 [English](#-english-description) | [Türkçe](#-türkçe-açıklama)
 
@@ -315,7 +315,7 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ## 🚀 Kurulum / Installation
 
 ### Chrome & Microsoft Edge
-1. İndirin / Download: [`luckystrike-ogame-helper-v12.1.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
+1. İndirin / Download: [`luckystrike-ogame-helper-v12.2.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
 2. Tarayıcıda eklentiler sayfasına gidin / Open extensions page:
    - **Chrome:** `chrome://extensions`
    - **Edge:** `edge://extensions`
@@ -325,6 +325,16 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ---
 
 ## 📝 Sürüm Geçmişi / Changelog
+
+### v12.2
+- **📬 Postacı Asistanı Ekranda Takılma Düzeltmesi:**
+  - OGame filo gönderim adımında (Step 2) OGame'in hedef koordinatları ve Ay seçimini varsayılana sıfırlaması sonucu ortaya çıkan *"Bu görevi başlatamazsın"* hatası ve buton pasifliği kökten çözüldü.
+  - `bridge.js` üzerinden `fleetDispatcher` dahili hedef özellikleri (`targetGalaxy`, `targetSystem`, `targetPosition`, `targetPlanetType`) doğrudan eşitlendi.
+  - Step 2 hazırlık döngüsüne kesintisiz koordinat & Ay doğrulaması eklendi; OGame koordinatları sıfırlamaya çalışsa dahi doğru hedef anında geri yükleniyor.
+  - Çıkış üssü Ay olduğunda hedef koordinat URL'sine yanlışlıkla basılan `type` parametresi düzeltilerek hedefin kendi gerçek tipi (`&type=${item.type}`) sağlandı.
+  - Pasif buton kontrolü ve *"Tekrarla (🔄)"* butonunda temiz sayfa yenilemesi entegre edildi.
+- **📏 Postacı Maden ve Kargo Özeti Düzeni:**
+  - Dağıtım listesinin altındaki toplam maden tutarları ile kargo ihtiyacı yazısının birbirine yapışması engellendi; alan şık ve ferah 2 satırlı düzen ve kesikli ayırıcı çizgi ile ayrıldı.
 
 ### v12.1
 - **📐 CSS Ölçekleme ve Dar Panel Sözdizimi Düzeltmesi:**
