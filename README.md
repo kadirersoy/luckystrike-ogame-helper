@@ -1,4 +1,4 @@
-# ⚡ LuckyStrike OGame Helper (v12.2)
+# ⚡ LuckyStrike OGame Helper (v12.3)
 
 [English](#-english-description) | [Türkçe](#-türkçe-açıklama)
 
@@ -315,7 +315,7 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ## 🚀 Kurulum / Installation
 
 ### Chrome & Microsoft Edge
-1. İndirin / Download: [`luckystrike-ogame-helper-v12.2.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
+1. İndirin / Download: [`luckystrike-ogame-helper-v12.3.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
 2. Tarayıcıda eklentiler sayfasına gidin / Open extensions page:
    - **Chrome:** `chrome://extensions`
    - **Edge:** `edge://extensions`
@@ -325,6 +325,19 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ---
 
 ## 📝 Sürüm Geçmişi / Changelog
+
+### v12.3
+- **🔭 Harabe Avcısı (16. Slot Sonsuz Uzaklar / Expedition) Tam Düzeltmesi:**
+  - 16. slot harabelerinin listeden kendi kendine silinmesine yol açan gizli başlangıç filtresi (1M sınırı ve kristal şartı) kökten kaldırıldı.
+  - OGame'in gezegen adı hücresindeki `title="Sonsuz Uzaklıklar"` niteliği ile enkaz hücresi arasındaki seçici çakışması giderildi; yalnızca `.cellDebris` izole edilerek güvenli çok katmanlı okuma sağlandı.
+  - OGame'in kullandığı tüm tooltip varyasyonları (`#debrisExpedition`, `#expeditionDebris`, `#debris16`) ve DOM öznitelikleri eksiksiz desteklendi.
+  - Tablo koordinat doğrulama (`getRenderedGalaxyCoords`) ve hücre doluluk teyidine dayalı **Güvenli Temizlik (Safe Deletion)** eklendi; enkaz ikonu ekranda olduğu sürece harabe listeden asla silinmez.
+- **⚡ Hızlı Galaksi Geçişlerinde Kesintisiz Tarama (Bridge Entegrasyonu):**
+  - `bridge.js` üzerinden OGame'in jQuery `ajaxComplete` döngüsü `LS_GALAXY_AJAX_COMPLETE` olayı ile `content.js`'e bağlandı.
+  - Ok tuşlarına hızlıca basıldığında zamanlayıcıların birbirini iptal etmesi engellendi; kademeli kuyruk yapısıyla hiçbir sistem atlanmadan taranıyor.
+- **🛡️ Chrome Eklenti Hata Temizliği (Zero Extension Errors):**
+  - `forceRefreshAllUniverseData()` fonksiyonundaki yakalanmayan `throw err;` istisnası ve `console.error` çağrıları temizlendi.
+  - `ensureAudioContext()` Web Audio API Autoplay kurallarına uygun hale getirildi; Chrome Extensions panelinde kırmızı hata uyarıları tamamen sıfırlandı.
 
 ### v12.2
 - **📬 Postacı Asistanı Ekranda Takılma Düzeltmesi:**

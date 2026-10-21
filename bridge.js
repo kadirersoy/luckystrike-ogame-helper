@@ -362,6 +362,21 @@
                         } catch (e) {}
                     }
                 }
+                if (settings && settings.url && (
+                    settings.url.indexOf('galaxyContent') !== -1 ||
+                    settings.url.indexOf('component=galaxy') !== -1 ||
+                    settings.url.indexOf('page=galaxy') !== -1
+                )) {
+                    try {
+                        window.dispatchEvent(new CustomEvent('LS_GALAXY_AJAX_COMPLETE', {
+                            detail: {
+                                url: settings.url,
+                                data: settings.data || '',
+                                responseText: xhr ? xhr.responseText : ''
+                            }
+                        }));
+                    } catch (e) {}
+                }
                 var isTrace = !!window.LS_TRACE_ENABLED;
                 var isDebug = !!window.LS_DEBUG_ENABLED;
                 if ((isTrace || isDebug) && settings && settings.url) {

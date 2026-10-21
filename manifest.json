@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LuckyStrike OGame Helper",
-  "version": "12.2",
+  "version": "12.3",
   "permissions": [
     "storage"
   ],
