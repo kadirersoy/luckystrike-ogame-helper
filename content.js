@@ -2,7 +2,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v13.0 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v13.1 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -2794,12 +2794,13 @@
                 // ==========================================
                 // YAKIT ÖNCELİKLİ (Fuel-Saving Mode)
                 // 1. Full BN (Minimum Yakıt)
-                // 2. BN + KN (Yakıtı artırmadan açığı kapatma)
-                // 3. Full KN (BN yoksa / kapalıysa)
-                // 4. BN + Rehber (KN kapalıysa BN açığını Rehber ile kapatma)
-                // 5. KN + Rehber (BN kapalıysa KN açığını Rehber ile kapatma)
-                // 6. Full Rehber (Yalnızca Rehber)
-                // 7. BN + KN + Rehber (Son Çare / Cascade)
+                // 2. BN + KN (Eldeki BN'leri doldurur, kalanı KN ile kapatır)
+                // 3. Full KN (BN hiç yoksa veya kapalıysa)
+                // 4. BN + KN + Rehber (BN ve KN yetmiyorsa; kalanı minimum Rehber ile kapatır)
+                // 5. BN + Rehber (KN hiç yoksa; BN + kalan Rehber)
+                // 6. KN + Rehber (BN hiç yoksa; KN + kalan Rehber)
+                // 7. Full Rehber (Yalnızca Rehber)
+                // 8. Cascade (Kapasite yetersizse)
                 // ==========================================
                 if (useBN && availBN >= reqBN) {
                     bnCount = reqBN;
@@ -2809,6 +2810,12 @@
                     knCount = Math.min(availKN, Math.ceil(rem / capKN));
                 } else if (useKN && availKN >= reqKN) {
                     knCount = reqKN;
+                } else if (useBN && useKN && useRehber && availBN > 0 && availKN > 0 && availRehber > 0 && (totalCapBN + totalCapKN + totalCapRehber >= needed)) {
+                    bnCount = availBN;
+                    let rem = Math.max(0, needed - (bnCount * capBN));
+                    knCount = Math.min(availKN, Math.ceil(rem / capKN));
+                    rem = Math.max(0, rem - (knCount * capKN));
+                    rehberCount = Math.min(availRehber, Math.ceil(rem / capRehber));
                 } else if (useBN && useRehber && availBN > 0 && availRehber > 0 && (totalCapBN + totalCapRehber >= needed)) {
                     bnCount = availBN;
                     const rem = Math.max(0, needed - (bnCount * capBN));
@@ -2839,11 +2846,12 @@
                 // HIZ ÖNCELİKLİ (Speed Mode)
                 // 1. Full Rehber (Maksimum Hız)
                 // 2. Full KN (Hızlı & Çok Düşük Yakıt)
-                // 3. KN + Rehber (Hızı BN'ye düşürmeden hızlı taşıma)
-                // 4. Full BN (Hız zaten BN'ye düşecekse minimum yakıt ve az gemi)
-                // 5. BN + KN (BN yetmiyorsa açığı ucuz KN ile kapatma, Rehber yakmama)
-                // 5b. BN + Rehber (KN yoksa veya kapalıysa, BN + Rehber ile taşıma)
-                // 6. BN + KN + Rehber (Son Çare - Eldeki tüm filoyu seferber etme)
+                // 3. KN + Rehber (Hızı BN'ye düşürmeden; tüm KN'leri alır, kalanı Rehber ile kapatır)
+                // 4. Full BN (Hız zaten BN'ye düşecekse)
+                // 5. BN + KN (BN hızındayız; BN'leri doldurur, kalanı KN ile kapatır)
+                // 6. BN + KN + Rehber (BN ve KN yetmiyorsa; kalanı minimum Rehber ile tamamlar)
+                // 7. BN + Rehber (KN hiç yoksa; BN + kalan Rehber)
+                // 8. Cascade (Kapasite yetersizse)
                 // ==========================================
                 if (useRehber && availRehber >= reqRehber) {
                     rehberCount = reqRehber;
@@ -2859,6 +2867,12 @@
                     bnCount = availBN;
                     const rem = Math.max(0, needed - (bnCount * capBN));
                     knCount = Math.min(availKN, Math.ceil(rem / capKN));
+                } else if (useBN && useKN && useRehber && availBN > 0 && availKN > 0 && availRehber > 0 && (totalCapBN + totalCapKN + totalCapRehber >= needed)) {
+                    bnCount = availBN;
+                    let rem = Math.max(0, needed - (bnCount * capBN));
+                    knCount = Math.min(availKN, Math.ceil(rem / capKN));
+                    rem = Math.max(0, rem - (knCount * capKN));
+                    rehberCount = Math.min(availRehber, Math.ceil(rem / capRehber));
                 } else if (useBN && useRehber && availBN > 0 && availRehber > 0 && (totalCapBN + totalCapRehber >= needed)) {
                     bnCount = availBN;
                     const rem = Math.max(0, needed - (bnCount * capBN));
@@ -9609,7 +9623,7 @@
         panel.id = 'ls-panel';
         panel.innerHTML =
             '<div id="ls-header">' +
-                '<span id="ls-header-title">' + boltSvg + ' LuckyStrike Helper <span style="font-size:10px;color:#8899aa;font-weight:normal;opacity:0.8">v13.0</span></span>' +
+                '<span id="ls-header-title">' + boltSvg + ' LuckyStrike Helper <span style="font-size:10px;color:#8899aa;font-weight:normal;opacity:0.8">v13.1</span></span>' +
                 '<div style="display:flex;align-items:center;gap:6px">' +
                     '<button id="ls-header-stop-btn" class="ls-btn-d ls-btn-sm" style="display:none;padding:2px 7px;font-size:10px;align-items:center;gap:3px;cursor:pointer" title="Tekrarlayan bu alarmı sustur">⏹️ Sustur</button>' +
                     '<span id="ls-close">✖</span>' +
@@ -10823,7 +10837,7 @@
             const r3 = Array.from(debugFilterState.row3).join(', ');
 
             let out = '==================================================\n' +
-                      '  LuckyStrike OGame Helper v13.0 - Log Kayıtları\n' +
+                      '  LuckyStrike OGame Helper v13.1 - Log Kayıtları\n' +
                       '  Tarih: ' + nowStr + '\n' +
                       '  URL: ' + window.location.href + '\n' +
                       '  Filtreler: [Akış: ' + r1 + '] [Kapsam: ' + r2 + '] [Seviye: ' + r3 + ']\n' +
@@ -11368,6 +11382,6 @@
     checkAndRunCourierAssistant();
     checkAndRunExpeditionAssistant();
     scanAndSaveExpeditionTemplates();
-    console.log(LS, 'LuckyStrike OGame Helper v13.0 hazır!');
+    console.log(LS, 'LuckyStrike OGame Helper v13.1 hazır!');
 
 })();

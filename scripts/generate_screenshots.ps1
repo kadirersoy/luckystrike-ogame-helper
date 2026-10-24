@@ -258,7 +258,7 @@ $htmlTemplate = @'
             const logsEl = document.getElementById('ls-debug-logs');
             if (logsEl) {
                 logsEl.innerHTML = 
-                    '<div style="color:#2ecc71">[INFO] LuckyStrike Helper v13.0 initialized successfully.</div>' +
+                    '<div style="color:#2ecc71">[INFO] LuckyStrike Helper v13.1 initialized successfully.</div>' +
                     '<div style="color:#00bcff">[SCAN] Universe cache valid: 38,450 celestial objects loaded.</div>' +
                     '<div style="color:#ffbe3b">[ALARM] Threat watcher running in active tab monitoring.</div>' +
                     '<div style="color:#d1d8e0">[FLEET] 6 expedition routes calculated from [1:20:16].</div>';

@@ -1,4 +1,4 @@
-# ⚡ LuckyStrike OGame Helper (v13.0)
+# ⚡ LuckyStrike OGame Helper (v13.1)
 
 [English](#-english-description) | [Türkçe](#-türkçe-açıklama)
 
@@ -315,7 +315,7 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ## 🚀 Kurulum / Installation
 
 ### Chrome & Microsoft Edge
-1. İndirin / Download: [`luckystrike-ogame-helper-v13.0.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
+1. İndirin / Download: [`luckystrike-ogame-helper-v13.1.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
 2. Tarayıcıda eklentiler sayfasına gidin / Open extensions page:
    - **Chrome:** `chrome://extensions`
    - **Edge:** `edge://extensions`
@@ -325,6 +325,26 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ---
 
 ## 📝 Sürüm Geçmişi / Changelog
+
+### v13.1
+- **⛽ Yakıt ve ⚡ Hız Öncelik Sıralaması İnce Ayarı (Mathematical Fleet Optimization):**
+  - **Yakıt Önceliği (Fuel Mode) Kusursuzlaştırıldı:**
+    1. Full BN *(En az yakıt tüketen)*
+    2. BN + KN *(Eldeki tüm BN'leri tüketir, kalan açığı minimum KN ile tamamlar)*
+    3. Full KN *(Yalnızca BN hiç yoksa devreye girer)*
+    4. BN + KN + Rehber *(BN ve KN yetmiyorsa; kalan açığı minimum Rehber ile kapatır)*
+    5. BN + Rehber *(KN hiç yoksa; BN + kalan Rehber)*
+    6. KN + Rehber *(BN hiç yoksa; KN + kalan Rehber)*
+    7. Full Rehber *(Yalnızca BN ve KN hiç yoksa son çare)*
+  - **Hız Önceliği (Speed Mode) Kusursuzlaştırıldı:**
+    1. Full Rehber *(Hiperuzay hızı)*
+    2. Full KN *(İmpuls hızı)*
+    3. KN + Rehber *(Tüm KN'leri doldurur, kalanı Rehber ile tamamlar)*
+    4. Full BN *(BN hızında)*
+    5. BN + KN *(BN hızında; BN'leri doldurur, kalanı KN ile tamamlar)*
+    6. BN + KN + Rehber *(BN hızında; KN'leri sonuna kadar harcar, kalan açığa minimum Rehber koyar)*
+    7. BN + Rehber *(KN hiç yoksa)*
+  - Gereksiz yere obur Rehber gemisine yakıt ödenmesi engellendi; tasarruflu gemiler her iki modda da önceliklendirildi.
 
 ### v13.0
 - **⚡ Hız / ⛽ Yakıt Öncelik Anahtarı (Smart Fleet Speed/Fuel Priority Switch):**
