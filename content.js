@@ -2,7 +2,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v13.2 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v13.3 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -219,6 +219,16 @@
             cart_hud_shortage_title: '⚠️ Yetersiz Kaynak veya Gemi Kapasitesi!',
             cart_hud_stop_btn: '⏹️ Dağıtımı Durdur',
             cart_hud_proceed_btn: '⏩ Olduğu Kadar Gönder (Devam Et)',
+
+            // Filo Limitleri ve Doğrulama
+            fleet_slots_full_title: 'Filo Slotları Dolu!',
+            fleet_slots_full_desc: 'Tüm filo hareketleriniz dolu ({current}/{max})! Lütfen filoların dönmesini bekleyin.',
+            fleet_slots_warning_partial: 'Dikkat: Sadece {avail} boş filo slotunuz var ({current}/{max}), ancak {queue} işlem seçildi. Slotlar dolduğunda işlem duraklatılacak. Devam etmek istiyor musunuz?',
+            fleet_slots_hud_waiting: '⚠️ Filo slotları tükendi ({current}/{max})! Filoların dönmesi bekleniyor...',
+            fleet_slots_hud_wait_btn: '⏳ Slot Bekleniyor ({current}/{max})',
+            fleet_mission_error_waiting: '⚠️ Görev onaylanamadı, hedef kontrol ediliyor...',
+            fleet_mission_retry_btn: '⚠️ Hedefi Tekrar Dene',
+            fleet_slot_label: 'Slot:',
 
             // Taşıma Öncelik Modu (Hız / Yakıt)
             mode_speed: '⚡ Hız',
@@ -540,6 +550,16 @@
             cart_hud_shortage_title: '⚠️ Insufficient Resources or Cargo Capacity!',
             cart_hud_stop_btn: '⏹️ Stop Distribution',
             cart_hud_proceed_btn: '⏩ Send Partial Fleet (Proceed)',
+
+            // Fleet Slots & Validation
+            fleet_slots_full_title: 'Fleet Slots Full!',
+            fleet_slots_full_desc: 'All fleet slots are full ({current}/{max})! Please wait for fleets to return.',
+            fleet_slots_warning_partial: 'Notice: Only {avail} free fleet slots available ({current}/{max}), but {queue} operations selected. Process will pause when slots run out. Do you want to proceed?',
+            fleet_slots_hud_waiting: '⚠️ Fleet slots full ({current}/{max})! Waiting for fleets to return...',
+            fleet_slots_hud_wait_btn: '⏳ Waiting for Slots ({current}/{max})',
+            fleet_mission_error_waiting: '⚠️ Mission not confirmed, checking target...',
+            fleet_mission_retry_btn: '⚠️ Retry Target',
+            fleet_slot_label: 'Slots:',
             cart_hud_title: 'Cost Distribution',
 
             // Cargo Priority Mode (Speed / Fuel)
@@ -2404,6 +2424,101 @@
         return true;
     };
 
+    function triggerRealClick(el) {
+        if (!el) return;
+        const opts = { bubbles: true, cancelable: true, view: window };
+        try { el.dispatchEvent(new MouseEvent('mouseover', opts)); } catch (e) {}
+        try { el.dispatchEvent(new MouseEvent('mousedown', opts)); } catch (e) {}
+        try { el.dispatchEvent(new MouseEvent('mouseup', opts)); } catch (e) {}
+        try { el.dispatchEvent(new MouseEvent('click', opts)); } catch (e) {}
+        if (el.parentElement && el.parentElement !== document.body) {
+            try { el.parentElement.dispatchEvent(new MouseEvent('click', opts)); } catch (e) {}
+        }
+    }
+
+    function getFleetSlotsInfo() {
+        let current = -1;
+        let max = -1;
+
+        // 1. Bridge dataset verisi kontrolü
+        if (document.body && document.body.dataset) {
+            const c = parseInt(document.body.dataset.lsCurrentFleets, 10);
+            const m = parseInt(document.body.dataset.lsMaxFleets, 10);
+            if (!isNaN(c) && !isNaN(m) && m > 0) {
+                current = c;
+                max = m;
+            }
+        }
+
+        // 2. DOM analizi: #slots, .fleetStatus veya fleetdispatch konteyneri
+        if (max <= 0) {
+            const slotsEl = document.getElementById('slots') || document.querySelector('.fleetStatus, #fleetdispatchcomponent #slots');
+            const textToSearch = slotsEl ? slotsEl.textContent : (document.body ? document.body.innerText : '');
+            const m = textToSearch.match(/(?:Filolar|Fleets|Flotten|Flottes|Flotte|Flotas)\s*:\s*(\d+)\s*\/\s*(\d+)/i) ||
+                      (slotsEl ? slotsEl.textContent.match(/(\d+)\s*\/\s*(\d+)/) : null);
+            if (m) {
+                current = parseInt(m[1], 10);
+                max = parseInt(m[2], 10);
+            }
+        }
+
+        // 3. SessionStorage önbelleği (başka sayfada okunduysa)
+        if (max <= 0) {
+            try {
+                const cached = JSON.parse(sessionStorage.getItem('LS_FLEET_SLOTS_CACHE') || '{}');
+                if (cached && cached.max > 0 && (Date.now() - (cached.time || 0) < 60000)) {
+                    current = cached.current;
+                    max = cached.max;
+                }
+            } catch (e) {}
+        } else {
+            try {
+                sessionStorage.setItem('LS_FLEET_SLOTS_CACHE', JSON.stringify({ current, max, time: Date.now() }));
+            } catch (e) {}
+        }
+
+        const isKnown = (max > 0);
+        const available = isKnown ? Math.max(0, max - current) : 999;
+        const isFull = isKnown ? (current >= max) : false;
+
+        return {
+            current: current >= 0 ? current : 0,
+            max: max > 0 ? max : 999,
+            available: available,
+            isKnown: isKnown,
+            isFull: isFull
+        };
+    }
+
+    function isFleetStep1ContinueReady() {
+        const btn = document.getElementById('continueToFleet2') ||
+                    document.querySelector('button.continue.toFleet2, a#continueToFleet2, #fleet1 .continue');
+        if (!btn) return false;
+        if (btn.classList.contains('off') || btn.classList.contains('disabled') || btn.hasAttribute('disabled')) {
+            return false;
+        }
+        return (btn.offsetWidth > 0 || btn.offsetHeight > 0);
+    }
+
+    function isFleetStep2Active() {
+        const f2 = document.getElementById('fleet2');
+        if (f2) {
+            const style = window.getComputedStyle(f2);
+            if (style.display !== 'none' && style.visibility !== 'hidden' && (f2.offsetHeight > 0 || f2.offsetWidth > 0)) {
+                return true;
+            }
+        }
+        const f1 = document.getElementById('fleet1');
+        if (f1 && window.getComputedStyle(f1).display === 'none') {
+            return true;
+        }
+        const sendBtn = findSendFleetButton();
+        if (sendBtn && sendBtn.offsetParent !== null && window.getComputedStyle(sendBtn).display !== 'none') {
+            return true;
+        }
+        return false;
+    }
+
     function clickDevamButton() {
         const btn = document.getElementById('continueToFleet2') ||
                     document.querySelector('button.continue.toFleet2') ||
@@ -2417,6 +2532,10 @@
                     document.querySelector('#fleetdispatchcomponent button.continue') ||
                     document.querySelector('#fleetdispatchcomponent .continue');
         if (btn) {
+            if (btn.classList.contains('off') || btn.classList.contains('disabled') || btn.hasAttribute('disabled')) {
+                return false;
+            }
+            triggerRealClick(btn);
             btn.click();
             return true;
         }
@@ -2458,19 +2577,28 @@
         if (typeInp) setVal(typeInp, targetType);
 
         if (targetType === 3) {
-            const moonBtn = document.querySelector('#mbutton, [data-type="3"], [data-planet-type="3"], #fleet2 .moon, #fleet2 .planetType .moon');
+            const moonBtn = document.querySelector('#mbutton, [data-type="3"], [data-planet-type="3"], #fleet2 .moon, #fleet2 .planetType .moon, #fleet2 figure.moon, #fleet2 .planetIcon.moon');
             if (moonBtn && !moonBtn.classList.contains('selected') && !moonBtn.classList.contains('active')) {
-                try { moonBtn.click(); } catch (e) {}
+                try {
+                    triggerRealClick(moonBtn);
+                    moonBtn.click();
+                } catch (e) {}
             }
         } else if (targetType === 2) {
-            const debrisBtn = document.querySelector('#dbutton, [data-type="2"], [data-planet-type="2"], #fleet2 .debris');
+            const debrisBtn = document.querySelector('#dbutton, [data-type="2"], [data-planet-type="2"], #fleet2 .debris, #fleet2 .planetType .debris, #fleet2 figure.debris, #fleet2 figure.tf, #fleet2 .planetIcon.debris');
             if (debrisBtn && !debrisBtn.classList.contains('selected') && !debrisBtn.classList.contains('active')) {
-                try { debrisBtn.click(); } catch (e) {}
+                try {
+                    triggerRealClick(debrisBtn);
+                    debrisBtn.click();
+                } catch (e) {}
             }
         } else {
-            const planetBtn = document.querySelector('#pbutton, [data-type="1"], [data-planet-type="1"], #fleet2 .planet, #fleet2 .planetType .planet');
+            const planetBtn = document.querySelector('#pbutton, [data-type="1"], [data-planet-type="1"], #fleet2 .planet, #fleet2 .planetType .planet, #fleet2 figure.planet, #fleet2 .planetIcon.planet');
             if (planetBtn && !planetBtn.classList.contains('selected') && !planetBtn.classList.contains('active')) {
-                try { planetBtn.click(); } catch (e) {}
+                try {
+                    triggerRealClick(planetBtn);
+                    planetBtn.click();
+                } catch (e) {}
             }
         }
 
@@ -2490,6 +2618,41 @@
         window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
             detail: { type: 'SELECT_MISSION', missionId: missionId }
         }));
+    }
+
+    function triggerAllResourcesNative(deuReserve = 0) {
+        const allBtn = document.getElementById('allresources') || document.querySelector('a#allresources');
+        if (allBtn) {
+            triggerRealClick(allBtn);
+            try { allBtn.click(); } catch(e) {}
+        }
+        window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+            detail: { type: 'SELECT_ALL_RESOURCES', deuReserve: deuReserve }
+        }));
+    }
+
+    function isMissionSelected(missionId) {
+        const mBtn = document.querySelector('#missionButton' + missionId + ', [data-mission="' + missionId + '"]');
+        return !!(mBtn && (mBtn.classList.contains('selected') || mBtn.classList.contains('active')));
+    }
+
+    function isMissionClickable(missionId) {
+        const mBtn = document.querySelector('#missionButton' + missionId + ', [data-mission="' + missionId + '"]');
+        return !!(mBtn && !mBtn.classList.contains('off') && !mBtn.classList.contains('disabled') && !mBtn.hasAttribute('disabled'));
+    }
+
+    function isSendFleetReady() {
+        const sendBtn = findSendFleetButton();
+        if (!sendBtn) return false;
+        const isVisible = sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none';
+        const isOff = sendBtn.classList.contains('off') || sendBtn.classList.contains('disabled') || sendBtn.hasAttribute('disabled');
+        const isOn = sendBtn.classList.contains('on');
+        const missionError = Array.from(document.querySelectorAll('#fleet2 p, #fleet2 span, #fleet2 div')).some(el => (el.textContent || '').includes('Bu görevi başlatamazsın'));
+        return isVisible && isOn && !isOff && !missionError;
+    }
+
+    function isTargetCheckPending() {
+        return document.body.dataset.lsTargetCheckPending === 'true';
     }
 
     function advanceFleetStep(stepNum) {
@@ -2992,6 +3155,22 @@
             return;
         }
 
+        const fleetSlots = getFleetSlotsInfo();
+        if (fleetSlots.isKnown && fleetSlots.isFull) {
+            alert(t('fleet_slots_full_desc').replace('{current}', fleetSlots.current).replace('{max}', fleetSlots.max));
+            return;
+        }
+        if (fleetSlots.isKnown && fleetSlots.available > 0 && fleetSlots.available < queue.length) {
+            const warnMsg = t('fleet_slots_warning_partial')
+                .replace('{avail}', fleetSlots.available)
+                .replace('{current}', fleetSlots.current)
+                .replace('{max}', fleetSlots.max)
+                .replace('{queue}', queue.length);
+            if (!window.confirm(warnMsg)) {
+                return;
+            }
+        }
+
         let cartOrigin = getCartOrigin();
         if (!cartOrigin.originCoord || !cartOrigin.originId) {
             const cur = getCurrentActiveTarget(getEmpirePlanetsAndMoons());
@@ -3148,7 +3327,7 @@
         let step2Interval = null;
         let step2CheckTimer = null;
 
-        const updateCartBannerReady = () => {
+        const updateCartBannerReady = (slots) => {
             const btn = document.getElementById('ls-cart-banner-send-btn');
             if (btn) {
                 btn.disabled = false;
@@ -3159,19 +3338,34 @@
             }
         };
 
+        const updateCartBannerSlotWaiting = (slots) => {
+            const btn = document.getElementById('ls-cart-banner-send-btn');
+            if (btn) {
+                btn.disabled = true;
+                btn.style.background = '#c0392b';
+                btn.style.color = '#fff';
+                btn.style.cursor = 'not-allowed';
+                btn.innerText = t('fleet_slots_hud_wait_btn').replace('{current}', slots.current).replace('{max}', slots.max);
+            }
+        };
+
+        const updateCartBannerWarning = (slots) => {
+            const btn = document.getElementById('ls-cart-banner-send-btn');
+            if (btn) {
+                btn.disabled = false;
+                btn.style.background = '#e67e22';
+                btn.style.color = '#fff';
+                btn.style.cursor = 'pointer';
+                btn.innerText = t('fleet_mission_retry_btn', '⚠️ Hedefi Tekrar Dene');
+            }
+        };
+
         const prepareStep2 = () => {
             if (isStepCancelled) return;
+            const targetType = currentItem.type || 1;
             if (g && s && p) {
-                setFleetTargetCoords(g, s, p, currentItem.type || 1);
+                setFleetTargetCoords(g, s, p, targetType);
             }
-            setFleetMission(missionId);
-            fillFleetResources(metLoad, criLoad, deuLoad);
-            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                detail: { type: 'SELECT_MISSION', missionId: missionId }
-            }));
-            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                detail: { type: 'CARGO_REFRESH' }
-            }));
 
             let checkCount = 0;
             step2CheckTimer = setInterval(() => {
@@ -3180,19 +3374,57 @@
                     return;
                 }
                 checkCount++;
-                const mBtn = document.querySelector('#missionButton' + missionId + ', [data-mission="' + missionId + '"]');
-                const isMissionActive = mBtn && (mBtn.classList.contains('selected') || mBtn.classList.contains('active'));
-                if (!isMissionActive) setFleetMission(missionId);
-                fillFleetResources(metLoad, criLoad, deuLoad);
 
-                const sendBtn = findSendFleetButton();
-                const isSendBtnReady = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
-
-                if ((isMissionActive && isSendBtnReady && checkCount >= 2) || checkCount > 15) {
-                    clearInterval(step2CheckTimer);
-                    updateCartBannerReady();
+                const slots = getFleetSlotsInfo();
+                if (slots.isKnown && slots.isFull) {
+                    updateCartBannerSlotWaiting(slots);
+                    return;
                 }
-            }, 100);
+
+                // 1. Hedef tipi kontrolü (Ay vs Gezegen)
+                let typeMatch = true;
+                const typeInp = document.getElementById('type') || document.querySelector('input[name="type"]');
+                if (typeInp && String(typeInp.value).trim() !== String(targetType).trim()) {
+                    typeMatch = false;
+                }
+                if (targetType === 3) {
+                    const moonIcon = document.querySelector('#fleet2 .planetIcon.moon, #fleet2 figure.moon, #mbutton, [data-planet-type="3"]');
+                    if (moonIcon && !moonIcon.classList.contains('selected') && !moonIcon.classList.contains('active')) {
+                        typeMatch = false;
+                    }
+                }
+                if (!typeMatch && checkCount <= 6) {
+                    setFleetTargetCoords(g, s, p, targetType);
+                }
+
+                // 2. OGame checkTarget AJAX yanıtını bekle (Asla yanıt dönmeden görev/kaynak doldurma)
+                if (isTargetCheckPending()) {
+                    return;
+                }
+
+                // 3. Görev seçimi
+                if (isMissionClickable(missionId) && !isMissionSelected(missionId)) {
+                    setFleetMission(missionId);
+                }
+
+                // 4. Kaynak doldurma (Görev seçildikten sonra)
+                if (isMissionSelected(missionId)) {
+                    fillFleetResources(metLoad, criLoad, deuLoad);
+                }
+
+                // 5. Filo gönderim hazır mı?
+                if (isMissionSelected(missionId) && isSendFleetReady()) {
+                    clearInterval(step2CheckTimer);
+                    updateCartBannerReady(slots);
+                } else if (checkCount > 40) {
+                    clearInterval(step2CheckTimer);
+                    if (isSendFleetReady()) {
+                        updateCartBannerReady(slots);
+                    } else {
+                        updateCartBannerWarning(slots);
+                    }
+                }
+            }, 30);
         };
 
         const targetShipTotal = (shipCounts.bn || 0) + (shipCounts.kn || 0) + (shipCounts.rehber || 0);
@@ -3204,90 +3436,67 @@
                     return;
                 }
                 shipTries++;
+                const isReady = isFleetStep1ContinueReady();
                 const { total } = getSelectedShipsSummary();
-                if (total > 0 || shipTries > 6) {
+                if (total > 0 && isReady) {
                     clearInterval(ensureShipsTimer);
-                    setTimeout(() => {
-                        if (isStepCancelled) return;
-                        clickDevamButton();
-                        window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                            detail: { type: 'SUBMIT_FLEET1' }
-                        }));
+                    clickDevamButton();
+                    window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                        detail: { type: 'SUBMIT_FLEET1' }
+                    }));
 
-                        let step2Tries = 0;
-                        step2Interval = setInterval(() => {
-                            if (isStepCancelled) {
-                                clearInterval(step2Interval);
-                                return;
-                            }
-                            step2Tries++;
-                            const devamBtn = document.getElementById('continueToFleet2') || document.querySelector('button.continue') || document.querySelector('a.continue');
-                            const isStep1StillActive = devamBtn && (devamBtn.offsetWidth > 0 || window.getComputedStyle(devamBtn).display !== 'none');
-                            const sendBtn = findSendFleetButton();
-                            const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
-                            const isStep2Active = !isStep1StillActive && isSendBtnVisible;
-
-                            if (isStep2Active) {
-                                clearInterval(step2Interval);
-                                setTimeout(prepareStep2, 100);
-                            } else {
-                                if (step2Tries % 5 === 0) {
-                                    clickDevamButton();
-                                    window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                                        detail: { type: 'SUBMIT_FLEET1' }
-                                    }));
-                                }
-                                if (step2Tries > 30) {
-                                    clearInterval(step2Interval);
-                                    setTimeout(prepareStep2, 100);
-                                }
-                            }
-                        }, 100);
-                    }, 200);
+                    let step2Tries = 0;
+                    step2Interval = setInterval(() => {
+                        if (isStepCancelled) {
+                            clearInterval(step2Interval);
+                            return;
+                        }
+                        step2Tries++;
+                        if (isFleetStep2Active()) {
+                            clearInterval(step2Interval);
+                            prepareStep2();
+                        } else if (step2Tries % 10 === 0) {
+                            clickDevamButton();
+                            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                                detail: { type: 'SUBMIT_FLEET1' }
+                            }));
+                        } else if (step2Tries > 50) {
+                            clearInterval(step2Interval);
+                            prepareStep2();
+                        }
+                    }, 30);
                 } else {
                     setShipAmount(219, shipCounts.rehber);
                     setShipAmount(202, shipCounts.kn);
                     setShipAmount(203, shipCounts.bn);
                 }
-            }, 150);
+            }, 50);
         } else {
-            setTimeout(() => {
-                if (isStepCancelled) return;
-                clickDevamButton();
-                window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                    detail: { type: 'SUBMIT_FLEET1' }
-                }));
+            clickDevamButton();
+            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                detail: { type: 'SUBMIT_FLEET1' }
+            }));
 
-                let step2Tries = 0;
-                step2Interval = setInterval(() => {
-                    if (isStepCancelled) {
-                        clearInterval(step2Interval);
-                        return;
-                    }
-                    step2Tries++;
-                    const devamBtn = document.getElementById('continueToFleet2') || document.querySelector('button.continue') || document.querySelector('a.continue');
-                    const isStep1StillActive = devamBtn && (devamBtn.offsetWidth > 0 || window.getComputedStyle(devamBtn).display !== 'none');
-                    const sendBtn = findSendFleetButton();
-                    const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
-                    const isStep2Active = !isStep1StillActive && isSendBtnVisible;
-
-                    if (isStep2Active) {
-                        clearInterval(step2Interval);
-                        setTimeout(prepareStep2, 100);
-                    } else {
-                        if (step2Tries % 5 === 0) {
-                            clickDevamButton();
-                            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                                detail: { type: 'SUBMIT_FLEET1' }
-                            }));
-                        }
-                        if (step2Tries > 30) {
-                            clearInterval(step2Interval);
-                            setTimeout(prepareStep2, 100);
-                        }
-                    }
-                }, 100);
-            }, 200);
+            let step2Tries = 0;
+            step2Interval = setInterval(() => {
+                if (isStepCancelled) {
+                    clearInterval(step2Interval);
+                    return;
+                }
+                step2Tries++;
+                if (isFleetStep2Active()) {
+                    clearInterval(step2Interval);
+                    prepareStep2();
+                } else if (step2Tries % 10 === 0) {
+                    clickDevamButton();
+                    window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                        detail: { type: 'SUBMIT_FLEET1' }
+                    }));
+                } else if (step2Tries > 50) {
+                    clearInterval(step2Interval);
+                    prepareStep2();
+                }
+            }, 30);
         }
 
         renderCartHUD(session, currentItem, {
@@ -3370,9 +3579,15 @@
 
         const hasShips = (details.shipCounts.totalCap > 0) || (details.shipCounts.bn > 0 || details.shipCounts.kn > 0 || details.shipCounts.rehber > 0);
 
+        const currentSlots = getFleetSlotsInfo();
+        const slotColor = currentSlots.isFull ? '#e74c3c' : '#2ecc71';
+        const slotHtml = currentSlots.isKnown
+            ? ` <span style="font-size:10px;padding:2px 6px;border-radius:3px;background:rgba(255,255,255,0.08);color:${slotColor};font-weight:bold;margin-left:6px">🛸 ${t('fleet_slot_label', 'Slot:')} ${currentSlots.current}/${currentSlots.max}</span>`
+            : '';
+
         banner.innerHTML =
             '<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1a2c3f;padding-bottom:6px;margin-bottom:8px">' +
-                '<span style="font-size:12px;font-weight:bold;color:#2ecc71">🛒 ' + t('cart_hud_title') + ' [' + currentStep + ' / ' + totalItems + ']</span>' +
+                '<span style="font-size:12px;font-weight:bold;color:#2ecc71">🛒 ' + t('cart_hud_title') + ' [' + currentStep + ' / ' + totalItems + ']' + slotHtml + '</span>' +
                 '<span style="font-size:11px;color:#fff">' + originIcon + ' ' + escapeHtml(originName) + originCoordText + ' ➔ ' + targetIcon + ' ' + escapeHtml(displayTargetTitle) + coordText + '</span>' +
             '</div>' +
             warningHtml +
@@ -3401,15 +3616,33 @@
             const sendBtnEl = document.getElementById('ls-cart-banner-send-btn');
             if (sendBtnEl && sendBtnEl.disabled) return;
             if (isSending) return;
+
+            const slots = getFleetSlotsInfo();
+            if (slots.isKnown && slots.isFull) {
+                showCollectorToast(t('fleet_slots_full_desc').replace('{current}', slots.current).replace('{max}', slots.max), 4000);
+                return;
+            }
+
             if (document.activeElement && document.activeElement.blur) {
                 document.activeElement.blur();
             }
 
             const sendBtn = findSendFleetButton();
-            const isSendBtnReady = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
+            const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
+            const isSendBtnDisabled = sendBtn && (sendBtn.classList.contains('off') || sendBtn.classList.contains('disabled') || sendBtn.hasAttribute('disabled'));
+            const hasMissionError = Array.from(document.querySelectorAll('#fleet2 p, #fleet2 span, #fleet2 div')).some(el => (el.textContent || '').includes('Bu görevi başlatamazsın'));
 
-            if (isSendBtnReady) {
+            if (isSendBtnVisible && !isSendBtnDisabled && !hasMissionError) {
                 dispatchSendCartFleet();
+            } else if (isSendBtnVisible) {
+                if (sendBtnEl) {
+                    sendBtnEl.disabled = true;
+                    sendBtnEl.style.background = '#e67e22';
+                    sendBtnEl.innerText = '⏳ ' + t('fleet_mission_error_waiting', 'Hedef Doğrulanıyor...');
+                }
+                if (typeof details.prepareStep2 === 'function') {
+                    details.prepareStep2();
+                }
             } else {
                 clickDevamButton();
                 window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
@@ -6552,6 +6785,22 @@
             return;
         }
 
+        const fleetSlots = getFleetSlotsInfo();
+        if (fleetSlots.isKnown && fleetSlots.isFull) {
+            alert(t('fleet_slots_full_desc').replace('{current}', fleetSlots.current).replace('{max}', fleetSlots.max));
+            return;
+        }
+        if (fleetSlots.isKnown && fleetSlots.available > 0 && fleetSlots.available < queue.length) {
+            const warnMsg = t('fleet_slots_warning_partial')
+                .replace('{avail}', fleetSlots.available)
+                .replace('{current}', fleetSlots.current)
+                .replace('{max}', fleetSlots.max)
+                .replace('{queue}', queue.length);
+            if (!window.confirm(warnMsg)) {
+                return;
+            }
+        }
+
         const session = {
             active: true,
             targetCoord: collectorSettings.targetCoord,
@@ -6713,11 +6962,10 @@
 
         // Hedef koordinatları
         const [g, s, p] = session.targetCoord.split(':');
-        setFleetTargetCoords(g, s, p, session.targetType);
 
         let isStepCancelled = false;
 
-        const updateCollectorBannerReady = () => {
+        const updateCollectorBannerReady = (slots) => {
             const btn = document.getElementById('ls-banner-send-btn');
             if (btn) {
                 btn.disabled = false;
@@ -6728,19 +6976,34 @@
             }
         };
 
+        const updateCollectorBannerSlotWaiting = (slots) => {
+            const btn = document.getElementById('ls-banner-send-btn');
+            if (btn) {
+                btn.disabled = true;
+                btn.style.background = '#c0392b';
+                btn.style.color = '#fff';
+                btn.style.cursor = 'not-allowed';
+                btn.innerText = t('fleet_slots_hud_wait_btn').replace('{current}', slots.current).replace('{max}', slots.max);
+            }
+        };
+
+        const updateCollectorBannerWarning = (slots) => {
+            const btn = document.getElementById('ls-banner-send-btn');
+            if (btn) {
+                btn.disabled = false;
+                btn.style.background = '#e67e22';
+                btn.style.color = '#fff';
+                btn.style.cursor = 'pointer';
+                btn.innerText = t('fleet_mission_retry_btn', '⚠️ Hedefi Tekrar Dene');
+            }
+        };
+
         // Step 2 (Görev ve Kaynaklar) Hazırlık Fonksiyonu
         const prepareStep2 = () => {
             if (isStepCancelled) return;
             const missionId = session.mission || 3;
-            setFleetTargetCoords(g, s, p, session.targetType);
-            setFleetMission(missionId);
-            fillFleetResources(metLoad, criLoad, deuLoad);
-            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                detail: { type: 'SELECT_MISSION', missionId: missionId }
-            }));
-            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                detail: { type: 'CARGO_REFRESH' }
-            }));
+            const targetType = session.targetType || 1;
+            setFleetTargetCoords(g, s, p, targetType);
 
             let checkCount = 0;
             const step2CheckTimer = setInterval(() => {
@@ -6749,22 +7012,66 @@
                     return;
                 }
                 checkCount++;
-                const mBtn = document.querySelector('#missionButton' + missionId + ', [data-mission="' + missionId + '"]');
-                const isMissionActive = mBtn && (mBtn.classList.contains('selected') || mBtn.classList.contains('active'));
-                if (!isMissionActive) setFleetMission(missionId);
-                fillFleetResources(metLoad, criLoad, deuLoad);
 
-                const sendBtn = findSendFleetButton();
-                const isSendBtnReady = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
-
-                if ((isMissionActive && isSendBtnReady && checkCount >= 2) || checkCount > 15) {
-                    clearInterval(step2CheckTimer);
-                    updateCollectorBannerReady();
+                const slots = getFleetSlotsInfo();
+                if (slots.isKnown && slots.isFull) {
+                    updateCollectorBannerSlotWaiting(slots);
+                    return;
                 }
-            }, 100);
+
+                // 1. Hedef tipi kontrolü (Ay vs Gezegen)
+                let typeMatch = true;
+                const typeInp = document.getElementById('type') || document.querySelector('input[name="type"]');
+                if (typeInp && String(typeInp.value).trim() !== String(targetType).trim()) {
+                    typeMatch = false;
+                }
+                if (targetType === 3) {
+                    const moonIcon = document.querySelector('#fleet2 .planetIcon.moon, #fleet2 figure.moon, #mbutton, [data-planet-type="3"]');
+                    if (moonIcon && !moonIcon.classList.contains('selected') && !moonIcon.classList.contains('active')) {
+                        typeMatch = false;
+                    }
+                }
+                if (!typeMatch && checkCount <= 6) {
+                    setFleetTargetCoords(g, s, p, targetType);
+                }
+
+                // 2. OGame checkTarget AJAX yanıtını bekle
+                if (isTargetCheckPending()) {
+                    return;
+                }
+
+                // 3. Kaynak doldurma: Saf OGame #allresources butonu veya hesaplanan miktar
+                if (checkCount === 2 || checkCount === 5) {
+                    const isAllRes = session.resources.met && session.resources.cri && session.resources.deu;
+                    if (isAllRes) {
+                        triggerAllResourcesNative(reserve);
+                    } else {
+                        fillFleetResources(metLoad, criLoad, deuLoad);
+                    }
+                }
+
+                // 4. Görev seçimi
+                if (isMissionClickable(missionId) && !isMissionSelected(missionId)) {
+                    setFleetMission(missionId);
+                }
+
+                // 5. Filo gönderim hazır mı?
+                if (isMissionSelected(missionId) && isSendFleetReady()) {
+                    clearInterval(step2CheckTimer);
+                    updateCollectorBannerReady(slots);
+                } else if (checkCount > 40) {
+                    clearInterval(step2CheckTimer);
+                    if (isSendFleetReady()) {
+                        updateCollectorBannerReady(slots);
+                    } else {
+                        updateCollectorBannerWarning(slots);
+                    }
+                }
+            }, 30);
         };
 
         let ensureShipsTimer = null;
+        let step2Interval = null;
         const targetShipTotal = bnCount + knCount + rehberCount;
         if (targetShipTotal > 0) {
             let shipTries = 0;
@@ -6774,52 +7081,67 @@
                     return;
                 }
                 shipTries++;
+                const isReady = isFleetStep1ContinueReady();
                 const { total } = getSelectedShipsSummary();
-                if (total > 0 || shipTries > 6) {
+                if (total > 0 && isReady) {
                     clearInterval(ensureShipsTimer);
-                    setTimeout(() => {
-                        if (isStepCancelled) return;
-                        clickDevamButton();
-                        window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                            detail: { type: 'SUBMIT_FLEET1' }
-                        }));
+                    clickDevamButton();
+                    window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                        detail: { type: 'SUBMIT_FLEET1' }
+                    }));
 
-                        let step2Tries = 0;
-                        const step2Interval = setInterval(() => {
-                            if (isStepCancelled) {
-                                clearInterval(step2Interval);
-                                return;
-                            }
-                            step2Tries++;
-                            const devamBtn = document.getElementById('continueToFleet2') || document.querySelector('button.continue') || document.querySelector('a.continue');
-                            const isStep1StillActive = devamBtn && (devamBtn.offsetWidth > 0 || window.getComputedStyle(devamBtn).display !== 'none');
-                            const sendBtn = findSendFleetButton();
-                            const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
-                            const isStep2Active = !isStep1StillActive && isSendBtnVisible;
-
-                            if (isStep2Active) {
-                                clearInterval(step2Interval);
-                                setTimeout(prepareStep2, 100);
-                            } else {
-                                if (step2Tries % 5 === 0) {
-                                    clickDevamButton();
-                                    window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                                        detail: { type: 'SUBMIT_FLEET1' }
-                                    }));
-                                }
-                                if (step2Tries > 30) {
-                                    clearInterval(step2Interval);
-                                    setTimeout(prepareStep2, 100);
-                                }
-                            }
-                        }, 100);
-                    }, 200);
+                    let step2Tries = 0;
+                    step2Interval = setInterval(() => {
+                        if (isStepCancelled) {
+                            clearInterval(step2Interval);
+                            return;
+                        }
+                        step2Tries++;
+                        if (isFleetStep2Active()) {
+                            clearInterval(step2Interval);
+                            prepareStep2();
+                        } else if (step2Tries % 10 === 0) {
+                            clickDevamButton();
+                            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                                detail: { type: 'SUBMIT_FLEET1' }
+                            }));
+                        } else if (step2Tries > 50) {
+                            clearInterval(step2Interval);
+                            prepareStep2();
+                        }
+                    }, 30);
                 } else {
                     setShipAmount(203, bnCount);
                     setShipAmount(202, knCount);
                     setShipAmount(219, rehberCount);
                 }
-            }, 150);
+            }, 50);
+        } else {
+            clickDevamButton();
+            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                detail: { type: 'SUBMIT_FLEET1' }
+            }));
+
+            let step2Tries = 0;
+            step2Interval = setInterval(() => {
+                if (isStepCancelled) {
+                    clearInterval(step2Interval);
+                    return;
+                }
+                step2Tries++;
+                if (isFleetStep2Active()) {
+                    clearInterval(step2Interval);
+                    prepareStep2();
+                } else if (step2Tries % 10 === 0) {
+                    clickDevamButton();
+                    window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                        detail: { type: 'SUBMIT_FLEET1' }
+                    }));
+                } else if (step2Tries > 50) {
+                    clearInterval(step2Interval);
+                    prepareStep2();
+                }
+            }, 30);
         }
 
         // Asistan Banner'ını Çiz
@@ -6901,9 +7223,15 @@
                 '</div>';
         }
 
+        const currentSlots = getFleetSlotsInfo();
+        const slotColor = currentSlots.isFull ? '#e74c3c' : '#2ecc71';
+        const slotHtml = currentSlots.isKnown
+            ? ` <span style="font-size:10px;padding:2px 6px;border-radius:3px;background:rgba(255,255,255,0.08);color:${slotColor};font-weight:bold;margin-left:6px">🛸 ${t('fleet_slot_label', 'Slot:')} ${currentSlots.current}/${currentSlots.max}</span>`
+            : '';
+
         banner.innerHTML =
             '<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1a2c3f;padding-bottom:6px;margin-bottom:8px">' +
-                '<span style="font-size:12px;font-weight:bold;color:#00bcff">📦 ' + t('tab_collector') + ' [' + currentStep + ' / ' + totalItems + ']</span>' +
+                '<span style="font-size:12px;font-weight:bold;color:#00bcff">📦 ' + t('tab_collector') + ' [' + currentStep + ' / ' + totalItems + ']' + slotHtml + '</span>' +
                 '<span style="font-size:11px;color:#fff">' + (currentItem.isMoon ? '🌕' : '🪐') + ' ' + escapeHtml(currentItem.name) + ' ➔ ' + displayTargetIcon + ' ' + escapeHtml(displayTargetTitle) + ' <span style="color:#ffbe3b;font-family:monospace">[' + session.targetCoord + ']</span></span>' +
             '</div>' +
             warningHtml +
@@ -6930,15 +7258,32 @@
             const sendBtnEl = document.getElementById('ls-banner-send-btn');
             if (sendBtnEl && sendBtnEl.disabled) return;
 
+            const slots = getFleetSlotsInfo();
+            if (slots.isKnown && slots.isFull) {
+                showCollectorToast(t('fleet_slots_full_desc').replace('{current}', slots.current).replace('{max}', slots.max), 4000);
+                return;
+            }
+
             if (document.activeElement && document.activeElement.blur) {
                 document.activeElement.blur();
             }
 
             const sendBtn = findSendFleetButton();
-            const isSendBtnReady = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
+            const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
+            const isSendBtnDisabled = sendBtn && (sendBtn.classList.contains('off') || sendBtn.classList.contains('disabled') || sendBtn.hasAttribute('disabled'));
+            const hasMissionError = Array.from(document.querySelectorAll('#fleet2 p, #fleet2 span, #fleet2 div')).some(el => (el.textContent || '').includes('Bu görevi başlatamazsın'));
 
-            if (isSendBtnReady) {
+            if (isSendBtnVisible && !isSendBtnDisabled && !hasMissionError) {
                 dispatchSendFleetButton();
+            } else if (isSendBtnVisible) {
+                if (sendBtnEl) {
+                    sendBtnEl.disabled = true;
+                    sendBtnEl.style.background = '#e67e22';
+                    sendBtnEl.innerText = '⏳ ' + t('fleet_mission_error_waiting', 'Hedef Doğrulanıyor...');
+                }
+                if (typeof details.prepareStep2 === 'function') {
+                    details.prepareStep2();
+                }
             } else {
                 clickDevamButton();
                 window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
@@ -7689,6 +8034,22 @@
             return;
         }
 
+        const fleetSlots = getFleetSlotsInfo();
+        if (fleetSlots.isKnown && fleetSlots.isFull) {
+            alert(t('fleet_slots_full_desc').replace('{current}', fleetSlots.current).replace('{max}', fleetSlots.max));
+            return;
+        }
+        if (fleetSlots.isKnown && fleetSlots.available > 0 && fleetSlots.available < queue.length) {
+            const warnMsg = t('fleet_slots_warning_partial')
+                .replace('{avail}', fleetSlots.available)
+                .replace('{current}', fleetSlots.current)
+                .replace('{max}', fleetSlots.max)
+                .replace('{queue}', queue.length);
+            if (!window.confirm(warnMsg)) {
+                return;
+            }
+        }
+
         const session = {
             originId: courierSettings.originId,
             originCoord: courierSettings.originCoord,
@@ -7817,50 +8178,50 @@
 
         // Hedef koordinatları
         const [g, s, p] = currentItem.coords.split(':');
-        setFleetTargetCoords(g, s, p, currentItem.type);
 
         let isStepCancelled = false;
 
-        const updateCourierBannerReady = () => {
+        const updateCourierBannerReady = (slots) => {
             const btn = document.getElementById('ls-banner-send-btn');
             if (btn) {
-                const sendBtn = findSendFleetButton();
-                const isSendBtnDisabled = sendBtn && (sendBtn.classList.contains('off') || sendBtn.classList.contains('disabled') || sendBtn.hasAttribute('disabled'));
-                const hasError = Array.from(document.querySelectorAll('#fleet2 p, #fleet2 span, #fleet2 div')).some(el => (el.textContent || '').includes('Bu görevi başlatamazsın'));
+                btn.disabled = false;
+                btn.style.background = '#27ae60';
+                btn.style.color = '#fff';
+                btn.style.cursor = 'pointer';
+                btn.innerText = '🚀 ' + t('coll_hud_send') + ' (Space)';
+            }
+        };
 
-                if (isSendBtnDisabled || hasError) {
-                    btn.disabled = false;
-                    btn.style.background = '#e67e22';
-                    btn.style.color = '#fff';
-                    btn.style.cursor = 'pointer';
-                    btn.innerText = '⚠️ Hedefi Tekrar Dene';
-                } else {
-                    btn.disabled = false;
-                    btn.style.background = '#27ae60';
-                    btn.style.color = '#fff';
-                    btn.style.cursor = 'pointer';
-                    btn.innerText = '🚀 ' + t('coll_hud_send') + ' (Space)';
-                }
+        const updateCourierBannerSlotWaiting = (slots) => {
+            const btn = document.getElementById('ls-banner-send-btn');
+            if (btn) {
+                btn.disabled = true;
+                btn.style.background = '#c0392b';
+                btn.style.color = '#fff';
+                btn.style.cursor = 'not-allowed';
+                btn.innerText = t('fleet_slots_hud_wait_btn').replace('{current}', slots.current).replace('{max}', slots.max);
+            }
+        };
+
+        const updateCourierBannerWarning = (slots) => {
+            const btn = document.getElementById('ls-banner-send-btn');
+            if (btn) {
+                btn.disabled = false;
+                btn.style.background = '#e67e22';
+                btn.style.color = '#fff';
+                btn.style.cursor = 'pointer';
+                btn.innerText = t('fleet_mission_retry_btn', '⚠️ Hedefi Tekrar Dene');
             }
         };
 
         const prepareStep2 = () => {
             if (isStepCancelled) return;
             const missionId = session.mission || 3;
+            const targetType = parseInt(currentItem.type, 10) || 1;
 
-            setFleetTargetCoords(g, s, p, currentItem.type);
-            setFleetMission(missionId);
-            fillFleetResources(metLoad, criLoad, deuLoad);
-
-            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                detail: { type: 'SELECT_MISSION', missionId: missionId }
-            }));
-            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                detail: { type: 'CARGO_REFRESH' }
-            }));
+            setFleetTargetCoords(g, s, p, targetType);
 
             let checkCount = 0;
-            let readyStreak = 0;
             const step2CheckTimer = setInterval(() => {
                 if (isStepCancelled) {
                     clearInterval(step2CheckTimer);
@@ -7868,75 +8229,71 @@
                 }
                 checkCount++;
 
-                // Hedef koordinatların ve tipin doğruluğunu kontrol et
-                const galInp = document.getElementById('galaxy') || document.querySelector('input[name="galaxy"]');
-                const sysInp = document.getElementById('system') || document.querySelector('input[name="system"]');
-                const posInp = document.getElementById('position') || document.querySelector('input[name="position"]');
-                const typeInp = document.getElementById('type') || document.querySelector('input[name="type"]');
+                const slots = getFleetSlotsInfo();
+                if (slots.isKnown && slots.isFull) {
+                    updateCourierBannerSlotWaiting(slots);
+                    return;
+                }
 
-                const targetType = parseInt(currentItem.type, 10) || 1;
-                const coordsMatch = galInp && sysInp && posInp &&
-                                    String(galInp.value).trim() === String(g).trim() &&
-                                    String(sysInp.value).trim() === String(s).trim() &&
-                                    String(posInp.value).trim() === String(p).trim();
-
+                // 1. Hedef tipi kontrolü (Ay vs Gezegen)
                 let typeMatch = true;
+                const typeInp = document.getElementById('type') || document.querySelector('input[name="type"]');
                 if (typeInp && String(typeInp.value).trim() !== String(targetType).trim()) {
                     typeMatch = false;
                 }
                 if (targetType === 3) {
-                    const moonBtn = document.querySelector('#mbutton, [data-type="3"], [data-planet-type="3"], #fleet2 .moon, #fleet2 .planetType .moon');
+                    const moonBtn = document.querySelector('#fleet2 .planetIcon.moon, #fleet2 figure.moon, #mbutton, [data-planet-type="3"]');
                     if (moonBtn && !moonBtn.classList.contains('selected') && !moonBtn.classList.contains('active')) {
                         typeMatch = false;
                     }
                 } else if (targetType === 1) {
-                    const planetBtn = document.querySelector('#pbutton, [data-type="1"], [data-planet-type="1"], #fleet2 .planet, #fleet2 .planetType .planet');
+                    const planetBtn = document.querySelector('#fleet2 .planetIcon.planet, #fleet2 figure.planet, #pbutton, [data-planet-type="1"]');
                     if (planetBtn && !planetBtn.classList.contains('selected') && !planetBtn.classList.contains('active')) {
                         typeMatch = false;
                     }
                 }
 
-                if (!coordsMatch || !typeMatch || checkCount <= 3) {
-                    setFleetTargetCoords(g, s, p, currentItem.type);
+                if (!typeMatch && checkCount <= 6) {
+                    setFleetTargetCoords(g, s, p, targetType);
                 }
 
-                const mBtn = document.querySelector('#missionButton' + missionId + ', [data-mission="' + missionId + '"]');
-                const isMissionActive = mBtn && (mBtn.classList.contains('selected') || mBtn.classList.contains('active'));
-                if (!isMissionActive) setFleetMission(missionId);
-                fillFleetResources(metLoad, criLoad, deuLoad);
-
-                const sendBtn = findSendFleetButton();
-                const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
-                const isSendBtnDisabled = sendBtn && (sendBtn.classList.contains('off') || sendBtn.classList.contains('disabled') || sendBtn.hasAttribute('disabled'));
-
-                const missionError = document.querySelector('.fleet_dispatch_error, .dispatchError, #missionError, #fleet2 .error') ||
-                                     Array.from(document.querySelectorAll('#fleet2 p, #fleet2 span, #fleet2 div')).find(el => (el.textContent || '').includes('Bu görevi başlatamazsın'));
-
-                const isActuallyReady = coordsMatch && typeMatch && isMissionActive && isSendBtnVisible && !isSendBtnDisabled && !missionError;
-
-                if (isActuallyReady) {
-                    readyStreak++;
-                } else {
-                    readyStreak = 0;
+                // 2. OGame checkTarget AJAX yanıtını bekle
+                if (isTargetCheckPending()) {
+                    return;
                 }
 
-                if (readyStreak >= 2 || checkCount > 30) {
+                // 3. Görev seçimi
+                if (isMissionClickable(missionId) && !isMissionSelected(missionId)) {
+                    setFleetMission(missionId);
+                }
+
+                // 4. Kaynak doldurma
+                if (isMissionSelected(missionId)) {
+                    fillFleetResources(metLoad, criLoad, deuLoad);
+                }
+
+                // 5. Filo gönderim hazır mı?
+                if (isMissionSelected(missionId) && isSendFleetReady()) {
                     clearInterval(step2CheckTimer);
-                    updateCourierBannerReady();
+                    updateCourierBannerReady(slots);
+                } else if (checkCount > 40) {
+                    clearInterval(step2CheckTimer);
+                    if (isSendFleetReady()) {
+                        updateCourierBannerReady(slots);
+                    } else {
+                        updateCourierBannerWarning(slots);
+                    }
                 }
-            }, 100);
+            }, 30);
         };
 
         // Eğer sayfa zaten Step 2'deyse doğrudan Step 2 hazırlığına geç
-        const devamBtnInit = document.getElementById('continueToFleet2') || document.querySelector('button.continue') || document.querySelector('a.continue');
-        const isStep1ActiveInit = devamBtnInit && (devamBtnInit.offsetWidth > 0 || window.getComputedStyle(devamBtnInit).display !== 'none');
-        const sendBtnInit = findSendFleetButton();
-        const isSendBtnVisibleInit = sendBtnInit && (sendBtnInit.offsetWidth > 0 || window.getComputedStyle(sendBtnInit).display !== 'none');
-        const isAlreadyOnStep2 = !isStep1ActiveInit && isSendBtnVisibleInit;
+        const isAlreadyOnStep2 = isFleetStep2Active();
 
         let ensureShipsTimer = null;
+        let step2Interval = null;
         if (isAlreadyOnStep2) {
-            setTimeout(prepareStep2, 100);
+            prepareStep2();
         } else {
             const targetShipTotal = bnCount + knCount + rehberCount;
             if (targetShipTotal > 0) {
@@ -7947,52 +8304,67 @@
                         return;
                     }
                     shipTries++;
+                    const isReady = isFleetStep1ContinueReady();
                     const { total } = getSelectedShipsSummary();
-                    if (total > 0 || shipTries > 6) {
+                    if (total > 0 && isReady) {
                         clearInterval(ensureShipsTimer);
-                        setTimeout(() => {
-                            if (isStepCancelled) return;
-                            clickDevamButton();
-                            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                                detail: { type: 'SUBMIT_FLEET1' }
-                            }));
+                        clickDevamButton();
+                        window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                            detail: { type: 'SUBMIT_FLEET1' }
+                        }));
 
-                            let step2Tries = 0;
-                            const step2Interval = setInterval(() => {
-                                if (isStepCancelled) {
-                                    clearInterval(step2Interval);
-                                    return;
-                                }
-                                step2Tries++;
-                                const devamBtn = document.getElementById('continueToFleet2') || document.querySelector('button.continue') || document.querySelector('a.continue');
-                                const isStep1StillActive = devamBtn && (devamBtn.offsetWidth > 0 || window.getComputedStyle(devamBtn).display !== 'none');
-                                const sendBtn = findSendFleetButton();
-                                const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
-                                const isStep2Active = !isStep1StillActive && isSendBtnVisible;
-
-                                if (isStep2Active) {
-                                    clearInterval(step2Interval);
-                                    setTimeout(prepareStep2, 100);
-                                } else {
-                                    if (step2Tries % 5 === 0) {
-                                        clickDevamButton();
-                                        window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                                            detail: { type: 'SUBMIT_FLEET1' }
-                                        }));
-                                    }
-                                    if (step2Tries > 30) {
-                                        clearInterval(step2Interval);
-                                        setTimeout(prepareStep2, 100);
-                                    }
-                                }
-                            }, 100);
-                        }, 200);
+                        let step2Tries = 0;
+                        step2Interval = setInterval(() => {
+                            if (isStepCancelled) {
+                                clearInterval(step2Interval);
+                                return;
+                            }
+                            step2Tries++;
+                            if (isFleetStep2Active()) {
+                                clearInterval(step2Interval);
+                                prepareStep2();
+                            } else if (step2Tries % 10 === 0) {
+                                clickDevamButton();
+                                window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                                    detail: { type: 'SUBMIT_FLEET1' }
+                                }));
+                            } else if (step2Tries > 50) {
+                                clearInterval(step2Interval);
+                                prepareStep2();
+                            }
+                        }, 30);
                     } else {
                         setShipAmount(203, bnCount);
                         setShipAmount(202, knCount);
                         setShipAmount(219, rehberCount);
                     }
-                }, 150);
+                }, 50);
+            } else {
+                clickDevamButton();
+                window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                    detail: { type: 'SUBMIT_FLEET1' }
+                }));
+
+                let step2Tries = 0;
+                step2Interval = setInterval(() => {
+                    if (isStepCancelled) {
+                        clearInterval(step2Interval);
+                        return;
+                    }
+                    step2Tries++;
+                    if (isFleetStep2Active()) {
+                        clearInterval(step2Interval);
+                        prepareStep2();
+                    } else if (step2Tries % 10 === 0) {
+                        clickDevamButton();
+                        window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                            detail: { type: 'SUBMIT_FLEET1' }
+                        }));
+                    } else if (step2Tries > 50) {
+                        clearInterval(step2Interval);
+                        prepareStep2();
+                    }
+                }, 30);
             }
         }
 
@@ -8066,9 +8438,15 @@
                 '</div>';
         }
 
+        const currentSlots = getFleetSlotsInfo();
+        const slotColor = currentSlots.isFull ? '#e74c3c' : '#2ecc71';
+        const slotHtml = currentSlots.isKnown
+            ? ` <span style="font-size:10px;padding:2px 6px;border-radius:3px;background:rgba(255,255,255,0.08);color:${slotColor};font-weight:bold;margin-left:6px">🛸 ${t('fleet_slot_label', 'Slot:')} ${currentSlots.current}/${currentSlots.max}</span>`
+            : '';
+
         banner.innerHTML =
             '<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1a2c3f;padding-bottom:6px;margin-bottom:8px">' +
-                '<span style="font-size:12px;font-weight:bold;color:#2980b9">📬 ' + t('cour_hud_title', 'Postacı Asistanı') + ' [' + currentStep + ' / ' + totalItems + ']</span>' +
+                '<span style="font-size:12px;font-weight:bold;color:#2980b9">📬 ' + t('cour_hud_title', 'Postacı Asistanı') + ' [' + currentStep + ' / ' + totalItems + ']' + slotHtml + '</span>' +
                 '<span style="font-size:11px;color:#fff">' + displayOriginIcon + ' ' + escapeHtml(session.originName || 'Üs') + ' ➔ ' + displayTargetIcon + ' ' + escapeHtml(cleanTName) + ' <span style="color:#ffbe3b;font-family:monospace">[' + currentItem.coords + ']</span></span>' +
             '</div>' +
             warningHtml +
@@ -8095,6 +8473,12 @@
             const sendBtnEl = document.getElementById('ls-banner-send-btn');
             if (sendBtnEl && sendBtnEl.disabled) return;
 
+            const slots = getFleetSlotsInfo();
+            if (slots.isKnown && slots.isFull) {
+                showCollectorToast(t('fleet_slots_full_desc').replace('{current}', slots.current).replace('{max}', slots.max), 4000);
+                return;
+            }
+
             if (document.activeElement && document.activeElement.blur) {
                 document.activeElement.blur();
             }
@@ -8110,14 +8494,10 @@
                 if (sendBtnEl) {
                     sendBtnEl.disabled = true;
                     sendBtnEl.style.background = '#e67e22';
-                    sendBtnEl.innerText = '⏳ Hedef Doğrulanıyor...';
+                    sendBtnEl.innerText = '⏳ ' + t('fleet_mission_error_waiting', 'Hedef Doğrulanıyor...');
                 }
-                const [g, s, p] = currentItem.coords.split(':');
-                setFleetTargetCoords(g, s, p, currentItem.type);
-                setFleetMission(session.mission || 3);
-                fillFleetResources(details.met, details.cri, details.deu);
                 if (typeof details.prepareStep2 === 'function') {
-                    setTimeout(details.prepareStep2, 200);
+                    details.prepareStep2();
                 }
             } else {
                 clickDevamButton();
@@ -8960,19 +9340,7 @@
 
             // 1. Hedef koordinatı (g:s:16) Step 2 olarak ata
             setExpeditionTarget(currentItem.g, currentItem.s, true);
-
             LS_LOGGER.info('EXPEDITION', `Step 2 parametreleri hazırlanıyor: Hedef [${currentItem.g}:${currentItem.s}:16]`);
-
-            const ensureMission15 = () => {
-                if (isStepCancelled) return;
-                const missionBtn = document.querySelector('#missionButton15, [data-mission="15"]');
-                const isMission15Active = missionBtn && (missionBtn.classList.contains('selected') || missionBtn.classList.contains('active'));
-                if (!isMission15Active) {
-                    setFleetMission(15);
-                }
-            };
-
-            ensureMission15();
 
             // 2. Mission 15 ve gönder butonunun hazır olmasını bekle
             let step2Checks = 0;
@@ -8983,20 +9351,24 @@
                 }
                 step2Checks++;
 
-                const missionBtn = document.querySelector('#missionButton15, [data-mission="15"]');
-                const isMission15Active = missionBtn && (missionBtn.classList.contains('selected') || missionBtn.classList.contains('active'));
-                if (!isMission15Active) {
-                    ensureMission15();
+                // OGame checkTarget yanıtını bekle
+                if (isTargetCheckPending()) {
+                    return;
                 }
 
-                const sendBtn = findSendFleetButton();
-                const isSendBtnReady = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
+                // Mission 15 seç
+                if (isMissionClickable(15) && !isMissionSelected(15)) {
+                    setFleetMission(15);
+                }
 
-                if ((isMission15Active && isSendBtnReady && step2Checks >= 2) || step2Checks > 10) {
+                if (isMissionSelected(15) && isSendFleetReady()) {
+                    clearInterval(step2Timer);
+                    updateBannerReady();
+                } else if (step2Checks > 40) {
                     clearInterval(step2Timer);
                     updateBannerReady();
                 }
-            }, 60);
+            }, 30);
         };
 
         // 1. Şablonu seç (Gemileri doldur)
@@ -9018,61 +9390,48 @@
             checkTries++;
             const { ships, total } = getSelectedShipsSummary();
 
-            if (total > 0) {
+            if (total > 0 && isFleetStep1ContinueReady()) {
                 clearInterval(ensureShipsInterval);
+                setExpeditionTarget(currentItem.g, currentItem.s, false);
+                LS_LOGGER.action('EXPEDITION', 'Step 1 Devam butonu tıklandı, Step 2 bekleniyor.');
+                clickDevamButton();
+                window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                    detail: { type: 'SUBMIT_FLEET1' }
+                }));
 
-                setTimeout(() => {
-                    if (isStepCancelled) return;
-                    setExpeditionTarget(currentItem.g, currentItem.s, false);
-                    LS_LOGGER.action('EXPEDITION', 'Step 1 Devam butonu tıklandı, Step 2 bekleniyor.');
-                    clickDevamButton();
-                    window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                        detail: { type: 'SUBMIT_FLEET1' }
-                    }));
-
-                    let step2Tries = 0;
-                    const step2Interval = setInterval(() => {
-                        if (isStepCancelled) {
-                            clearInterval(step2Interval);
-                            return;
-                        }
-                        step2Tries++;
-                        const devamBtn = document.getElementById('continueToFleet2') || document.querySelector('button.continue') || document.querySelector('a.continue');
-                        const isStep1StillActive = devamBtn && (devamBtn.offsetWidth > 0 || window.getComputedStyle(devamBtn).display !== 'none');
-                        const sendBtn = findSendFleetButton();
-                        const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
-                        const isStep2Active = !isStep1StillActive && isSendBtnVisible;
-
-                        if (isStep2Active) {
-                            clearInterval(step2Interval);
-                            setTimeout(prepareStep2, 100);
-                        } else {
-                            if (step2Tries % 5 === 0) {
-                                clickDevamButton();
-                                window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                                    detail: { type: 'SUBMIT_FLEET1' }
-                                }));
-                            }
-                            if (step2Tries > 30) {
-                                clearInterval(step2Interval);
-                                setTimeout(prepareStep2, 100);
-                            }
-                        }
-                    }, 100);
-                }, 150);
+                let step2Tries = 0;
+                const step2Interval = setInterval(() => {
+                    if (isStepCancelled) {
+                        clearInterval(step2Interval);
+                        return;
+                    }
+                    step2Tries++;
+                    if (isFleetStep2Active()) {
+                        clearInterval(step2Interval);
+                        prepareStep2();
+                    } else if (step2Tries % 10 === 0) {
+                        clickDevamButton();
+                        window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                            detail: { type: 'SUBMIT_FLEET1' }
+                        }));
+                    } else if (step2Tries > 50) {
+                        clearInterval(step2Interval);
+                        prepareStep2();
+                    }
+                }, 30);
             } else if (checkTries === 2 || checkTries === 5) {
                 if (session.templateId || session.templateName) {
                     applyExpeditionTemplate(session.templateId, session.templateName);
                 }
-            } else if (checkTries > 15) {
+            } else if (checkTries > 25) {
                 clearInterval(ensureShipsInterval);
                 clickDevamButton();
                 window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
                     detail: { type: 'SUBMIT_FLEET1' }
                 }));
-                setTimeout(prepareStep2, 200);
+                prepareStep2();
             }
-        }, 150);
+        }, 50);
 
         renderExpeditionBanner(session, currentItem, {
             prepareStep2: prepareStep2,
@@ -10095,7 +10454,7 @@
                         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
                             '<div style="display:flex;align-items:center;gap:6px">' +
                                 '<span style="font-size:12px;color:#00bcff;font-weight:bold">⚡ LuckyStrike Helper</span>' +
-                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v13.2</span>' +
+                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v13.3</span>' +
                             '</div>' +
                             '<a href="https://github.com/kadirersoy/luckystrike-ogame-helper" target="_blank" style="font-size:10.5px;color:#00bcff;text-decoration:none;display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,0.05);padding:2px 7px;border-radius:4px;border:1px solid #1a2c3f" title="GitHub Proje Sayfası" data-i18n-title="settings_github_title">' +
                                 '<span>🔗</span> <span data-i18n="settings_github">GitHub</span>' +
@@ -10880,7 +11239,7 @@
             const r3 = Array.from(debugFilterState.row3).join(', ');
 
             let out = '==================================================\n' +
-                      '  LuckyStrike OGame Helper v13.2 - Log Kayıtları\n' +
+                      '  LuckyStrike OGame Helper v13.3 - Log Kayıtları\n' +
                       '  Tarih: ' + nowStr + '\n' +
                       '  URL: ' + window.location.href + '\n' +
                       '  Filtreler: [Akış: ' + r1 + '] [Kapsam: ' + r2 + '] [Seviye: ' + r3 + ']\n' +
@@ -11257,7 +11616,7 @@
                     if (!resp.ok) throw new Error('HTTP ' + resp.status);
                     const data = await resp.json();
                     const latestTag = (data.tag_name || '').trim();
-                    const currentTag = 'v13.2';
+                    const currentTag = 'v13.3';
 
                     const parseVer = (v) => v.replace(/^v/, '').split('.').map(n => parseInt(n, 10) || 0);
                     const latParts = parseVer(latestTag);
@@ -11467,6 +11826,6 @@
     checkAndRunCourierAssistant();
     checkAndRunExpeditionAssistant();
     scanAndSaveExpeditionTemplates();
-    console.log(LS, 'LuckyStrike OGame Helper v13.2 hazır!');
+    console.log(LS, 'LuckyStrike OGame Helper v13.3 hazır!');
 
 })();

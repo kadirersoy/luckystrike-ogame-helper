@@ -63,6 +63,26 @@
         try { el.dispatchEvent(new MouseEvent('click', o)); } catch (e) {}
     }
 
+    function syncFleetDispatcherState() {
+        try {
+            if (window.fleetDispatcher) {
+                var cur = (window.fleetDispatcher.busyFleets !== undefined && window.fleetDispatcher.busyFleets !== null)
+                    ? window.fleetDispatcher.busyFleets
+                    : (window.fleetDispatcher.currentFleets || 0);
+                var max = window.fleetDispatcher.maxFleets || 0;
+                if (max > 0) {
+                    document.body.dataset.lsCurrentFleets = String(cur);
+                    document.body.dataset.lsMaxFleets = String(max);
+                }
+            }
+        } catch (e) {}
+    }
+
+    try {
+        syncFleetDispatcherState();
+        setInterval(syncFleetDispatcherState, 1500);
+    } catch (e) {}
+
     function selectExpeditionTemplateMain(d) {
         var targetName = d.name ? String(d.name).trim().toLowerCase() : '';
         var targetId = d.id;
@@ -146,19 +166,25 @@
                     if ($t.length) $t.val('' + targetType).trigger('change');
 
                     if (targetType === 3) {
-                        var $m = $('#mbutton, #fleet2 #mbutton, [data-type="3"], [data-planet-type="3"], a.moon, .moon, #fleet2 .planetType .moon');
+                        var $m = $('#mbutton, #fleet2 #mbutton, [data-type="3"], [data-planet-type="3"], a.moon, .moon, #fleet2 .planetType .moon, #fleet2 figure.moon, #fleet2 .planetIcon.moon');
                         if ($m.length && !$m.hasClass('selected') && !$m.hasClass('active')) {
-                            $m.trigger('click');
+                            realClick($m[0]);
+                            if ($m.parent().length) realClick($m.parent()[0]);
+                            try { $m.trigger('click'); } catch(e) {}
                         }
                     } else if (targetType === 2) {
-                        var $d = $('#dbutton, #fleet2 #dbutton, [data-type="2"], [data-planet-type="2"], a.debris, .debris');
+                        var $d = $('#dbutton, #fleet2 #dbutton, [data-type="2"], [data-planet-type="2"], a.debris, .debris, #fleet2 .planetType .debris, #fleet2 figure.debris, #fleet2 figure.tf, #fleet2 .planetIcon.debris');
                         if ($d.length && !$d.hasClass('selected') && !$d.hasClass('active')) {
-                            $d.trigger('click');
+                            realClick($d[0]);
+                            if ($d.parent().length) realClick($d.parent()[0]);
+                            try { $d.trigger('click'); } catch(e) {}
                         }
                     } else {
-                        var $pb = $('#pbutton, #fleet2 #pbutton, [data-type="1"], [data-planet-type="1"], a.planet, .planet, #fleet2 .planetType .planet');
+                        var $pb = $('#pbutton, #fleet2 #pbutton, [data-type="1"], [data-planet-type="1"], a.planet, .planet, #fleet2 .planetType .planet, #fleet2 figure.planet, #fleet2 .planetIcon.planet');
                         if ($pb.length && !$pb.hasClass('selected') && !$pb.hasClass('active')) {
-                            $pb.trigger('click');
+                            realClick($pb[0]);
+                            if ($pb.parent().length) realClick($pb.parent()[0]);
+                            try { $pb.trigger('click'); } catch(e) {}
                         }
                     }
 
@@ -172,13 +198,33 @@
                                 window.fleetDispatcher.updateTarget();
                             }
                             if (typeof window.fleetDispatcher.checkTarget === 'function') {
+                                document.body.dataset.lsTargetCheckPending = 'true';
                                 window.fleetDispatcher.checkTarget();
-                            }
-                            if (typeof window.fleetDispatcher.refresh === 'function') {
-                                window.fleetDispatcher.refresh();
                             }
                         } catch (err) {}
                     }
+                    syncFleetDispatcherState();
+                }
+            } else if (d.type === 'SELECT_ALL_RESOURCES') {
+                bridgeLog('ACTION', 'BRIDGE', 'Tüm kaynaklar yerel olarak seçiliyor (#allresources).');
+                if (window.fleetDispatcher && typeof window.fleetDispatcher.selectAllResources === 'function') {
+                    window.fleetDispatcher.selectAllResources();
+                } else if (window.$ && $('#allresources').length) {
+                    realClick($('#allresources')[0]);
+                    $('#allresources').trigger('click');
+                }
+                if (d.deuReserve !== undefined && d.deuReserve > 0) {
+                    setTimeout(function() {
+                        var $d = $('#deuterium, input[name="deuterium"]');
+                        if ($d.length) {
+                            var currentVal = parseInt($d.val().replace(/\./g, ''), 10) || 0;
+                            var targetVal = Math.max(0, currentVal - d.deuReserve);
+                            $d.val(targetVal).trigger('input').trigger('change').trigger('keyup');
+                            if (window.fleetDispatcher && typeof window.fleetDispatcher.cargoCalculation === 'function') {
+                                window.fleetDispatcher.cargoCalculation();
+                            }
+                        }
+                    }, 30);
                 }
             } else if (d.type === 'SELECT_MISSION') {
                 var missionId = parseInt(d.missionId, 10) || 3;
@@ -187,8 +233,13 @@
                     window.fleetDispatcher.selectMission(missionId);
                 }
                 if (window.$) {
-                    $('#missionButton' + missionId + ', [data-mission="' + missionId + '"]').trigger('click');
+                    var $mBtn = $('#missionButton' + missionId + ', [data-mission="' + missionId + '"]');
+                    if ($mBtn.length) {
+                        realClick($mBtn[0]);
+                        $mBtn.trigger('click');
+                    }
                 }
+                syncFleetDispatcherState();
             } else if (d.type === 'SUBMIT_FLEET1') {
                 bridgeLog('ACTION', 'BRIDGE', 'SUBMIT_FLEET1 tetiklendi.');
                 if (window.fleetDispatcher && typeof window.fleetDispatcher.trySubmitFleet1 === 'function') {
@@ -225,6 +276,7 @@
                     $('#sendFleet').trigger('click');
                     submitted = true;
                 }
+                setTimeout(syncFleetDispatcherState, 300);
             } else if (d.type === 'FILL_RESOURCES') {
                 bridgeLog('ACTION', 'BRIDGE', 'Kaynaklar dolduruldu: M:' + (d.m||0) + ' C:' + (d.c||0) + ' D:' + (d.d||0));
                 if (window.$) {
@@ -343,9 +395,15 @@
             $(document).ajaxSend(function(event, jqXHR, settings) {
                 var isTrace = !!window.LS_TRACE_ENABLED;
                 var isDebug = !!window.LS_DEBUG_ENABLED;
-                if ((isTrace || isDebug) && settings && settings.url) {
+                if (settings && settings.url) {
                     var u = settings.url;
-                    if (u.indexOf('fleetdispatch') !== -1 || u.indexOf('sendFleet') !== -1 || u.indexOf('checkTarget') !== -1 || u.indexOf('galaxy') !== -1 || u.indexOf('ajax') !== -1) {
+                    if (u.indexOf('checkTarget') !== -1) {
+                        document.body.dataset.lsTargetCheckPending = 'true';
+                    }
+                    if (u.indexOf('sendFleet') !== -1) {
+                        document.body.dataset.lsSendFleetPending = 'true';
+                    }
+                    if ((isTrace || isDebug) && (u.indexOf('fleetdispatch') !== -1 || u.indexOf('sendFleet') !== -1 || u.indexOf('checkTarget') !== -1 || u.indexOf('galaxy') !== -1 || u.indexOf('ajax') !== -1)) {
                         var cleanUrl = u.split('&_st=')[0];
                         if (isDebug) bridgeLog('INFO', 'AJAX-REQ', '📤 [GİDEN İSTEK] ' + cleanUrl);
                         if (isTrace) bridgeLog('ACTION', 'TRACE', '📤 [SUNUCU İSTEĞİ] ' + cleanUrl);
@@ -353,6 +411,35 @@
                 }
             });
             $(document).ajaxComplete(function(event, xhr, settings) {
+                if (settings && settings.url) {
+                    var u = settings.url;
+                    if (u.indexOf('checkTarget') !== -1) {
+                        document.body.dataset.lsTargetCheckPending = 'false';
+                        document.body.dataset.lsTargetCheckSuccess = (xhr && xhr.status === 200) ? 'true' : 'false';
+                        document.body.dataset.lsTargetCheckTimestamp = String(Date.now());
+                        try {
+                            window.dispatchEvent(new CustomEvent('LS_TARGET_CHECK_COMPLETE', {
+                                detail: {
+                                    status: xhr ? xhr.status : 0,
+                                    responseText: xhr ? xhr.responseText : ''
+                                }
+                            }));
+                        } catch (e) {}
+                    }
+                    if (u.indexOf('sendFleet') !== -1) {
+                        document.body.dataset.lsSendFleetPending = 'false';
+                        document.body.dataset.lsSendFleetSuccess = (xhr && xhr.status === 200) ? 'true' : 'false';
+                        document.body.dataset.lsSendFleetTimestamp = String(Date.now());
+                        try {
+                            window.dispatchEvent(new CustomEvent('LS_SEND_FLEET_COMPLETE', {
+                                detail: {
+                                    status: xhr ? xhr.status : 0,
+                                    responseText: xhr ? xhr.responseText : ''
+                                }
+                            }));
+                        } catch (e) {}
+                    }
+                }
                 if (settings && settings.url && (settings.url.indexOf('eventList') !== -1 || settings.url.indexOf('component=eventList') !== -1)) {
                     if (xhr && xhr.responseText) {
                         try {

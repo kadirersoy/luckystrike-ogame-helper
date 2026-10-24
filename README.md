@@ -315,7 +315,7 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ## 🚀 Kurulum / Installation
 
 ### Chrome & Microsoft Edge
-1. İndirin / Download: [`luckystrike-ogame-helper-v13.2.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
+1. İndirin / Download: [`luckystrike-ogame-helper-v13.3.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
 2. Tarayıcıda eklentiler sayfasına gidin / Open extensions page:
    - **Chrome:** `chrome://extensions`
    - **Edge:** `edge://extensions`
@@ -325,6 +325,20 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ---
 
 ## 📝 Sürüm Geçmişi / Changelog
+
+### v13.3
+- **🛡️ Saf OGame Deterministik & Olay Tabanlı (Event-Driven) Filo Mimarisi / Pure OGame Event-Driven Architecture:**
+  - **Milisaniyelik Yapay Beklemelere Son:** Tüm filo hazırlık ve sekme geçişlerindeki yapay gecikmeler tamamen kaldırıldı. Kodlar doğrudan OGame'in DOM durumlarına (`.on`, `.selected`) ve sunucu yaşam döngüsüne bağlandı.
+  - **Zero Blind Delays:** Removed artificial timeout delays across fleet dispatch and step transitions. Automation is now directly synchronized with OGame's reactive DOM state flags and server lifecycle.
+- **🛰️ Sunucu `checkTarget` AJAX Kancası & Asenkron Senkronizasyon / `checkTarget` Server Hook:**
+  - Koordinat veya hedef türü (Ay/Gezegen) seçildiğinde OGame'in sunucuya attığı `checkTarget` AJAX yanıtı `bridge.js` üzerinden anlık olarak dinlenir. Sunucu yanıtı dönmeden görev seçimi veya kaynak doldurma yapılmaz; böylece *"Bu görevi başlatamazsın"* hatası ve yarış durumları (race condition) tamamen engellendi.
+  - Synchronized mission and resource operations with OGame's native `checkTarget` asynchronous response. Eliminates premature mission submission and "You cannot start this mission" errors.
+- **💎 Maden Toplayıcı'da Saf OGame `<a id="allresources">` Entegrasyonu / Native Resource Loading:**
+  - Maden Toplayıcı modülünde kutulara elle ham veri enjekte etmek yerine saf OGame'in yerel "Tüm Kaynaklar" (`#allresources`) butonu entegre edildi. Varsa döteryum rezervi tek tıkla korunarak tüm kargo kapasitesi hatasız ve yerel sayı formatıyla (`.checkThousandSeparator`) doldurulur.
+  - Integrated native OGame `#allresources` button for Collector deliveries, properly respecting deuterium reserves and native thousand-separator formatting.
+- **🛸 Filo Hareketi Slot Limiti Takibi & Koruması / Fleet Slot Awareness & Waiting Mode:**
+  - Maliyet Sepeti, Maden Toplayıcı ve Postacı modüllerinde filo slotu limitleri canlı olarak takip edilir. Slotlar tükendiğinde (`27/27` vb.) operasyon kilitlenmeden akıllı bekleme moduna geçer ve HUD üzerinde anlık slot rozeti (`🛸 Slot: X/Y`) görüntülenir.
+  - Live tracking of fleet slot capacities across all dispatch modules. Automatically pauses queue execution when slots are exhausted instead of failing.
 
 ### v13.2
 - **⚡ Zamansız Başlık Tasarımı (Timeless Header):**
