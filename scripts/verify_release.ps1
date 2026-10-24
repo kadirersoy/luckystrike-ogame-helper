@@ -94,20 +94,27 @@ if (-not $readmeHasVersion) {
 }
 
 # Check 5: Screenshot Freshness
-Write-Host "[5/6] Checking Screenshot Assets Freshness..."
+Write-Host "[5/6] Checking Screenshot Assets Freshness (TR & EN)..."
 $screenshotsDir = Join-Path $projectRoot "screenshots"
+$enScreenshotsDir = Join-Path $screenshotsDir "en"
 $allSsExist = $true
 $requiredScreenshots = @("tab_alarm.png", "tab_cart.png", "tab_collector.png", "tab_courier.png", "tab_debris.png", "tab_expedition.png", "tab_finder.png", "tab_scanner.png", "tab_settings.png")
 foreach ($ss in $requiredScreenshots) {
-    $p = Join-Path $screenshotsDir $ss
-    if (-not (Test-Path $p) -or (Get-Item $p).Length -lt 1000) {
+    $pTr = Join-Path $screenshotsDir $ss
+    if (-not (Test-Path $pTr) -or (Get-Item $pTr).Length -lt 1000) {
         $allSsExist = $false
-        $failures += "Screenshot '$ss' missing or corrupt!"
-        Write-Host "  FAILED: Screenshot '$ss' missing or corrupt!" -ForegroundColor Red
+        $failures += "Turkish screenshot '$ss' missing or corrupt!"
+        Write-Host "  FAILED: Turkish screenshot '$ss' missing or corrupt!" -ForegroundColor Red
+    }
+    $pEn = Join-Path $enScreenshotsDir $ss
+    if (-not (Test-Path $pEn) -or (Get-Item $pEn).Length -lt 1000) {
+        $allSsExist = $false
+        $failures += "English screenshot 'en/$ss' missing or corrupt!"
+        Write-Host "  FAILED: English screenshot 'en/$ss' missing or corrupt!" -ForegroundColor Red
     }
 }
 if ($allSsExist) {
-    Write-Host "  PASSED: All 9 screenshots verified." -ForegroundColor Green
+    Write-Host "  PASSED: All 18 screenshots (9 TR + 9 EN) verified." -ForegroundColor Green
 }
 
 # Check 6: Local ZIP Hygiene (only 1 ZIP present in root)

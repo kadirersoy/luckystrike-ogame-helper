@@ -1,4 +1,4 @@
-# ⚡ LuckyStrike OGame Helper (v13.2)
+﻿# ⚡ LuckyStrike OGame Helper (v13.2)
 
 [English](#-english-description) | [Türkçe](#-türkçe-açıklama)
 
@@ -176,7 +176,7 @@ LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Term
 #### 1. 🏗️ Resource Cost Cart & Multi-Level Calculation
 
 <p align="center">
-  <img src="screenshots/tab_cart.png" width="380" alt="LuckyStrike Cost Cart">
+  <img src="screenshots/en/tab_cart.png" width="380" alt="LuckyStrike Cost Cart">
 </p>
 
 - **Multi-Level Selection:** Quick level adjustments (`[ − ] [ +N ] [ + ]`) directly within building and research detail popups.
@@ -190,7 +190,7 @@ LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Term
 #### 2. 📦 Resource Collector Assistant
 
 <p align="center">
-  <img src="screenshots/tab_collector.png" width="380" alt="LuckyStrike Resource Collector">
+  <img src="screenshots/en/tab_collector.png" width="380" alt="LuckyStrike Resource Collector">
 </p>
 
 - **Empire-Wide Collection:** Sequentially gathers resources from all selected planets and moons to a designated central base (planet, moon, or manual coordinate).
@@ -204,7 +204,7 @@ LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Term
 #### 3. 📬 Resource Courier Assistant
 
 <p align="center">
-  <img src="screenshots/tab_courier.png" width="380" alt="LuckyStrike Resource Courier">
+  <img src="screenshots/en/tab_courier.png" width="380" alt="LuckyStrike Resource Courier">
 </p>
 
 - **Central Distribution Model:** Operates as the reverse of the Collector; dispatches resources from a single origin base (Distribution Hub) outward to selected colonies.
@@ -219,7 +219,7 @@ LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Term
 #### 4. 🛰️ Debris Field Tracker
 
 <p align="center">
-  <img src="screenshots/tab_debris.png" width="380" alt="LuckyStrike Debris Tracker">
+  <img src="screenshots/en/tab_debris.png" width="380" alt="LuckyStrike Debris Tracker">
 </p>
 
 - **Passive Galaxy View Tracking:** Compiles and organizes debris fields displayed on screen as you navigate galaxy systems.
@@ -232,7 +232,7 @@ LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Term
 #### 5. 🧭 Expedition Assistant
 
 <p align="center">
-  <img src="screenshots/tab_expedition.png" width="380" alt="LuckyStrike Expedition Assistant">
+  <img src="screenshots/en/tab_expedition.png" width="380" alt="LuckyStrike Expedition Assistant">
 </p>
 
 - **Spiral Routing Algorithm:** Distributes expedition missions to slot 16 systems radiating outward (+1, -1, +2, -2...) from your chosen origin.
@@ -245,7 +245,7 @@ LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Term
 #### 6. 🌌 Galaxy Scanner (Empty Slot Locator)
 
 <p align="center">
-  <img src="screenshots/tab_scanner.png" width="380" alt="LuckyStrike Galaxy Scanner">
+  <img src="screenshots/en/tab_scanner.png" width="380" alt="LuckyStrike Galaxy Scanner">
 </p>
 
 - **Official Gameforge API:** Leverages public `universe.xml` data to locate vacant slots and clusters of systems suitable for colonization or relocation.
@@ -258,7 +258,7 @@ LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Term
 #### 7. 🔍 Player Finder (Colony Locator)
 
 <p align="center">
-  <img src="screenshots/tab_finder.png" width="380" alt="LuckyStrike Player Finder">
+  <img src="screenshots/en/tab_finder.png" width="380" alt="LuckyStrike Player Finder">
 </p>
 
 - **Player & Planet Coordinate Search:** Searches player names and colony names via official `players.xml` and `universe.xml` APIs.
@@ -270,7 +270,7 @@ LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Term
 #### 8. 🚨 Threat Alert Assistant (Active In-Game Alarm)
 
 <p align="center">
-  <img src="screenshots/tab_alarm.png" width="380" alt="LuckyStrike Threat Alert">
+  <img src="screenshots/en/tab_alarm.png" width="380" alt="LuckyStrike Threat Alert">
 </p>
 
 - **Active Session Threat Detection:** Monitors incoming attacks and espionage missions when the active page refreshes or the game's native event header updates.
@@ -284,7 +284,7 @@ LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Term
 #### 9. ⚙️ Settings, Customization & System Diagnostics
 
 <p align="center">
-  <img src="screenshots/tab_settings.png" width="380" alt="LuckyStrike Settings and Diagnostics">
+  <img src="screenshots/en/tab_settings.png" width="380" alt="LuckyStrike Settings and Diagnostics">
 </p>
 
 - **🌐 Language Selector:** Switch between TR (Türkçe) and ENG (English) instantly.

@@ -123,6 +123,8 @@
             cart_ship_pref_hint: 'Gemi Tercihi (Öncelik: Rehber > KN > BN):',
             cart_extra_title: 'Ek Maliyet',
             cart_extra_hint: 'Aktif olduğunda girilen tutarlar gönderim yapılacak her bir seçili gezegen sepetine eklenir',
+            cart_add_extra_btn: '📥 Sepete Ekle',
+            cart_add_extra_tip: 'Girilen ek maliyeti seçili gezegen sepetlerine kalem olarak ekler',
             cart_metal_ph: 'Metal',
             cart_crys_ph: 'Kristal',
             cart_deut_ph: 'Deu',
@@ -207,6 +209,10 @@
             cour_no_selection: 'Dağıtım yapılacak gezegen veya ay seçilmedi!',
             cour_no_resources: 'Lütfen gönderilecek maden miktarlarını girin!',
             cour_planets_count: 'hedef seçili',
+            cour_cargo_needed: 'Kargo İhtiyacı:',
+            cour_status_waiting: 'Tutar bekleniyor',
+            cour_status_ok: '✔ Üs Kaynağı Yeterli',
+            cour_status_shortage: '⚠ Üs Stoğu Eksik',
             cour_hud_title: 'Postacı Asistanı',
             cour_hud_dest: 'Hedef:',
             cour_hud_cargo: 'Taşınan:',
@@ -243,6 +249,7 @@
             deb_clear_title: 'Tüm harabeleri listeden temizle',
             deb_no_debris: '🪐 Henüz harabe tespit edilmedi.<br><span style="font-size:10px;color:#5c7080;margin-top:4px;display:inline-block">Galakside gezdikçe belirlediğiniz eşiğin üzerindeki harabeler otomatik listelenir.</span>',
             deb_jump: '🚀 Git',
+            deb_recycler_short: 'GD',
 
             // Expedition Tab
             exp_start_slot16: '🎯 Başlangıç Keşif Noktası (Slot 16)',
@@ -437,6 +444,8 @@
             cart_ship_pref_hint: 'Ship Preference (Priority: Pathfinder > SC > LC):',
             cart_extra_title: 'Extra Cost',
             cart_extra_hint: 'When active, entered amounts are added on top of each selected planet cart for delivery',
+            cart_add_extra_btn: '📥 Add to Cart',
+            cart_add_extra_tip: 'Adds entered extra cost as items to selected planet carts',
             cart_metal_ph: 'Metal',
             cart_crys_ph: 'Crystal',
             cart_deut_ph: 'Deut',
@@ -521,6 +530,10 @@
             cour_no_selection: 'No destination planet or moon selected!',
             cour_no_resources: 'Please enter resource amounts to send!',
             cour_planets_count: 'targets selected',
+            cour_cargo_needed: 'Cargo Needed:',
+            cour_status_waiting: 'Awaiting amounts',
+            cour_status_ok: '✔ Hub Resources Sufficient',
+            cour_status_shortage: '⚠ Insufficient Hub Stock',
             cour_hud_title: 'Courier Assistant',
             cour_hud_dest: 'Target:',
             cour_hud_cargo: 'Distributing:',
@@ -557,6 +570,7 @@
             deb_clear_title: 'Clear all debris from list',
             deb_no_debris: '🪐 No debris detected yet.<br><span style="font-size:10px;color:#5c7080;margin-top:4px;display:inline-block">Debris above your threshold will appear automatically as you browse galaxy view.</span>',
             deb_jump: '🚀 Go',
+            deb_recycler_short: 'REC',
 
             // Expedition Tab
             exp_start_slot16: '🎯 Starting Expedition Point (Slot 16)',
@@ -1620,23 +1634,23 @@
                 const pNameEl = parentP ? parentP.querySelector('.planet-name') : null;
                 if (pNameEl && pNameEl.textContent.trim()) parentName = pNameEl.textContent.trim();
             }
-            if (parentName) return `${parentName} ( Ay )`;
+            if (parentName) return `${parentName} ( ${t('coll_moon_name', 'Ay')} )`;
 
             const metaCoords = document.querySelector('meta[name="ogame-planet-coordinates"]')?.getAttribute('content');
             if (metaCoords) {
                 const emp = getEmpirePlanetsAndMoons();
                 const matched = emp.find(p => p.coords === metaCoords);
-                if (matched && matched.name) return `${matched.name} ( Ay )`;
+                if (matched && matched.name) return `${matched.name} ( ${t('coll_moon_name', 'Ay')} )`;
             }
 
             if (activeMoon) {
                 const moonTitle = activeMoon.getAttribute('title') || activeMoon.textContent;
                 if (moonTitle && moonTitle.trim()) {
                     const raw = moonTitle.split('[')[0].trim();
-                    if (raw && raw !== 'Ay') return `${raw} ( Ay )`;
+                    if (raw && raw !== 'Ay' && raw !== 'Moon') return `${raw} ( ${t('coll_moon_name', 'Ay')} )`;
                 }
             }
-            return 'Gezegen ( Ay )';
+            return `${t('coll_planet_name', 'Gezegen')} ( ${t('coll_moon_name', 'Ay')} )`;
         }
 
         if (activeEl && activeEl.textContent.trim()) {
@@ -1646,7 +1660,7 @@
         // 3. OGame resmi meta etiketi (Sunucu tarafından aktif gezegene göre üretilir)
         const metaName = document.querySelector('meta[name="ogame-planet-name"]')?.getAttribute('content');
         if (metaName && metaName.trim()) {
-            return isMoon ? `${metaName.trim()} ( Ay )` : metaName.trim();
+            return isMoon ? `${metaName.trim()} ( ${t('coll_moon_name', 'Ay')} )` : metaName.trim();
         }
 
         // 4. Üst başlık veya seçili gezegen başlığı
@@ -1654,10 +1668,10 @@
                          document.querySelector('#selectedPlanetName') ||
                          document.querySelector('.planet-header .planet-name');
         if (headerEl && headerEl.textContent.trim()) {
-            return isMoon ? `${headerEl.textContent.trim()} ( Ay )` : headerEl.textContent.trim();
+            return isMoon ? `${headerEl.textContent.trim()} ( ${t('coll_moon_name', 'Ay')} )` : headerEl.textContent.trim();
         }
 
-        return isMoon ? 'Gezegen ( Ay )' : 'Gezegen';
+        return isMoon ? `${t('coll_planet_name', 'Gezegen')} ( ${t('coll_moon_name', 'Ay')} )` : t('coll_planet_name', 'Gezegen');
     }
 
     // ============================================================
@@ -2677,14 +2691,14 @@
                     const empire = getEmpirePlanetsAndMoons();
                     const parentP = empire.find(p => p.coords === coords);
                     if (parentP) {
-                        pName = `${parentP.name} ( Ay )`;
-                    } else if (!pName || pName === 'Ay') {
-                        pName = 'Ay ( Ay )';
-                    } else if (!pName.includes('( Ay )')) {
-                        pName = `${pName} ( Ay )`;
+                        pName = `${parentP.name} ( ${t('coll_moon_name', 'Ay')} )`;
+                    } else if (!pName || pName === 'Ay' || pName === 'Moon') {
+                        pName = `${t('coll_moon_name', 'Ay')} ( ${t('coll_moon_name', 'Ay')} )`;
+                    } else if (!pName.includes('( Ay )') && !pName.includes('( Moon )')) {
+                        pName = `${pName} ( ${t('coll_moon_name', 'Ay')} )`;
                     }
                 } else if (!pName) {
-                    pName = 'Gezegen';
+                    pName = t('coll_planet_name', 'Gezegen');
                 }
 
                 groupsMap.set(key, {
@@ -3607,18 +3621,18 @@
 
         let originIcon = '🪐';
         if (cartOrigin.originType === 3) originIcon = '🌕';
-        let rawOriginTitle = cartOrigin.originName || 'Merkez';
+        let rawOriginTitle = cartOrigin.originName || t('cour_origin_head', 'Merkez');
         let cleanOriginTitle = rawOriginTitle.replace(/^[\s\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]+/u, '').trim();
-        if (!cleanOriginTitle || cleanOriginTitle === 'Ay') {
+        if (!cleanOriginTitle || cleanOriginTitle === 'Ay' || cleanOriginTitle === 'Moon') {
             if (cartOrigin.originType === 3) {
                 const parentP = empire.find(p => p.coords === cartOrigin.originCoord);
-                cleanOriginTitle = parentP ? `${parentP.name} ( Ay )` : 'Ay ( Ay )';
+                cleanOriginTitle = parentP ? `${parentP.name} ( ${t('coll_moon_name', 'Ay')} )` : `${t('coll_moon_name', 'Ay')} ( ${t('coll_moon_name', 'Ay')} )`;
             } else {
-                cleanOriginTitle = 'Gezegen';
+                cleanOriginTitle = t('coll_planet_name', 'Gezegen');
             }
         }
         if (cartOrigin.originId === 'manual') {
-            cleanOriginTitle = (cartOrigin.originType === 3 ? 'Manuel Ay' : 'Manuel Gezegen');
+            cleanOriginTitle = (cartOrigin.originType === 3 ? t('coll_manual_moon', 'Manuel Ay...') : t('coll_manual_planet', 'Manuel Gezegen...'));
         }
 
         originLabelEl.innerHTML = `<span><b>${originIcon} ${escapeHtml(cleanOriginTitle)}</b><span class="crd">${cartOrigin.originCoord || ''}</span></span>`;
@@ -3630,7 +3644,7 @@
                 `<span>🪐 ${escapeHtml(p.name)}</span><span class="crd">${p.coords}</span></div>`;
             if (p.moon) {
                 const isMActive = (cartOrigin.originCoord === p.coords && cartOrigin.originType === 3);
-                const mTitle = p.moon.name || `${p.name} ( Ay )`;
+                const mTitle = p.moon.name || `${p.name} ( ${t('coll_moon_name', 'Ay')} )`;
                 ddHtml += `<div class="ls-coll-dd-item moon ${isMActive ? 'active' : ''}" data-id="${p.moon.id}" data-coord="${p.coords}" data-type="3" data-name="${escapeHtml(mTitle)}">` +
                     `<span>🌕 ${escapeHtml(mTitle)}</span><span class="crd">${p.coords}</span></div>`;
             }
@@ -5020,7 +5034,7 @@
             if (headerStopBtn) headerStopBtn.style.display = 'none';
             if (banner) { banner.style.background = '#162436'; banner.style.borderColor = '#1a3a5c'; }
             if (dot) { dot.style.background = '#2ecc71'; dot.style.boxShadow = '0 0 6px #2ecc71'; }
-            if (text) { text.style.color = '#2ecc71'; text.textContent = 'Gözcü Aktif · Tehdit Yok'; }
+            if (text) { text.style.color = '#2ecc71'; text.textContent = t('alarm_status_active_safe', 'Gözcü Aktif · Tehdit Yok'); }
             return;
         }
 
@@ -5523,7 +5537,7 @@
                     '<div style="display:flex;align-items:center;gap:6px">' +
                         '<b style="color:#00bcff;font-family:monospace;font-size:12px;cursor:pointer" class="ls-debris-coord" data-g="' + item.g + '" data-s="' + item.s + '" title="Galakside bu sisteme git">' + coordStr + '</b>' +
                         '<span style="color:#2ecc71;font-size:10px;background:rgba(46,204,113,0.12);padding:1px 5px;border-radius:3px;border:1px solid rgba(46,204,113,0.25)">' +
-                            '🚛 ' + fmt(item.recyclers) + ' GD' +
+                            '🚛 ' + fmt(item.recyclers) + ' ' + t('deb_recycler_short', 'GD') +
                         '</span>' +
                     '</div>' +
                     '<div style="display:flex;align-items:center;gap:4px">' +
@@ -5926,7 +5940,7 @@
 
                     moonObj = {
                         id: mId,
-                        name: `${name} ( Ay )`,
+                        name: `${name} ( ${t('coll_moon_name', 'Ay')} )`,
                         coords: coords,
                         isMoon: true,
                         type: 3,
@@ -5953,8 +5967,8 @@
                 try {
                     list = JSON.parse(cached);
                     list.forEach(p => {
-                        if (p.moon && (!p.moon.name || p.moon.name === 'Ay')) {
-                            p.moon.name = `${p.name} ( Ay )`;
+                        if (p.moon && (!p.moon.name || p.moon.name === 'Ay' || p.moon.name === 'Moon')) {
+                            p.moon.name = `${p.name} ( ${t('coll_moon_name', 'Ay')} )`;
                         }
                     });
                 } catch (e) {}
@@ -6052,7 +6066,7 @@
                         id: found.moon.id,
                         coords: found.coords,
                         type: 3,
-                        name: found.moon.name || `${found.name} ( Ay )`
+                        name: found.moon.name || `${found.name} ( ${t('coll_moon_name', 'Ay')} )`
                     };
                 }
                 return {
@@ -6069,7 +6083,7 @@
                     return { id: p.id, coords: p.coords, type: 1, name: p.name };
                 }
                 if (p.moon && p.moon.id === metaId) {
-                    return { id: p.moon.id, coords: p.coords, type: 3, name: p.moon.name || `${p.name} ( Ay )` };
+                    return { id: p.moon.id, coords: p.coords, type: 3, name: p.moon.name || `${p.name} ( ${t('coll_moon_name', 'Ay')} )` };
                 }
             }
         }
@@ -6110,18 +6124,18 @@
         // 1. Hedef Buton Başlığı
         let targetIcon = '🪐';
         if (collectorSettings.targetType === 3) targetIcon = '🌕';
-        let rawTargetTitle = collectorSettings.targetName || 'Merkez';
+        let rawTargetTitle = collectorSettings.targetName || t('coll_target_head', 'Merkez');
         let cleanTargetTitle = rawTargetTitle.replace(/^[\s\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]+/u, '').trim();
-        if (!cleanTargetTitle || cleanTargetTitle === 'Ay') {
+        if (!cleanTargetTitle || cleanTargetTitle === 'Ay' || cleanTargetTitle === 'Moon') {
             if (collectorSettings.targetType === 3) {
                 const parentP = empire.find(p => p.coords === collectorSettings.targetCoord);
-                cleanTargetTitle = parentP ? `${parentP.name} ( Ay )` : 'Ay ( Ay )';
+                cleanTargetTitle = parentP ? `${parentP.name} ( ${t('coll_moon_name', 'Ay')} )` : `${t('coll_moon_name', 'Ay')} ( ${t('coll_moon_name', 'Ay')} )`;
             } else {
-                cleanTargetTitle = 'Gezegen';
+                cleanTargetTitle = t('coll_planet_name', 'Gezegen');
             }
         }
         if (collectorSettings.targetId === 'manual') {
-            cleanTargetTitle = (collectorSettings.targetType === 3 ? 'Manuel Ay' : 'Manuel Gezegen');
+            cleanTargetTitle = (collectorSettings.targetType === 3 ? t('coll_manual_moon', 'Manuel Ay...') : t('coll_manual_planet', 'Manuel Gezegen...'));
         }
 
         targetLabelEl.innerHTML = `<span><b>${targetIcon} ${escapeHtml(cleanTargetTitle)}</b><span class="crd">${collectorSettings.targetCoord || ''}</span></span>`;
@@ -6134,7 +6148,7 @@
                 `<span>🪐 ${escapeHtml(p.name)}</span><span class="crd">${p.coords}</span></div>`;
             if (p.moon) {
                 const isMActive = (collectorSettings.targetCoord === p.coords && collectorSettings.targetType === 3);
-                const mTitle = p.moon.name || `${p.name} ( Ay )`;
+                const mTitle = p.moon.name || `${p.name} ( ${t('coll_moon_name', 'Ay')} )`;
                 ddHtml += `<div class="ls-coll-dd-item moon ${isMActive ? 'active' : ''}" data-id="${p.moon.id}" data-coord="${p.coords}" data-type="3" data-name="${escapeHtml(mTitle)}">` +
                     `<span>🌕 ${escapeHtml(mTitle)}</span><span class="crd">${p.coords}</span></div>`;
             }
@@ -6198,7 +6212,7 @@
                     const mRes = getPlanetCachedResources(p.moon.id);
                     const mReserve = collectorSettings.reserves[p.moon.id] !== undefined ? collectorSettings.reserves[p.moon.id] : 250000;
                     const mChecked = collectorSettings.selectedItems[p.moon.id] === true;
-                    const mTitle = p.moon.name || `${p.name} ( Ay )`;
+                    const mTitle = p.moon.name || `${p.name} ( ${t('coll_moon_name', 'Ay')} )`;
 
                     if (isTargetMoon) {
                         listHtml += `<div class="ls-coll-mrow ls-coll-dest">` +
@@ -7109,13 +7123,13 @@
         if (!cleanOriginTitle || cleanOriginTitle === 'Ay') {
             if (courierSettings.originType === 3) {
                 const parentP = empire.find(p => p.coords === courierSettings.originCoord);
-                cleanOriginTitle = parentP ? `${parentP.name} ( Ay )` : 'Ay ( Ay )';
+                cleanOriginTitle = parentP ? `${parentP.name} ( ${t('coll_moon_name', 'Ay')} )` : `${t('coll_moon_name', 'Ay')} ( ${t('coll_moon_name', 'Ay')} )`;
             } else {
-                cleanOriginTitle = 'Gezegen';
+                cleanOriginTitle = t('coll_planet_name', 'Gezegen');
             }
         }
         if (courierSettings.originId === 'manual') {
-            cleanOriginTitle = (courierSettings.originType === 3 ? 'Manuel Ay' : 'Manuel Gezegen');
+            cleanOriginTitle = (courierSettings.originType === 3 ? t('coll_manual_moon', 'Manuel Ay...') : t('coll_manual_planet', 'Manuel Gezegen...'));
         }
 
         originLabelEl.innerHTML = `<span><b>${originIcon} ${escapeHtml(cleanOriginTitle)}</b><span class="crd">${courierSettings.originCoord || ''}</span></span>`;
@@ -7128,7 +7142,7 @@
                 `<span>🪐 ${escapeHtml(p.name)}</span><span class="crd">${p.coords}</span></div>`;
             if (p.moon) {
                 const isMActive = (courierSettings.originCoord === p.coords && courierSettings.originType === 3);
-                const mTitle = p.moon.name || `${p.name} ( Ay )`;
+                const mTitle = p.moon.name || `${p.name} ( ${t('coll_moon_name', 'Ay')} )`;
                 ddHtml += `<div class="ls-coll-dd-item moon ${isMActive ? 'active' : ''}" data-id="${p.moon.id}" data-coord="${p.coords}" data-type="3" data-name="${escapeHtml(mTitle)}">` +
                     `<span>🌕 ${escapeHtml(mTitle)}</span><span class="crd">${p.coords}</span></div>`;
             }
@@ -7200,7 +7214,7 @@
                     const mRes = getPlanetCachedResources(p.moon.id);
                     const mChecked = courierSettings.selectedItems[p.moon.id] === true;
                     const mTarget = (courierSettings.targets && courierSettings.targets[p.moon.id]) ? courierSettings.targets[p.moon.id] : { met: 0, cri: 0, deu: 0 };
-                    const mTitle = p.moon.name || `${p.name} ( Ay )`;
+                    const mTitle = p.moon.name || `${p.name} ( ${t('coll_moon_name', 'Ay')} )`;
 
                     if (isOriginMoon) {
                         listHtml += `<div class="ls-coll-mrow ls-coll-dest">` +
@@ -7288,11 +7302,11 @@
 
         let statusText = '';
         if (totalCargo === 0) {
-            statusText = `<span style="color:#8899aa">Tutar bekleniyor</span>`;
+            statusText = `<span style="color:#8899aa">${t('cour_status_waiting', 'Tutar bekleniyor')}</span>`;
         } else if (isResourceSuff) {
-            statusText = `<span style="color:#2ecc71">✔ Üs Kaynağı Yeterli</span>`;
+            statusText = `<span style="color:#2ecc71">${t('cour_status_ok', '✔ Üs Kaynağı Yeterli')}</span>`;
         } else {
-            statusText = `<span style="color:#f39c12" title="Metal: ${formatShort(originRes.metal)}/${formatShort(totalM)}, Kri: ${formatShort(originRes.crystal)}/${formatShort(totalC)}, Deu: ${formatShort(originRes.deuterium)}/${formatShort(totalD)}">⚠ Üs Stoğu Eksik</span>`;
+            statusText = `<span style="color:#f39c12" title="Metal: ${formatShort(originRes.metal)}/${formatShort(totalM)}, Kri: ${formatShort(originRes.crystal)}/${formatShort(totalC)}, Deu: ${formatShort(originRes.deuterium)}/${formatShort(totalD)}">${t('cour_status_shortage', '⚠ Üs Stoğu Eksik')}</span>`;
         }
 
         summaryEl.innerHTML =
@@ -7301,7 +7315,7 @@
                 `<span style="font-family:monospace;font-weight:bold"><span class="ls-coll-m">${formatShort(totalM)}</span> · <span class="ls-coll-k">${formatShort(totalC)}</span> · <span class="ls-coll-d">${formatShort(totalD)}</span></span>` +
             '</div>' +
             '<div class="ls-cour-sum-row ls-cour-sum-sub">' +
-                `<span style="color:#8899aa">Kargo İhtiyacı: <b style="color:#00bcff;font-family:monospace">${formatShort(totalCargo)}</b></span>` +
+                `<span style="color:#8899aa">${t('cour_cargo_needed', 'Kargo İhtiyacı:')} <b style="color:#00bcff;font-family:monospace">${formatShort(totalCargo)}</b></span>` +
                 statusText +
             '</div>';
     }
@@ -7657,7 +7671,7 @@
                     if ((subM + subC + subD) > 0) {
                         queue.push({
                             id: p.moon.id,
-                            name: p.moon.name || `${p.name} ( Ay )`,
+                            name: p.moon.name || `${p.name} ( ${t('coll_moon_name', 'Ay')} )`,
                             coords: p.coords,
                             type: 3,
                             isMoon: true,
@@ -9687,7 +9701,7 @@
                                 '<input type="text" id="ls-cart-extra-c" class="ls-cour-inp ls-cour-inp-c" placeholder="Kristal" data-i18n-placeholder="cart_crys_ph" title="Her hedefe eklenecek Kristal miktarı (örn: 2m, 250k)">' +
                                 '<input type="text" id="ls-cart-extra-d" class="ls-cour-inp ls-cour-inp-d" placeholder="Deu" data-i18n-placeholder="cart_deut_ph" title="Her hedefe eklenecek Deuterium miktarı (örn: 3m, 100k)">' +
                             '</div>' +
-                            '<button type="button" id="ls-cart-add-extra-btn" class="ls-btn-sm" style="background:#27ae60;color:#fff;border:none;padding:3px 7px;font-size:10px;font-weight:bold;border-radius:3px;cursor:pointer;white-space:nowrap" title="Girilen ek maliyeti seçili gezegen sepetlerine kalem olarak ekler">📥 Sepete Ekle</button>' +
+                            '<button type="button" id="ls-cart-add-extra-btn" class="ls-btn-sm" style="background:#27ae60;color:#fff;border:none;padding:3px 7px;font-size:10px;font-weight:bold;border-radius:3px;cursor:pointer;white-space:nowrap" data-i18n="cart_add_extra_btn" data-i18n-title="cart_add_extra_tip" title="Girilen ek maliyeti seçili gezegen sepetlerine kalem olarak ekler">📥 Sepete Ekle</button>' +
                         '</div>' +
                     '</div>' +
                     '<div class="ls-coll-selbar">' +
@@ -9719,7 +9733,7 @@
                         '<span class="ls-chip" data-slots="7, 9" data-min="1" data-i18n="scan_chip_7_9">⭐ 7, 9</span>' +
                         '<span class="ls-chip" data-slots="13, 14, 15" data-min="1" data-i18n="scan_chip_13_15">❄️ 13-15 (Deut)</span>' +
                         '<span class="ls-chip" data-slots="1, 2, 3" data-min="1" data-i18n="scan_chip_1_3">☀️ 1-3 (Solar)</span>' +
-                        '<span class="ls-chip" data-slots="1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15" data-min="15">🪐 Tamamen Boş (1-15)</span>' +
+                        '<span class="ls-chip" data-slots="1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15" data-min="15" data-i18n="scan_chip_empty">🪐 Tamamen Boş (1-15)</span>' +
                     '</div>' +
                     '<div style="display:justify;justify-content:space-between;align-items:center;margin-bottom:8px;background:rgba(255,255,255,0.03);padding:6px 8px;border-radius:4px;border:1px solid #1a2c3f;display:flex">' +
                         '<span class="ls-label" style="font-size:11px;color:#d1d8e0" data-i18n="scan_min_empty">👥 Min. Eşzamanlı Boş Slot:</span>' +
@@ -10016,12 +10030,12 @@
 
                     '<div id="ls-cour-summary" class="ls-coll-sum">' +
                         '<div class="ls-cour-sum-row" style="font-size:11px">' +
-                            '<span style="color:#8899aa">0 hedef seçili</span>' +
+                            `<span style="color:#8899aa">0 ${t('cour_planets_count', 'hedef seçili')}</span>` +
                             '<span style="font-family:monospace;font-weight:bold"><span class="ls-coll-m">0</span> · <span class="ls-coll-k">0</span> · <span class="ls-coll-d">0</span></span>' +
                         '</div>' +
                         '<div class="ls-cour-sum-row ls-cour-sum-sub">' +
-                            '<span style="color:#8899aa">Kargo İhtiyacı: <b style="color:#00bcff;font-family:monospace">0</b></span>' +
-                            '<span style="color:#8899aa">Tutar bekleniyor</span>' +
+                            `<span style="color:#8899aa">${t('cour_cargo_needed', 'Kargo İhtiyacı:')} <b style="color:#00bcff;font-family:monospace">0</b></span>` +
+                            `<span style="color:#8899aa">${t('cour_status_waiting', 'Tutar bekleniyor')}</span>` +
                         '</div>' +
                     '</div>' +
 
