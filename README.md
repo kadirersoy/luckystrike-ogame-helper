@@ -1,4 +1,4 @@
-﻿# ⚡ LuckyStrike OGame Helper (v13.2)
+# ⚡ LuckyStrike OGame Helper (v13.6)
 
 [English](#-english-description) | [Türkçe](#-türkçe-açıklama)
 
@@ -315,7 +315,7 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ## 🚀 Kurulum / Installation
 
 ### Chrome & Microsoft Edge
-1. İndirin / Download: [`luckystrike-ogame-helper-v13.3.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
+1. İndirin / Download: [`luckystrike-ogame-helper-v13.6.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
 2. Tarayıcıda eklentiler sayfasına gidin / Open extensions page:
    - **Chrome:** `chrome://extensions`
    - **Edge:** `edge://extensions`
@@ -325,6 +325,43 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ---
 
 ## 📝 Sürüm Geçmişi / Changelog
+
+### v13.6
+- **🌕 Ayların Kendi Gerçek İsimleri Algılanıp Tanımlandı / Real Moon Names Parsing & Persistent Caching:**
+  - Eskiden aylar doğrudan bağlı oldukları ana gezegenin adını devralıp `GezegenAdı ( Ay )` şeklinde listeleniyordu (örn: `FB_521 ( Ay )`).
+  - OGame DOM yapısındaki `a.moonlink` tooltip başlıkları (`title`, `data-tooltip-title`, `<b>FB_520</b>`) ve `meta[name="ogame-planet-name"]` meta etiketleri taranarak ayın kendi özel ismi (örn: `FB_520`) tespit edildi ve `LS_KNOWN_MOON_NAMES` kalıcı önbelleğine alındı.
+  - Toplayıcı (Collector), Maliyet Sepeti (Cart), Kurye (Courier) ve Asistan HUD başlıklarındaki tüm ay gösterimleri ayın kendi gerçek ismiyle güncellendi.
+  - Extracted authentic moon names from OGame's DOM tooltip attributes and server meta tags, persistently caching them in `LS_KNOWN_MOON_NAMES` across all dispatch and collection interfaces.
+- **🛡️ Toplayıcı (Collector) `LOCA_ERROR_INQUIRY_NOT_WORKED_TRYAGAIN` & Görev 3 Flood Koruması / Fixed Collector Inquiry Rate-Limit & Mission 3 Spam:**
+  - `content.js` içerisindeki `setFleetTargetCoords` fonksiyonundan çift DOM tıklamaları kaldırıldı; hedef seçimi ve tip ataması yalnızca `bridge.js` üzerinden tekil ve kontrollü olarak tetiklenecek şekilde optimize edildi.
+  - `setFleetMission` fonksiyonuna `isMissionSelected(missionId)`, `isTargetCheckPending()` ve `!isMissionClickable(missionId)` kilitleri eklendi. Görev zaten seçiliyse veya sunucuda `checkTarget` devam ediyorsa saniyede 40 kez Nakliye görevine tıklama döngüsü tamamen sonlandırıldı.
+  - `isMissionClickable` kontrolü OGame'in `li.off` ve `li.disabled` sınıflarını denetleyecek şekilde güçlendirildi; sunucu doğrulaması tamamlanmadan butona tıklanması engellendi.
+  - Eliminated redundant target clicks between `content.js` and `bridge.js`, added pre-conditions to `setFleetMission` preventing rapid 40 clicks/sec spam, and respected parent `li.off` disabled flags during active `checkTarget` inquiries.
+
+### v13.5
+- **🧭 Keşif Asistanı (Expedition) `LOCA_ERROR_INQUIRY_NOT_WORKED_TRYAGAIN` Hatası Giderildi / Fixed Expedition Target Check Spam:**
+  - `bridge.js` içerisindeki yapay çift sistem girdisi (`tempS` yazıp 40ms sonra asıl sistemi yazma) tamamen kaldırıldı. Bu durum GameForge sunucularına 40ms arayla iki `checkTarget` sorgusu gönderip `LOCA_ERROR_INQUIRY_NOT_WORKED_TRYAGAIN` hatasına sebep oluyordu.
+  - Hedef Gezegen/16. slot seçim kontrolü `.planet_selected` ve `.selected` sınıflarını tanıyacak şekilde tekilleştirildi; gereksiz tıklama tekrarları önlendi.
+  - Eliminated the artificial `tempS` double-input delay in `bridge.js` that triggered concurrent `checkTarget` AJAX inquiries and caused GameForge error 60000.
+- **🚀 Keşifler Arasında Doğrudan Geçiş & Çift Yenilenme / Ara Sekme Sorunu Çözüldü / Seamless Expedition Next-System Transition:**
+  - Keşif filosu gönderilirken `SUBMIT_FLEET2` aksiyonuna sıradaki sistemin URL'si (`nextUrl`) entegre edildi.
+  - OGame'in `sendFleet` yanıtındaki `redirectUrl` doğrudan sıradaki keşif koordinatına yönlendirilir; böylece eski sistemin yeniden yüklenmesi ve "arada bir sekme fazladan gelip orayı tekrar geçmesi" sorunu tamamen ortadan kalktı.
+  - Connected `nextUrl` to `SUBMIT_FLEET2` in Expedition Assistant, enabling OGame's native redirect to jump directly to the next system without redundant intermediate reloads.
+- **🛡️ Keşif Görevi (Mission 15) ve Slot Senkronizasyonu Güçlendirildi / Robust Mission 15 & Expedition Slots Guard:**
+  - `prepareStep2` döngüsünde Görev 15 zaten seçiliyse veya sunucuda `checkTarget` isteği askıdaysa gereksiz tıklama ve flood engellendi; `isMissionSelected(15)` ve `isTargetCheckPending()` ile tam senkronizasyon sağlandı.
+  - `getExpeditionSlotsInfo()` eklenerek keşif slotlarının dolu olup olmadığı hem panelden başlatırken hem de HUD üzerinden filo gönderirken kontrol altına alındı.
+  - Throttled mission selection with `isMissionSelected(15)` and `isTargetCheckPending()`, and introduced `getExpeditionSlotsInfo()` to respect maximum expedition capacity.
+
+### v13.4
+- **🛡️ `LOCA_ERROR_INQUIRY_NOT_WORKED_TRYAGAIN` & Hedef Sorgu Kilitlenmesi Giderildi / Target Query Rate-Limit Fix:**
+  - OGame'in yerel hedef seçim sınıfları (`.moon_selected`, `.planet_selected`, `.debris_selected`) tam uyumlu hale getirildi.
+  - Hedef koordinat ve Ay/Gezegen türü ataması tekil ve kontrollü yapıya kavuşturuldu; aynı anda 8 DOM elementine birden tıklama döngüsü ve 80ms aralıklı flood çağrıları kaldırıldı.
+  - `checkTarget` isteği sunucuda askıdayken (`lsTargetCheckPending`) yeni sorguların gitmesini engelleyen eşzamanlı istek kilidi eklendi.
+  - Resolved GameForge server rate-limiting and localization query errors by introducing deterministic single-element target clicking, proper CSS class recognition, and an active inquiry mutex.
+- **🚀 Akıcı Doğrudan Gezegen Geçişi & Çift Sayfa Yüklenmesinin Önlenmesi / Direct Planet Transition:**
+  - Filo gönderildikten sonra OGame'in native scripti tarafından eski/mevcut gezegenin yeniden yüklenmesi (`redirectUrl`) `$.ajaxPrefilter` kancasıyla doğrudan sıradaki hedef gezegenin adresine bağlandı.
+  - "Arada bir sekme fazladan geliyor ve orayı tekrar geçip çalışıyor" şeklindeki ara sayfa yüklenme ve çift yönlendirme davranışı tamamen ortadan kaldırıldı; filolar gezegenler arasında doğrudan ve kesintisiz akar.
+  - Intercepted OGame's native post-dispatch redirect to transition straight into the next queue target URL, eliminating intermediate reloads on the previous planet.
 
 ### v13.3
 - **🛡️ Saf OGame Deterministik & Olay Tabanlı (Event-Driven) Filo Mimarisi / Pure OGame Event-Driven Architecture:**

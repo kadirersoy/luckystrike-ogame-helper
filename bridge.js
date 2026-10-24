@@ -23,6 +23,7 @@
     var isDebugEnabled = false;
     var isTraceEnabled = false;
     var lastFleetSubmitTime = 0;
+    var pendingNextUrl = null;
     try {
         isDebugEnabled = (localStorage.getItem('LS_DEBUG_ENABLED') === 'true');
         isTraceEnabled = (localStorage.getItem('LS_TRACE_ENABLED') === 'true');
@@ -73,6 +74,17 @@
                 if (max > 0) {
                     document.body.dataset.lsCurrentFleets = String(cur);
                     document.body.dataset.lsMaxFleets = String(max);
+                }
+                var expCur = (window.fleetDispatcher.busyExpeditions !== undefined && window.fleetDispatcher.busyExpeditions !== null)
+                    ? window.fleetDispatcher.busyExpeditions
+                    : (window.fleetDispatcher.currentExpeditions || 0);
+                var expMax = window.fleetDispatcher.maxExpeditions || 0;
+                if (expMax > 0) {
+                    document.body.dataset.lsCurrentExpeditions = String(expCur);
+                    document.body.dataset.lsMaxExpeditions = String(expMax);
+                }
+                if (window.fleetDispatcher.targetPlanetType !== undefined && window.fleetDispatcher.targetPlanetType !== null) {
+                    document.body.dataset.lsTargetPlanetType = String(window.fleetDispatcher.targetPlanetType);
                 }
             }
         } catch (e) {}
@@ -155,36 +167,41 @@
                 var targetType = parseInt(d.targetType, 10) || 1;
                 bridgeLog('ACTION', 'BRIDGE', 'Hedef koordinat ayarlanıyor: [' + d.g + ':' + d.s + ':' + d.p + '] Tip: ' + targetType);
                 if (window.$) {
-                    var $g = $('#galaxy, input[name="galaxy"]');
-                    var $s = $('#system, input[name="system"]');
-                    var $p = $('#position, input[name="position"]');
+                    var $g = $('#galaxy, input[name="galaxy"], #galaxyInput');
+                    var $s = $('#system, input[name="system"], #systemInput');
+                    var $p = $('#position, input[name="position"], #positionInput');
                     var $t = $('#type, input[name="type"]');
 
-                    if ($g.length && d.g) $g.val(d.g).trigger('input').trigger('change').trigger('keyup');
-                    if ($s.length && d.s) $s.val(d.s).trigger('input').trigger('change').trigger('keyup');
-                    if ($p.length && d.p) $p.val(d.p).trigger('input').trigger('change').trigger('keyup');
-                    if ($t.length) $t.val('' + targetType).trigger('change');
+                    if ($g.length && d.g && String($g.val()).trim() !== String(d.g).trim()) $g.val(d.g).trigger('input').trigger('change').trigger('keyup');
+                    if ($s.length && d.s && String($s.val()).trim() !== String(d.s).trim()) $s.val(d.s).trigger('input').trigger('change').trigger('keyup');
+                    if ($p.length && d.p && String($p.val()).trim() !== String(d.p).trim()) $p.val(d.p).trigger('input').trigger('change').trigger('keyup');
+                    if ($t.length && String($t.val()).trim() !== String(targetType).trim()) $t.val('' + targetType).trigger('input').trigger('change');
+
+                    var isCheckPending = (document.body.dataset.lsTargetCheckPending === 'true');
 
                     if (targetType === 3) {
-                        var $m = $('#mbutton, #fleet2 #mbutton, [data-type="3"], [data-planet-type="3"], a.moon, .moon, #fleet2 .planetType .moon, #fleet2 figure.moon, #fleet2 .planetIcon.moon');
-                        if ($m.length && !$m.hasClass('selected') && !$m.hasClass('active')) {
-                            realClick($m[0]);
-                            if ($m.parent().length) realClick($m.parent()[0]);
-                            try { $m.trigger('click'); } catch(e) {}
+                        var $m = $('#mbutton');
+                        if (!$m.length) $m = $('#fleet2 #mbutton, [data-type="3"], [data-planet-type="3"]').first();
+                        if ($m.length && !$m.hasClass('moon_selected') && !$m.hasClass('selected') && !$m.parent().hasClass('moon_selected')) {
+                            if (!isCheckPending) {
+                                realClick($m[0]);
+                            }
                         }
                     } else if (targetType === 2) {
-                        var $d = $('#dbutton, #fleet2 #dbutton, [data-type="2"], [data-planet-type="2"], a.debris, .debris, #fleet2 .planetType .debris, #fleet2 figure.debris, #fleet2 figure.tf, #fleet2 .planetIcon.debris');
-                        if ($d.length && !$d.hasClass('selected') && !$d.hasClass('active')) {
-                            realClick($d[0]);
-                            if ($d.parent().length) realClick($d.parent()[0]);
-                            try { $d.trigger('click'); } catch(e) {}
+                        var $d = $('#dbutton');
+                        if (!$d.length) $d = $('#fleet2 #dbutton, [data-type="2"], [data-planet-type="2"]').first();
+                        if ($d.length && !$d.hasClass('debris_selected') && !$d.hasClass('selected') && !$d.parent().hasClass('debris_selected')) {
+                            if (!isCheckPending) {
+                                realClick($d[0]);
+                            }
                         }
                     } else {
-                        var $pb = $('#pbutton, #fleet2 #pbutton, [data-type="1"], [data-planet-type="1"], a.planet, .planet, #fleet2 .planetType .planet, #fleet2 figure.planet, #fleet2 .planetIcon.planet');
-                        if ($pb.length && !$pb.hasClass('selected') && !$pb.hasClass('active')) {
-                            realClick($pb[0]);
-                            if ($pb.parent().length) realClick($pb.parent()[0]);
-                            try { $pb.trigger('click'); } catch(e) {}
+                        var $pb = $('#pbutton');
+                        if (!$pb.length) $pb = $('#fleet2 #pbutton, [data-type="1"], [data-planet-type="1"]').first();
+                        if ($pb.length && !$pb.hasClass('planet_selected') && !$pb.hasClass('selected') && !$pb.parent().hasClass('planet_selected')) {
+                            if (!isCheckPending) {
+                                realClick($pb[0]);
+                            }
                         }
                     }
 
@@ -194,11 +211,17 @@
                         if (d.p) window.fleetDispatcher.targetPosition = parseInt(d.p, 10);
                         window.fleetDispatcher.targetPlanetType = targetType;
                         try {
+                            if (typeof window.fleetDispatcher.selectPlanetType === 'function') {
+                                window.fleetDispatcher.selectPlanetType(targetType);
+                            }
+                            if (typeof window.fleetDispatcher.setTargetPlanetType === 'function') {
+                                window.fleetDispatcher.setTargetPlanetType(targetType);
+                            }
                             if (typeof window.fleetDispatcher.updateTarget === 'function') {
                                 window.fleetDispatcher.updateTarget();
                             }
-                            if (typeof window.fleetDispatcher.checkTarget === 'function') {
-                                document.body.dataset.lsTargetCheckPending = 'true';
+                            // Concurrent checkTarget önleme: Sunucu kontrolü zaten devredeyse tekrar sorma
+                            if (document.body.dataset.lsTargetCheckPending !== 'true' && typeof window.fleetDispatcher.checkTarget === 'function') {
                                 window.fleetDispatcher.checkTarget();
                             }
                         } catch (err) {}
@@ -206,38 +229,51 @@
                     syncFleetDispatcherState();
                 }
             } else if (d.type === 'SELECT_ALL_RESOURCES') {
-                bridgeLog('ACTION', 'BRIDGE', 'Tüm kaynaklar yerel olarak seçiliyor (#allresources).');
+                var deuReserve = Math.max(0, parseInt(d.deuReserve, 10) || 0);
+                bridgeLog('ACTION', 'BRIDGE', 'Tüm kaynaklar yerel olarak seçiliyor (#allresources), Deu Rezerv: ' + deuReserve);
                 if (window.fleetDispatcher && typeof window.fleetDispatcher.selectAllResources === 'function') {
-                    window.fleetDispatcher.selectAllResources();
-                } else if (window.$ && $('#allresources').length) {
-                    realClick($('#allresources')[0]);
-                    $('#allresources').trigger('click');
+                    try { window.fleetDispatcher.selectAllResources(); } catch(e) {}
                 }
-                if (d.deuReserve !== undefined && d.deuReserve > 0) {
+                var allBtn = document.getElementById('allresources') || document.querySelector('a#allresources, .sendall, .allresources, [data-action="allresources"], .ogl-resources-all, .ogl-all-resources');
+                if (allBtn) {
+                    realClick(allBtn);
+                }
+                if (deuReserve > 0) {
                     setTimeout(function() {
                         var $d = $('#deuterium, input[name="deuterium"]');
                         if ($d.length) {
-                            var currentVal = parseInt($d.val().replace(/\./g, ''), 10) || 0;
-                            var targetVal = Math.max(0, currentVal - d.deuReserve);
-                            $d.val(targetVal).trigger('input').trigger('change').trigger('keyup');
-                            if (window.fleetDispatcher && typeof window.fleetDispatcher.cargoCalculation === 'function') {
-                                window.fleetDispatcher.cargoCalculation();
+                            var currentVal = parseInt(String($d.val()).replace(/[^0-9]/g, ''), 10) || 0;
+                            var targetVal = Math.max(0, currentVal - deuReserve);
+                            $d.val(targetVal).trigger('input').trigger('change').trigger('keyup').trigger('blur');
+                            if (window.fleetDispatcher) {
+                                try { window.fleetDispatcher.cargoDeuterium = targetVal; } catch(e) {}
+                                if (typeof window.fleetDispatcher.cargoCalculation === 'function') {
+                                    try { window.fleetDispatcher.cargoCalculation(); } catch(e) {}
+                                }
                             }
                         }
-                    }, 30);
+                    }, 50);
                 }
             } else if (d.type === 'SELECT_MISSION') {
                 var missionId = parseInt(d.missionId, 10) || 3;
+                if (document.body.dataset.lsTargetCheckPending === 'true') {
+                    bridgeLog('WARN', 'BRIDGE', 'SELECT_MISSION ertelendi (checkTarget devam ediyor).');
+                    return;
+                }
+                var $mBtn = $('#missionButton' + missionId + ', [data-mission="' + missionId + '"]');
+                var $li = $mBtn.closest('li');
+                if ($li.hasClass('off') || $li.hasClass('disabled') || $mBtn.hasClass('off') || $mBtn.hasClass('disabled')) {
+                    return;
+                }
+                if ($mBtn.hasClass('selected') || $mBtn.hasClass('active') || $li.hasClass('selected') || $li.hasClass('active')) {
+                    return;
+                }
                 bridgeLog('ACTION', 'BRIDGE', 'Görev seçildi: ID ' + missionId);
                 if (window.fleetDispatcher && typeof window.fleetDispatcher.selectMission === 'function') {
                     window.fleetDispatcher.selectMission(missionId);
                 }
-                if (window.$) {
-                    var $mBtn = $('#missionButton' + missionId + ', [data-mission="' + missionId + '"]');
-                    if ($mBtn.length) {
-                        realClick($mBtn[0]);
-                        $mBtn.trigger('click');
-                    }
+                if (window.$ && $mBtn.length) {
+                    realClick($mBtn[0]);
                 }
                 syncFleetDispatcherState();
             } else if (d.type === 'SUBMIT_FLEET1') {
@@ -254,7 +290,8 @@
                     return;
                 }
                 lastFleetSubmitTime = now;
-                bridgeLog('DISPATCH', 'BRIDGE', 'SUBMIT_FLEET2 tetiklendi.');
+                pendingNextUrl = d.nextUrl || null;
+                bridgeLog('DISPATCH', 'BRIDGE', 'SUBMIT_FLEET2 tetiklendi. Sonraki URL: ' + (pendingNextUrl || 'Yok'));
                 var submitted = false;
                 if (window.fleetDispatcher) {
                     if (typeof window.fleetDispatcher.trySubmitFleet2 === 'function') {
@@ -271,31 +308,41 @@
                         submitted = true;
                     }
                 }
-                if (!submitted && window.$ && $('#sendFleet').length) {
+                var $sf = $('#sendFleet, a#sendFleet, .btn_blue#sendFleet, button#sendFleet, .ogl-send-fleet');
+                if (!submitted && $sf.length) {
                     bridgeLog('DISPATCH', 'BRIDGE', '$("#sendFleet").trigger("click") çağrıldı.');
-                    $('#sendFleet').trigger('click');
+                    realClick($sf[0]);
+                    try { $sf.trigger('click'); } catch(e) {}
                     submitted = true;
                 }
                 setTimeout(syncFleetDispatcherState, 300);
             } else if (d.type === 'FILL_RESOURCES') {
-                bridgeLog('ACTION', 'BRIDGE', 'Kaynaklar dolduruldu: M:' + (d.m||0) + ' C:' + (d.c||0) + ' D:' + (d.d||0));
+                var mVal = Math.max(0, parseInt(d.m, 10) || 0);
+                var cVal = Math.max(0, parseInt(d.c, 10) || 0);
+                var dVal = Math.max(0, parseInt(d.d, 10) || 0);
+                bridgeLog('ACTION', 'BRIDGE', 'Kaynaklar dolduruldu: M:' + mVal + ' C:' + cVal + ' D:' + dVal);
                 if (window.$) {
                     var mEl = $('#metal, input[name="metal"]');
                     var cEl = $('#crystal, input[name="crystal"]');
                     var dEl = $('#deuterium, input[name="deuterium"]');
-                    if (mEl.length) mEl.val(d.m || 0).trigger('input').trigger('change').trigger('keyup');
-                    if (cEl.length) cEl.val(d.c || 0).trigger('input').trigger('change').trigger('keyup');
-                    if (dEl.length) dEl.val(d.d || 0).trigger('input').trigger('change').trigger('keyup');
+                    if (mEl.length) mEl.val(mVal).trigger('input').trigger('change').trigger('keyup').trigger('blur');
+                    if (cEl.length) cEl.val(cVal).trigger('input').trigger('change').trigger('keyup').trigger('blur');
+                    if (dEl.length) dEl.val(dVal).trigger('input').trigger('change').trigger('keyup').trigger('blur');
                 }
                 if (window.fleetDispatcher) {
-                    if (typeof window.fleetDispatcher.cargoCalculation === 'function') window.fleetDispatcher.cargoCalculation();
-                    if (typeof window.fleetDispatcher.refresh === 'function') window.fleetDispatcher.refresh();
+                    try {
+                        window.fleetDispatcher.cargoMetal = mVal;
+                        window.fleetDispatcher.cargoCrystal = cVal;
+                        window.fleetDispatcher.cargoDeuterium = dVal;
+                    } catch(e) {}
+                    if (typeof window.fleetDispatcher.cargoCalculation === 'function') {
+                        try { window.fleetDispatcher.cargoCalculation(); } catch(e) {}
+                    }
                 }
             } else if (d.type === 'CARGO_REFRESH') {
                 bridgeLog('ACTION', 'BRIDGE', 'Kargo hesaplaması yenilendi.');
                 if (window.fleetDispatcher) {
                     if (typeof window.fleetDispatcher.cargoCalculation === 'function') window.fleetDispatcher.cargoCalculation();
-                    if (typeof window.fleetDispatcher.refresh === 'function') window.fleetDispatcher.refresh();
                 }
             } else if (d.type === 'SCAN_TEMPLATES') {
                 var templates = [];
@@ -346,31 +393,33 @@
                     var $p = $('#position, input[name="position"]');
                     var $t = $('#type, input[name="type"]');
 
-                    if ($t.length) $t.val('1').trigger('change');
+                    if ($t.length && $t.val() !== '1') $t.val('1').trigger('change');
 
                     var $pb = $('#pbutton, #fleet2 #pbutton, [data-type="1"], [data-planet-type="1"], a.planet');
-                    if ($pb.length && !$pb.hasClass('selected') && !$pb.hasClass('active')) {
+                    if ($pb.length && !$pb.hasClass('selected') && !$pb.hasClass('active') && !$pb.hasClass('planet_selected')) {
                         $pb.trigger('click');
                     }
 
-                    if ($g.length && g) $g.val(g).trigger('input').trigger('change').trigger('keyup');
-                    if ($p.length) $p.val('16').trigger('input').trigger('change').trigger('keyup');
+                    if ($g.length && g && $g.val() !== g) $g.val(g).trigger('input').trigger('change').trigger('keyup');
+                    if ($p.length && $p.val() !== '16') $p.val('16').trigger('input').trigger('change').trigger('keyup');
 
                     if ($s.length && s) {
-                        var tempS = s.length > 1 ? s.slice(0, -1) : '1';
-                        $s.val(tempS).trigger('input').trigger('keyup');
-                        setTimeout(function() {
+                        var curS = $s.val();
+                        if (curS !== s) {
                             $s.val(s).trigger('input').trigger('change').trigger('keyup');
-                            if (window.fleetDispatcher) {
-                                if (g) window.fleetDispatcher.targetGalaxy = parseInt(g, 10);
-                                window.fleetDispatcher.targetSystem = parseInt(s, 10);
-                                window.fleetDispatcher.targetPosition = 16;
-                                window.fleetDispatcher.targetPlanetType = 1;
-                                if (d.isStep2 && typeof window.fleetDispatcher.updateTarget === 'function') {
-                                    try { window.fleetDispatcher.updateTarget(); } catch(e) {}
-                                }
+                        }
+                        if (window.fleetDispatcher) {
+                            if (g) window.fleetDispatcher.targetGalaxy = parseInt(g, 10);
+                            window.fleetDispatcher.targetSystem = parseInt(s, 10);
+                            window.fleetDispatcher.targetPosition = 16;
+                            window.fleetDispatcher.targetPlanetType = 1;
+                            if (d.isStep2 && typeof window.fleetDispatcher.updateTarget === 'function') {
+                                try { window.fleetDispatcher.updateTarget(); } catch(e) {}
                             }
-                        }, 40);
+                            if (d.isStep2 && document.body.dataset.lsTargetCheckPending !== 'true' && typeof window.fleetDispatcher.checkTarget === 'function') {
+                                try { window.fleetDispatcher.checkTarget(); } catch(e) {}
+                            }
+                        }
                     }
                 }
             }
@@ -392,6 +441,28 @@
                 }
             });
 
+            var targetCheckTimer = null;
+
+            // sendFleet yönlendirme kancası: OGame'in native redirectUrl'sini sonraki hedefe bağla
+            if (typeof $.ajaxPrefilter === 'function') {
+                $.ajaxPrefilter(function(options, originalOptions, jqXHR) {
+                    if (options.url && options.url.indexOf('sendFleet') !== -1) {
+                        var origSuccess = options.success;
+                        options.success = function(data, textStatus, xhr) {
+                            if (pendingNextUrl && data && typeof data === 'object') {
+                                bridgeLog('ACTION', 'BRIDGE', 'sendFleet başarılı. OGame redirectUrl sonraki hedefe uyarlandı: ' + pendingNextUrl);
+                                if ('redirectUrl' in data) {
+                                    data.redirectUrl = pendingNextUrl;
+                                }
+                            }
+                            if (typeof origSuccess === 'function') {
+                                origSuccess.apply(this, arguments);
+                            }
+                        };
+                    }
+                });
+            }
+
             $(document).ajaxSend(function(event, jqXHR, settings) {
                 var isTrace = !!window.LS_TRACE_ENABLED;
                 var isDebug = !!window.LS_DEBUG_ENABLED;
@@ -399,6 +470,10 @@
                     var u = settings.url;
                     if (u.indexOf('checkTarget') !== -1) {
                         document.body.dataset.lsTargetCheckPending = 'true';
+                        if (targetCheckTimer) clearTimeout(targetCheckTimer);
+                        targetCheckTimer = setTimeout(function() {
+                            document.body.dataset.lsTargetCheckPending = 'false';
+                        }, 1500);
                     }
                     if (u.indexOf('sendFleet') !== -1) {
                         document.body.dataset.lsSendFleetPending = 'true';
@@ -414,6 +489,7 @@
                 if (settings && settings.url) {
                     var u = settings.url;
                     if (u.indexOf('checkTarget') !== -1) {
+                        if (targetCheckTimer) clearTimeout(targetCheckTimer);
                         document.body.dataset.lsTargetCheckPending = 'false';
                         document.body.dataset.lsTargetCheckSuccess = (xhr && xhr.status === 200) ? 'true' : 'false';
                         document.body.dataset.lsTargetCheckTimestamp = String(Date.now());
@@ -434,10 +510,23 @@
                             window.dispatchEvent(new CustomEvent('LS_SEND_FLEET_COMPLETE', {
                                 detail: {
                                     status: xhr ? xhr.status : 0,
-                                    responseText: xhr ? xhr.responseText : ''
+                                    responseText: xhr ? xhr.responseText : '',
+                                    nextUrl: pendingNextUrl
                                 }
                             }));
                         } catch (e) {}
+
+                        // Sonraki hedefe doğrudan geçiş garantisi (eski gezegenin ara sekme gibi yüklenmesini önler)
+                        if (pendingNextUrl && xhr && xhr.status === 200) {
+                            var dest = pendingNextUrl;
+                            pendingNextUrl = null;
+                            setTimeout(function() {
+                                if (window.location.href.indexOf(dest) === -1) {
+                                    bridgeLog('ACTION', 'BRIDGE', 'ajaxComplete: Sonraki hedefe yönlendiriliyor -> ' + dest);
+                                    window.location.href = dest;
+                                }
+                            }, 50);
+                        }
                     }
                 }
                 if (settings && settings.url && (settings.url.indexOf('eventList') !== -1 || settings.url.indexOf('component=eventList') !== -1)) {

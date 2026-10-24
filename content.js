@@ -2,7 +2,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v13.3 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v13.6 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -44,6 +44,8 @@
         OPACITY: 'LS_PANEL_OPACITY',
         HOVER_FOCUS: 'LS_HOVER_FOCUS'
     };
+
+    let activeAutomationCancel = null;
 
     // ============================================================
     // I18N / DİL YÖNETİMİ (TR & EN)
@@ -133,6 +135,7 @@
             cart_btn_add: 'Sepete Ekle',
             cart_stepper_down_title: 'Kademe azalt',
             cart_stepper_up_title: 'Kademe artır',
+            common_stop_btn: '⏹️ Durdur',
 
             // Collector Tab
             coll_target_head: '📍 Merkez',
@@ -272,7 +275,7 @@
             exp_loading_tpl: '-- Şablon Yükleniyor... --',
             exp_preview_title: '🧭 Rota Dağılımı Önizlemesi:',
             exp_preview_placeholder: '(Başlangıç koordinatı ve sefer sayısını girin)',
-            exp_start_btn: '🚀 Keşifleri Başlat (Adım Adım)',
+            exp_start_btn: '🚀 Keşifleri Başlat',
             exp_missions_count: 'Sefer',
             exp_hud_title: '🧭 Keşif Asistanı',
             exp_hud_route: 'Hedef Rota:',
@@ -464,6 +467,7 @@
             cart_btn_add: 'Add to Cart',
             cart_stepper_down_title: 'Decrease level',
             cart_stepper_up_title: 'Increase level',
+            common_stop_btn: '⏹️ Stop',
 
             // Collector Tab
             coll_target_head: '📍 Hub',
@@ -603,7 +607,7 @@
             exp_loading_tpl: '-- Loading Templates... --',
             exp_preview_title: '🧭 Route Distribution Preview:',
             exp_preview_placeholder: '(Enter starting coordinates and mission count)',
-            exp_start_btn: '🚀 Start Expeditions (Step by Step)',
+            exp_start_btn: '🚀 Start Expeditions',
             exp_missions_count: 'Missions',
             exp_hud_title: '🧭 Expedition Assistant',
             exp_hud_route: 'Target Route:',
@@ -1627,9 +1631,110 @@
         };
     }
 
+    function getKnownMoonNames() {
+        try {
+            return JSON.parse(localStorage.getItem('LS_KNOWN_MOON_NAMES') || '{}');
+        } catch (e) {
+            return {};
+        }
+    }
+
+    function saveKnownMoonName(id, coords, name) {
+        if (!name) return;
+        const clean = name.replace(/<[^>]+>/g, '').replace(/\[\d+:\d+:\d+\]/g, '').trim();
+        if (!clean || clean === 'Ay' || clean === 'Moon' || clean === 'Mond') return;
+        try {
+            const names = getKnownMoonNames();
+            let changed = false;
+            if (id && names[id] !== clean) {
+                names[id] = clean;
+                changed = true;
+            }
+            if (coords && names[coords] !== clean) {
+                names[coords] = clean;
+                changed = true;
+            }
+            if (changed) {
+                localStorage.setItem('LS_KNOWN_MOON_NAMES', JSON.stringify(names));
+            }
+        } catch (e) {}
+    }
+
+    function extractMoonNameFromElement(mLink, mId, coords, parentPlanetName) {
+        const knownNames = getKnownMoonNames();
+
+        // 1. Canlı DOM attribute ve tooltip başlıklarını tara
+        if (mLink) {
+            const rawTitle = mLink.getAttribute('data-tooltip-title') ||
+                             mLink.getAttribute('title') ||
+                             (mLink.dataset ? mLink.dataset.tooltipTitle : '') || '';
+            if (rawTitle) {
+                const stripped = rawTitle.replace(/<[^>]+>/g, ' ').replace(/\[\d+:\d+:\d+\]/g, '').trim();
+                if (stripped && stripped !== 'Ay' && stripped !== 'Moon' && stripped !== 'Mond') {
+                    saveKnownMoonName(mId, coords, stripped);
+                    return stripped;
+                }
+            }
+            const innerNameEl = mLink.querySelector('.planet-name, .moon-name');
+            if (innerNameEl && innerNameEl.textContent.trim()) {
+                const innerName = innerNameEl.textContent.trim();
+                if (innerName && innerName !== 'Ay' && innerName !== 'Moon' && innerName !== 'Mond') {
+                    saveKnownMoonName(mId, coords, innerName);
+                    return innerName;
+                }
+            }
+        }
+
+        // 2. Şu anda aktif sayfa bu aydaysa ve meta etiketinde ismi varsa
+        const metaType = document.querySelector('meta[name="ogame-planet-type"]')?.getAttribute('content');
+        const metaCoords = document.querySelector('meta[name="ogame-planet-coordinates"]')?.getAttribute('content');
+        const metaId = document.querySelector('meta[name="ogame-planet-id"]')?.getAttribute('content');
+        if (metaType === 'moon' && ((metaId && String(metaId) === String(mId)) || (metaCoords && metaCoords === coords))) {
+            const metaName = document.querySelector('meta[name="ogame-planet-name"]')?.getAttribute('content');
+            if (metaName && metaName.trim() && metaName.trim() !== 'Ay' && metaName.trim() !== 'Moon' && metaName.trim() !== 'Mond') {
+                saveKnownMoonName(mId, coords, metaName.trim());
+                return metaName.trim();
+            }
+        }
+
+        // 3. Bilinen isimler önbelleğinden bak
+        if (mId && knownNames[mId]) return knownNames[mId];
+        if (coords && knownNames[coords]) return knownNames[coords];
+
+        // 4. Varsayılan Ay ismi fallback
+        return parentPlanetName ? `${parentPlanetName} ( ${t('coll_moon_name', 'Ay')} )` : t('coll_moon_name', 'Ay');
+    }
+
     function getCurrentPlanetName() {
         const metaType = document.querySelector('meta[name="ogame-planet-type"]')?.getAttribute('content');
+        const metaCoords = document.querySelector('meta[name="ogame-planet-coordinates"]')?.getAttribute('content');
+        const metaId = document.querySelector('meta[name="ogame-planet-id"]')?.getAttribute('content');
         const isMoon = (metaType === 'moon');
+
+        if (isMoon) {
+            // Ay ise: Öncelikle ayın kendi resmi ismini meta etiketinden al
+            const metaName = document.querySelector('meta[name="ogame-planet-name"]')?.getAttribute('content');
+            if (metaName && metaName.trim()) {
+                const trimmed = metaName.trim();
+                saveKnownMoonName(metaId, metaCoords, trimmed);
+                if (trimmed !== 'Ay' && trimmed !== 'Moon' && trimmed !== 'Mond') {
+                    return trimmed;
+                }
+            }
+
+            // Aktif ay linki veya bilinen isimler önbelleğinden dene
+            const activeMoon = document.querySelector('#planetList .moonlink.active, .smallplanet .moonlink.active');
+            const parentNameEl = activeMoon ? activeMoon.closest('.smallplanet')?.querySelector('.planet-name') : null;
+            const parentName = parentNameEl ? parentNameEl.textContent.trim() : '';
+
+            const extracted = extractMoonNameFromElement(activeMoon, metaId, metaCoords, parentName);
+            if (extracted && extracted !== 'Ay' && extracted !== 'Moon' && extracted !== 'Mond') {
+                return extracted;
+            }
+
+            if (parentName) return `${parentName} ( ${t('coll_moon_name', 'Ay')} )`;
+            return t('coll_moon_name', 'Ay');
+        }
 
         // 1. Sidebar'daki aktif gezegen linki
         const activeEl = document.querySelector('#planetList .smallplanet a.active .planet-name') ||
@@ -1642,56 +1747,25 @@
                          document.querySelector('#planetList a.active .planet-name') ||
                          document.querySelector('#planetList .smallplanet.selected .planet-name');
 
-        // 2. Aktif Ay seçimi varsa
-        const activeMoon = document.querySelector('#planetList .moonlink.active') ||
-                           document.querySelector('.smallplanet .moonlink.active');
-        if (activeMoon || isMoon) {
-            let parentName = '';
-            if (activeEl && activeEl.textContent.trim()) {
-                parentName = activeEl.textContent.trim();
-            } else if (activeMoon) {
-                const parentP = activeMoon.closest('.smallplanet');
-                const pNameEl = parentP ? parentP.querySelector('.planet-name') : null;
-                if (pNameEl && pNameEl.textContent.trim()) parentName = pNameEl.textContent.trim();
-            }
-            if (parentName) return `${parentName} ( ${t('coll_moon_name', 'Ay')} )`;
-
-            const metaCoords = document.querySelector('meta[name="ogame-planet-coordinates"]')?.getAttribute('content');
-            if (metaCoords) {
-                const emp = getEmpirePlanetsAndMoons();
-                const matched = emp.find(p => p.coords === metaCoords);
-                if (matched && matched.name) return `${matched.name} ( ${t('coll_moon_name', 'Ay')} )`;
-            }
-
-            if (activeMoon) {
-                const moonTitle = activeMoon.getAttribute('title') || activeMoon.textContent;
-                if (moonTitle && moonTitle.trim()) {
-                    const raw = moonTitle.split('[')[0].trim();
-                    if (raw && raw !== 'Ay' && raw !== 'Moon') return `${raw} ( ${t('coll_moon_name', 'Ay')} )`;
-                }
-            }
-            return `${t('coll_planet_name', 'Gezegen')} ( ${t('coll_moon_name', 'Ay')} )`;
-        }
-
         if (activeEl && activeEl.textContent.trim()) {
             return activeEl.textContent.trim();
         }
 
-        // 3. OGame resmi meta etiketi (Sunucu tarafından aktif gezegene göre üretilir)
+        // 2. OGame resmi meta etiketi
         const metaName = document.querySelector('meta[name="ogame-planet-name"]')?.getAttribute('content');
         if (metaName && metaName.trim()) {
-            return isMoon ? `${metaName.trim()} ( ${t('coll_moon_name', 'Ay')} )` : metaName.trim();
+            return metaName.trim();
         }
 
-        // 4. Üst başlık veya seçili gezegen başlığı
+        // 3. Üst başlık veya seçili gezegen başlığı
         const headerEl = document.querySelector('#planetNameHeader') ||
                          document.querySelector('#selectedPlanetName') ||
                          document.querySelector('.planet-header .planet-name');
         if (headerEl && headerEl.textContent.trim()) {
-            return isMoon ? `${headerEl.textContent.trim()} ( ${t('coll_moon_name', 'Ay')} )` : headerEl.textContent.trim();
+            return headerEl.textContent.trim();
         }
 
-        return isMoon ? `${t('coll_planet_name', 'Gezegen')} ( ${t('coll_moon_name', 'Ay')} )` : t('coll_planet_name', 'Gezegen');
+        return t('coll_planet_name', 'Gezegen');
     }
 
     // ============================================================
@@ -2304,7 +2378,7 @@
 
     function findSendFleetButton() {
         const el = document.getElementById('sendFleet') ||
-                   document.querySelector('#sendFleet, a#sendFleet, button#sendFleet, .send_fleet');
+                   document.querySelector('#sendFleet, a#sendFleet, .btn_blue#sendFleet, button#sendFleet, .send_fleet, .ogl-send-fleet, #fleet2 #sendFleet');
         if (el && !el.getAttribute('data-mission')) return el;
 
         const allCandidates = document.querySelectorAll('button, a.btn_blue, a, div[role="button"]');
@@ -2490,6 +2564,59 @@
         };
     }
 
+    function getExpeditionSlotsInfo() {
+        let current = -1;
+        let max = -1;
+
+        // 1. Bridge dataset verisi kontrolü
+        if (document.body && document.body.dataset) {
+            const c = parseInt(document.body.dataset.lsCurrentExpeditions, 10);
+            const m = parseInt(document.body.dataset.lsMaxExpeditions, 10);
+            if (!isNaN(c) && !isNaN(m) && m > 0) {
+                current = c;
+                max = m;
+            }
+        }
+
+        // 2. DOM analizi: #slots veya metin
+        if (max <= 0) {
+            const slotsEl = document.getElementById('slots') || document.querySelector('.fleetStatus, #fleetdispatchcomponent #slots');
+            const textToSearch = slotsEl ? slotsEl.textContent : (document.body ? document.body.innerText : '');
+            const m = textToSearch.match(/(?:Keşifler|Expeditions|Expeditionen|Expéditions)\s*:\s*(\d+)\s*\/\s*(\d+)/i);
+            if (m) {
+                current = parseInt(m[1], 10);
+                max = parseInt(m[2], 10);
+            }
+        }
+
+        // 3. SessionStorage önbelleği
+        if (max <= 0) {
+            try {
+                const cached = JSON.parse(sessionStorage.getItem('LS_EXP_SLOTS_CACHE') || '{}');
+                if (cached && cached.max > 0 && (Date.now() - (cached.time || 0) < 60000)) {
+                    current = cached.current;
+                    max = cached.max;
+                }
+            } catch (e) {}
+        } else {
+            try {
+                sessionStorage.setItem('LS_EXP_SLOTS_CACHE', JSON.stringify({ current, max, time: Date.now() }));
+            } catch (e) {}
+        }
+
+        const isKnown = (max > 0);
+        const available = isKnown ? Math.max(0, max - current) : 999;
+        const isFull = isKnown ? (current >= max) : false;
+
+        return {
+            current: current >= 0 ? current : 0,
+            max: max > 0 ? max : 999,
+            available: available,
+            isKnown: isKnown,
+            isFull: isFull
+        };
+    }
+
     function isFleetStep1ContinueReady() {
         const btn = document.getElementById('continueToFleet2') ||
                     document.querySelector('button.continue.toFleet2, a#continueToFleet2, #fleet1 .continue');
@@ -2502,21 +2629,73 @@
 
     function isFleetStep2Active() {
         const f2 = document.getElementById('fleet2');
-        if (f2) {
-            const style = window.getComputedStyle(f2);
-            if (style.display !== 'none' && style.visibility !== 'hidden' && (f2.offsetHeight > 0 || f2.offsetWidth > 0)) {
-                return true;
-            }
-        }
-        const f1 = document.getElementById('fleet1');
-        if (f1 && window.getComputedStyle(f1).display === 'none') {
+        if (f2 && (f2.offsetWidth > 0 || f2.offsetHeight > 0 || f2.offsetParent !== null)) {
             return true;
         }
+
+        const devamBtn = document.getElementById('continueToFleet2') ||
+                         document.querySelector('button#continueToFleet2') ||
+                         document.querySelector('a#continueToFleet2') ||
+                         document.querySelector('.continue.toFleet2') ||
+                         document.querySelector('#fleet1 .continue');
+        const isDevamVisible = devamBtn && (devamBtn.offsetWidth > 0 || devamBtn.offsetHeight > 0 || devamBtn.offsetParent !== null);
+        if (isDevamVisible) {
+            return false;
+        }
+
         const sendBtn = findSendFleetButton();
-        if (sendBtn && sendBtn.offsetParent !== null && window.getComputedStyle(sendBtn).display !== 'none') {
+        const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || sendBtn.offsetHeight > 0 || sendBtn.offsetParent !== null);
+        return !!isSendBtnVisible;
+    }
+
+    function hasVisibleMissionError() {
+        return Array.from(document.querySelectorAll('#fleet2 .notification-error, #fleet2 p.error, #fleet2 .error, .notification-error'))
+            .some(el => (el.offsetWidth > 0 || el.offsetHeight > 0) && window.getComputedStyle(el).display !== 'none' && (el.textContent || '').includes('Bu görevi başlatamazsın'));
+    }
+
+    function isTargetTypeSelected(targetType) {
+        const t = parseInt(targetType, 10) || 1;
+        const typeInp = document.getElementById('type') || document.querySelector('input[name="type"]');
+        if (typeInp && String(typeInp.value).trim() === String(t)) {
             return true;
         }
-        return false;
+        if (document.body.dataset.lsTargetPlanetType && String(document.body.dataset.lsTargetPlanetType) === String(t)) {
+            return true;
+        }
+        if (t === 3) {
+            const moonBtn = document.querySelector('#mbutton, [data-type="3"], [data-planet-type="3"], #fleet2 .moon, #fleet2 figure.moon, #fleet2 .planetIcon.moon, .ogl-moon-icon');
+            return !!(moonBtn && (
+                moonBtn.classList.contains('selected') ||
+                moonBtn.classList.contains('moon_selected') ||
+                moonBtn.classList.contains('active') ||
+                moonBtn.parentElement?.classList.contains('selected') ||
+                moonBtn.parentElement?.classList.contains('moon_selected') ||
+                moonBtn.closest('li')?.classList.contains('selected') ||
+                moonBtn.closest('li')?.classList.contains('moon_selected')
+            ));
+        }
+        if (t === 2) {
+            const debrisBtn = document.querySelector('#dbutton, [data-type="2"], [data-planet-type="2"], #fleet2 .debris, #fleet2 figure.debris, #fleet2 .planetIcon.debris');
+            return !!(debrisBtn && (
+                debrisBtn.classList.contains('selected') ||
+                debrisBtn.classList.contains('debris_selected') ||
+                debrisBtn.classList.contains('active') ||
+                debrisBtn.parentElement?.classList.contains('selected') ||
+                debrisBtn.parentElement?.classList.contains('debris_selected') ||
+                debrisBtn.closest('li')?.classList.contains('selected') ||
+                debrisBtn.closest('li')?.classList.contains('debris_selected')
+            ));
+        }
+        const planetBtn = document.querySelector('#pbutton, [data-type="1"], [data-planet-type="1"], #fleet2 .planet, #fleet2 figure.planet, #fleet2 .planetIcon.planet, .ogl-planet-icon');
+        return !!(planetBtn && (
+            planetBtn.classList.contains('selected') ||
+            planetBtn.classList.contains('planet_selected') ||
+            planetBtn.classList.contains('active') ||
+            planetBtn.parentElement?.classList.contains('selected') ||
+            planetBtn.parentElement?.classList.contains('planet_selected') ||
+            planetBtn.closest('li')?.classList.contains('selected') ||
+            planetBtn.closest('li')?.classList.contains('planet_selected')
+        ));
     }
 
     function clickDevamButton() {
@@ -2543,9 +2722,9 @@
     }
 
     function setFleetTargetCoords(g, s, p, type) {
-        const galInp = document.getElementById('galaxy') || document.querySelector('input[name="galaxy"]');
-        const sysInp = document.getElementById('system') || document.querySelector('input[name="system"]');
-        const posInp = document.getElementById('position') || document.querySelector('input[name="position"]');
+        const galInp = document.getElementById('galaxy') || document.querySelector('input[name="galaxy"]') || document.getElementById('galaxyInput');
+        const sysInp = document.getElementById('system') || document.querySelector('input[name="system"]') || document.getElementById('systemInput');
+        const posInp = document.getElementById('position') || document.querySelector('input[name="position"]') || document.getElementById('positionInput');
         const typeInp = document.getElementById('type') || document.querySelector('input[name="type"]');
 
         const targetType = parseInt(type, 10) || 1;
@@ -2553,6 +2732,7 @@
         const setVal = (el, val) => {
             if (!el) return;
             const targetVal = String(val);
+            if (String(el.value).trim() === targetVal.trim()) return;
             try {
                 const proto = window.HTMLInputElement.prototype;
                 const nativeSetter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
@@ -2572,35 +2752,18 @@
         };
 
         if (galInp && g) setVal(galInp, g);
-        if (sysInp && s) setVal(sysInp, s);
-        if (posInp && p) setVal(posInp, p);
-        if (typeInp) setVal(typeInp, targetType);
+        const infGal = document.getElementById('galaxyInput');
+        if (infGal && infGal !== galInp && g) setVal(infGal, g);
 
-        if (targetType === 3) {
-            const moonBtn = document.querySelector('#mbutton, [data-type="3"], [data-planet-type="3"], #fleet2 .moon, #fleet2 .planetType .moon, #fleet2 figure.moon, #fleet2 .planetIcon.moon');
-            if (moonBtn && !moonBtn.classList.contains('selected') && !moonBtn.classList.contains('active')) {
-                try {
-                    triggerRealClick(moonBtn);
-                    moonBtn.click();
-                } catch (e) {}
-            }
-        } else if (targetType === 2) {
-            const debrisBtn = document.querySelector('#dbutton, [data-type="2"], [data-planet-type="2"], #fleet2 .debris, #fleet2 .planetType .debris, #fleet2 figure.debris, #fleet2 figure.tf, #fleet2 .planetIcon.debris');
-            if (debrisBtn && !debrisBtn.classList.contains('selected') && !debrisBtn.classList.contains('active')) {
-                try {
-                    triggerRealClick(debrisBtn);
-                    debrisBtn.click();
-                } catch (e) {}
-            }
-        } else {
-            const planetBtn = document.querySelector('#pbutton, [data-type="1"], [data-planet-type="1"], #fleet2 .planet, #fleet2 .planetType .planet, #fleet2 figure.planet, #fleet2 .planetIcon.planet');
-            if (planetBtn && !planetBtn.classList.contains('selected') && !planetBtn.classList.contains('active')) {
-                try {
-                    triggerRealClick(planetBtn);
-                    planetBtn.click();
-                } catch (e) {}
-            }
-        }
+        if (sysInp && s) setVal(sysInp, s);
+        const infSys = document.getElementById('systemInput');
+        if (infSys && infSys !== sysInp && s) setVal(infSys, s);
+
+        if (posInp && p) setVal(posInp, p);
+        const infPos = document.getElementById('positionInput');
+        if (infPos && infPos !== posInp && p) setVal(infPos, p);
+
+        if (typeInp) setVal(typeInp, targetType);
 
         window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
             detail: { type: 'SET_TARGET', targetType: targetType, g: g, s: s, p: p }
@@ -2608,20 +2771,33 @@
     }
 
     function setFleetMission(missionId) {
+        if (isMissionSelected(missionId)) return;
+        if (isTargetCheckPending()) return;
+        if (!isMissionClickable(missionId)) return;
+
         const btn = document.getElementById('missionButton' + missionId) ||
                     document.querySelector(`[data-mission="${missionId}"]`) ||
+                    document.querySelector(`.ogl-mission-${missionId}`) ||
                     document.querySelector(`li#missionButton${missionId} a`) ||
                     document.querySelector(`li#missionButton${missionId}`) ||
                     document.querySelector(`input[name="mission"][value="${missionId}"]`);
-        if (btn) btn.click();
+        if (btn) {
+            triggerRealClick(btn);
+        }
 
         window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
             detail: { type: 'SELECT_MISSION', missionId: missionId }
         }));
     }
 
+    let lastAllResCall = 0;
     function triggerAllResourcesNative(deuReserve = 0) {
-        const allBtn = document.getElementById('allresources') || document.querySelector('a#allresources');
+        const now = Date.now();
+        if (now - lastAllResCall < 350) return;
+        lastAllResCall = now;
+
+        const allBtn = document.getElementById('allresources') ||
+                       document.querySelector('a#allresources, .sendall, .allresources, [data-action="allresources"], .ogl-resources-all, .ogl-all-resources');
         if (allBtn) {
             triggerRealClick(allBtn);
             try { allBtn.click(); } catch(e) {}
@@ -2632,23 +2808,35 @@
     }
 
     function isMissionSelected(missionId) {
-        const mBtn = document.querySelector('#missionButton' + missionId + ', [data-mission="' + missionId + '"]');
-        return !!(mBtn && (mBtn.classList.contains('selected') || mBtn.classList.contains('active')));
+        const mBtn = document.querySelector('#missionButton' + missionId + ', [data-mission="' + missionId + '"], .ogl-mission-' + missionId);
+        if (mBtn) {
+            if (mBtn.classList.contains('selected') || mBtn.classList.contains('active')) return true;
+            const childA = mBtn.querySelector('a');
+            if (childA && (childA.classList.contains('selected') || childA.classList.contains('active'))) return true;
+            const parentLi = mBtn.closest('li');
+            if (parentLi && (parentLi.classList.contains('selected') || parentLi.classList.contains('active'))) return true;
+        }
+        const missionInp = document.getElementById('mission') || document.querySelector('input[name="mission"]');
+        if (missionInp && String(missionInp.value).trim() === String(missionId)) return true;
+        return false;
     }
 
     function isMissionClickable(missionId) {
-        const mBtn = document.querySelector('#missionButton' + missionId + ', [data-mission="' + missionId + '"]');
-        return !!(mBtn && !mBtn.classList.contains('off') && !mBtn.classList.contains('disabled') && !mBtn.hasAttribute('disabled'));
+        const mBtn = document.querySelector('#missionButton' + missionId + ', [data-mission="' + missionId + '"], .ogl-mission-' + missionId);
+        if (!mBtn) return false;
+        if (mBtn.classList.contains('off') || mBtn.classList.contains('disabled') || mBtn.hasAttribute('disabled')) return false;
+        const parentLi = mBtn.closest('li');
+        if (parentLi && (parentLi.classList.contains('off') || parentLi.classList.contains('disabled') || parentLi.hasAttribute('disabled'))) return false;
+        return true;
     }
 
     function isSendFleetReady() {
         const sendBtn = findSendFleetButton();
         if (!sendBtn) return false;
-        const isVisible = sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none';
-        const isOff = sendBtn.classList.contains('off') || sendBtn.classList.contains('disabled') || sendBtn.hasAttribute('disabled');
-        const isOn = sendBtn.classList.contains('on');
-        const missionError = Array.from(document.querySelectorAll('#fleet2 p, #fleet2 span, #fleet2 div')).some(el => (el.textContent || '').includes('Bu görevi başlatamazsın'));
-        return isVisible && isOn && !isOff && !missionError;
+        const isVisible = (sendBtn.offsetWidth > 0 || sendBtn.offsetHeight > 0 || sendBtn.offsetParent !== null);
+        if (!isVisible) return false;
+        if (hasVisibleMissionError()) return false;
+        return true;
     }
 
     function isTargetCheckPending() {
@@ -2709,22 +2897,54 @@
         return { kn: knNeeded, bn: bnNeeded };
     }
 
-    function fillFleetResources(m, c, d) {
-        const findInput = (name) => {
-            return document.getElementById(name) ||
-                   document.querySelector(`input#${name}`) ||
-                   document.querySelector(`input[name="${name}"]`) ||
-                   document.querySelector(`input[data-resource="${name}"]`) ||
-                   document.querySelector(`input[id*="${name}"]`) ||
-                   document.querySelector(`input[name*="${name}"]`) ||
-                   document.querySelector(`#fleet3 input[name="${name}"]`) ||
-                   document.querySelector(`.resource_${name} input`) ||
-                   document.querySelector(`.res_${name} input`);
-        };
+    function getFleetResourceInput(name) {
+        return document.getElementById(name) ||
+               document.querySelector(`input#${name}`) ||
+               document.querySelector(`input[name="${name}"]`) ||
+               document.querySelector(`input[data-resource="${name}"]`) ||
+               document.querySelector(`input[id*="${name}"]`) ||
+               document.querySelector(`input[name*="${name}"]`) ||
+               document.querySelector(`#fleet2 input[name="${name}"]`) ||
+               document.querySelector(`#fleet3 input[name="${name}"]`) ||
+               document.querySelector(`.resource_${name} input`) ||
+               document.querySelector(`.res_${name} input`);
+    }
 
+    function getFleetLoadedResources() {
+        const getVal = (name) => {
+            const el = getFleetResourceInput(name);
+            if (!el) return 0;
+            return parseInt(String(el.value || '0').replace(/[^0-9]/g, '').trim(), 10) || 0;
+        };
+        return {
+            met: getVal('metal'),
+            cri: getVal('crystal'),
+            deu: getVal('deuterium')
+        };
+    }
+
+    function areFleetResourcesLoaded(m, c, d) {
+        const expM = Math.max(0, parseInt(m, 10) || 0);
+        const expC = Math.max(0, parseInt(c, 10) || 0);
+        const expD = Math.max(0, parseInt(d, 10) || 0);
+
+        if (expM === 0 && expC === 0 && expD === 0) return true;
+
+        const cur = getFleetLoadedResources();
+        if (expM > 0 && cur.met === 0) return false;
+        if (expC > 0 && cur.cri === 0) return false;
+        if (expD > 0 && cur.deu === 0) return false;
+
+        return true;
+    }
+
+    function fillFleetResources(m, c, d) {
         const setVal = (el, val) => {
             if (!el) return false;
             const targetVal = String(Math.max(0, parseInt(val, 10) || 0));
+            if (String(el.value).replace(/[^0-9]/g, '').trim() === targetVal) {
+                return true;
+            }
 
             try {
                 const proto = window.HTMLInputElement.prototype;
@@ -2738,15 +2958,17 @@
                 el.value = targetVal;
             }
 
-            ['focus', 'input', 'change', 'keydown', 'keyup', 'blur'].forEach(evt => {
-                el.dispatchEvent(new Event(evt, { bubbles: true, cancelable: true }));
+            ['focus', 'input', 'change', 'keyup', 'blur'].forEach(evt => {
+                try {
+                    el.dispatchEvent(new Event(evt, { bubbles: true, cancelable: true }));
+                } catch (e) {}
             });
             return true;
         };
 
-        let mInp = findInput('metal');
-        let cInp = findInput('crystal');
-        let dInp = findInput('deuterium');
+        let mInp = getFleetResourceInput('metal');
+        let cInp = getFleetResourceInput('crystal');
+        let dInp = getFleetResourceInput('deuterium');
 
         if (!mInp || !cInp) {
             const candidates = Array.from(document.querySelectorAll('input[type="text"], input[type="number"], input:not([type])')).filter(el => {
@@ -2853,12 +3075,12 @@
                 if (type === 3) {
                     const empire = getEmpirePlanetsAndMoons();
                     const parentP = empire.find(p => p.coords === coords);
-                    if (parentP) {
+                    if (parentP && parentP.moon && parentP.moon.name) {
+                        pName = parentP.moon.name;
+                    } else if (parentP) {
                         pName = `${parentP.name} ( ${t('coll_moon_name', 'Ay')} )`;
                     } else if (!pName || pName === 'Ay' || pName === 'Moon') {
-                        pName = `${t('coll_moon_name', 'Ay')} ( ${t('coll_moon_name', 'Ay')} )`;
-                    } else if (!pName.includes('( Ay )') && !pName.includes('( Moon )')) {
-                        pName = `${pName} ( ${t('coll_moon_name', 'Ay')} )`;
+                        pName = `${t('coll_moon_name', 'Ay')}`;
                     }
                 } else if (!pName) {
                     pName = t('coll_planet_name', 'Gezegen');
@@ -3204,6 +3426,7 @@
         };
 
         sessionStorage.setItem(KEYS.CART_QUEUE, JSON.stringify(session));
+        updateAllAutomationStartButtons();
 
         const first = session.queue[0];
         const [g, s, p] = first.coords.split(':');
@@ -3360,20 +3583,29 @@
             }
         };
 
+        let targetSet = false;
+        let missionSet = false;
+        let stableReadyTicks = 0;
+        let totalTicks = 0;
+
         const prepareStep2 = () => {
             if (isStepCancelled) return;
             const targetType = currentItem.type || 1;
-            if (g && s && p) {
-                setFleetTargetCoords(g, s, p, targetType);
-            }
 
-            let checkCount = 0;
+            if (step2CheckTimer) clearInterval(step2CheckTimer);
+            targetSet = false;
+            missionSet = false;
+            stableReadyTicks = 0;
+            totalTicks = 0;
+            let lastTargetSetTime = 0;
+            let lastResourceFillTime = 0;
+
             step2CheckTimer = setInterval(() => {
                 if (isStepCancelled) {
                     clearInterval(step2CheckTimer);
                     return;
                 }
-                checkCount++;
+                totalTicks++;
 
                 const slots = getFleetSlotsInfo();
                 if (slots.isKnown && slots.isFull) {
@@ -3381,54 +3613,76 @@
                     return;
                 }
 
-                // 1. Hedef tipi kontrolü (Ay vs Gezegen)
-                let typeMatch = true;
-                const typeInp = document.getElementById('type') || document.querySelector('input[name="type"]');
-                if (typeInp && String(typeInp.value).trim() !== String(targetType).trim()) {
-                    typeMatch = false;
-                }
-                if (targetType === 3) {
-                    const moonIcon = document.querySelector('#fleet2 .planetIcon.moon, #fleet2 figure.moon, #mbutton, [data-planet-type="3"]');
-                    if (moonIcon && !moonIcon.classList.contains('selected') && !moonIcon.classList.contains('active')) {
-                        typeMatch = false;
+                // 1. Hedef koordinatlarını ve tipini ata (Sunucuya aşırı yüklenmeyi önlemek için kontrollü çağrı)
+                if (!targetSet) {
+                    if (g && s && p) {
+                        setFleetTargetCoords(g, s, p, targetType);
+                        targetSet = true;
+                        lastTargetSetTime = Date.now();
                     }
-                }
-                if (!typeMatch && checkCount <= 6) {
+                } else if (!isTargetTypeSelected(targetType) && !isTargetCheckPending() && Date.now() - lastTargetSetTime > 1200) {
                     setFleetTargetCoords(g, s, p, targetType);
+                    lastTargetSetTime = Date.now();
                 }
 
-                // 2. OGame checkTarget AJAX yanıtını bekle (Asla yanıt dönmeden görev/kaynak doldurma)
-                if (isTargetCheckPending()) {
-                    return;
-                }
-
-                // 3. Görev seçimi
-                if (isMissionClickable(missionId) && !isMissionSelected(missionId)) {
-                    setFleetMission(missionId);
-                }
-
-                // 4. Kaynak doldurma (Görev seçildikten sonra)
+                // 2. Görev seçimi
                 if (isMissionSelected(missionId)) {
-                    fillFleetResources(metLoad, criLoad, deuLoad);
-                }
-
-                // 5. Filo gönderim hazır mı?
-                if (isMissionSelected(missionId) && isSendFleetReady()) {
-                    clearInterval(step2CheckTimer);
-                    updateCartBannerReady(slots);
-                } else if (checkCount > 40) {
-                    clearInterval(step2CheckTimer);
-                    if (isSendFleetReady()) {
-                        updateCartBannerReady(slots);
-                    } else {
-                        updateCartBannerWarning(slots);
+                    missionSet = true;
+                } else if (!isTargetCheckPending() && isMissionClickable(missionId)) {
+                    setFleetMission(missionId);
+                    if (isMissionSelected(missionId)) {
+                        missionSet = true;
                     }
                 }
-            }, 30);
+
+                // Sunucu hedef kontrolü devam ederken bekle
+                const targetChecking = isTargetCheckPending();
+
+                // 3. Kaynak doldurma ve doğrulama (Hedef kontrolü bittikten sonra ve görev seçiliyken)
+                const needsCargo = (metLoad > 0 || criLoad > 0 || deuLoad > 0);
+                const isCargoLoaded = !needsCargo || areFleetResourcesLoaded(metLoad, criLoad, deuLoad);
+
+                if (!targetChecking && isMissionSelected(missionId)) {
+                    if (!isCargoLoaded && Date.now() - lastResourceFillTime > 400) {
+                        lastResourceFillTime = Date.now();
+                        fillFleetResources(metLoad, criLoad, deuLoad);
+                        stableReadyTicks = 0;
+                    }
+                }
+
+                // 4. Filo gönderim hazır mı kontrolü (Görev seçili + Kargo yüklü + Buton aktif + Hedef kontrolü bitmiş)
+                const sendBtn = findSendFleetButton();
+                const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || sendBtn.offsetHeight > 0);
+                const isReady = isMissionSelected(missionId) && isCargoLoaded;
+
+                if (isReady && isSendBtnVisible) {
+                    stableReadyTicks++;
+                    if (stableReadyTicks >= 2) {
+                        updateCartBannerReady(slots);
+                    }
+                } else {
+                    stableReadyTicks = 0;
+                    if (totalTicks > 20 && !targetChecking && !isCargoLoaded && Date.now() - lastResourceFillTime > 400) {
+                        lastResourceFillTime = Date.now();
+                        fillFleetResources(metLoad, criLoad, deuLoad);
+                    }
+                    if (totalTicks > 40 && isSendBtnVisible) {
+                        updateCartBannerReady(slots);
+                    }
+                }
+
+                // 5. 6 saniye boyunca hazır olmadıysa uyarı göster ama döngüyü kesme
+                if (totalTicks > 75 && (!isSendFleetReady() || !isCargoLoaded)) {
+                    updateCartBannerWarning(slots);
+                }
+            }, 80);
         };
 
         const targetShipTotal = (shipCounts.bn || 0) + (shipCounts.kn || 0) + (shipCounts.rehber || 0);
-        if (targetShipTotal > 0) {
+
+        if (isFleetStep2Active()) {
+            setTimeout(prepareStep2, 100);
+        } else if (targetShipTotal > 0) {
             let shipTries = 0;
             ensureShipsTimer = setInterval(() => {
                 if (isStepCancelled) {
@@ -3436,9 +3690,8 @@
                     return;
                 }
                 shipTries++;
-                const isReady = isFleetStep1ContinueReady();
                 const { total } = getSelectedShipsSummary();
-                if (total > 0 && isReady) {
+                if (total > 0 || shipTries > 6) {
                     clearInterval(ensureShipsTimer);
                     clickDevamButton();
                     window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
@@ -3454,23 +3707,23 @@
                         step2Tries++;
                         if (isFleetStep2Active()) {
                             clearInterval(step2Interval);
-                            prepareStep2();
-                        } else if (step2Tries % 10 === 0) {
+                            setTimeout(prepareStep2, 100);
+                        } else if (step2Tries % 5 === 0) {
                             clickDevamButton();
                             window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
                                 detail: { type: 'SUBMIT_FLEET1' }
                             }));
-                        } else if (step2Tries > 50) {
+                        } else if (step2Tries > 30) {
                             clearInterval(step2Interval);
-                            prepareStep2();
+                            setTimeout(prepareStep2, 100);
                         }
-                    }, 30);
+                    }, 80);
                 } else {
                     setShipAmount(219, shipCounts.rehber);
                     setShipAmount(202, shipCounts.kn);
                     setShipAmount(203, shipCounts.bn);
                 }
-            }, 50);
+            }, 100);
         } else {
             clickDevamButton();
             window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
@@ -3486,17 +3739,17 @@
                 step2Tries++;
                 if (isFleetStep2Active()) {
                     clearInterval(step2Interval);
-                    prepareStep2();
-                } else if (step2Tries % 10 === 0) {
+                    setTimeout(prepareStep2, 100);
+                } else if (step2Tries % 5 === 0) {
                     clickDevamButton();
                     window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
                         detail: { type: 'SUBMIT_FLEET1' }
                     }));
-                } else if (step2Tries > 50) {
+                } else if (step2Tries > 30) {
                     clearInterval(step2Interval);
-                    prepareStep2();
+                    setTimeout(prepareStep2, 100);
                 }
-            }, 30);
+            }, 80);
         }
 
         renderCartHUD(session, currentItem, {
@@ -3521,6 +3774,7 @@
             banner.id = 'ls-coll-floating-banner';
             document.body.appendChild(banner);
         }
+        activeAutomationCancel = details.cancel;
 
         const totalItems = session.queue.length;
         const currentStep = session.currentIndex + 1;
@@ -3531,11 +3785,11 @@
         const targetIcon = (currentItem.type === 3) ? '🌕' : '🪐';
         const cleanTName = (currentItem.name || '').replace(/^[\s\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]+/u, '').trim();
         let displayTargetTitle = cleanTName;
-        if (!displayTargetTitle) {
+        if (!displayTargetTitle || displayTargetTitle === 'Ay' || displayTargetTitle === 'Moon') {
             if (currentItem.type === 3) {
                 const emp = getEmpirePlanetsAndMoons();
                 const matched = emp.find(x => x.coords === currentItem.coords);
-                displayTargetTitle = matched ? `${matched.name} ( ${t('coll_moon_name')} )` : `${t('coll_moon_name')} ( ${t('coll_moon_name')} )`;
+                displayTargetTitle = (matched && matched.moon && matched.moon.name) ? matched.moon.name : (matched ? `${matched.name} ( ${t('coll_moon_name')} )` : `${t('coll_moon_name')}`);
             } else {
                 displayTargetTitle = (currentLang === 'tr' ? 'Hedef' : 'Target');
             }
@@ -3628,21 +3882,39 @@
             }
 
             const sendBtn = findSendFleetButton();
-            const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
-            const isSendBtnDisabled = sendBtn && (sendBtn.classList.contains('off') || sendBtn.classList.contains('disabled') || sendBtn.hasAttribute('disabled'));
-            const hasMissionError = Array.from(document.querySelectorAll('#fleet2 p, #fleet2 span, #fleet2 div')).some(el => (el.textContent || '').includes('Bu görevi başlatamazsın'));
+            const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || sendBtn.offsetHeight > 0);
 
-            if (isSendBtnVisible && !isSendBtnDisabled && !hasMissionError) {
-                dispatchSendCartFleet();
-            } else if (isSendBtnVisible) {
+            const mLoad = (details.met !== undefined ? details.met : details.metLoad) || 0;
+            const cLoad = (details.cri !== undefined ? details.cri : details.criLoad) || 0;
+            const dLoad = (details.deu !== undefined ? details.deu : details.deuLoad) || 0;
+            const needsCargo = (mLoad > 0 || cLoad > 0 || dLoad > 0);
+            if (needsCargo && !areFleetResourcesLoaded(mLoad, cLoad, dLoad)) {
                 if (sendBtnEl) {
                     sendBtnEl.disabled = true;
-                    sendBtnEl.style.background = '#e67e22';
-                    sendBtnEl.innerText = '⏳ ' + t('fleet_mission_error_waiting', 'Hedef Doğrulanıyor...');
+                    sendBtnEl.innerText = '⏳ ' + t('cour_hud_cargo', 'Kaynaklar Yükleniyor...');
                 }
-                if (typeof details.prepareStep2 === 'function') {
-                    details.prepareStep2();
-                }
+                fillFleetResources(mLoad, cLoad, dLoad);
+
+                setTimeout(() => {
+                    const sb = findSendFleetButton();
+                    const sbVisible = sb && (sb.offsetWidth > 0 || sb.offsetHeight > 0);
+                    if (sbVisible) {
+                        dispatchSendCartFleet();
+                    } else {
+                        clickDevamButton();
+                        window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                            detail: { type: 'SUBMIT_FLEET1' }
+                        }));
+                        if (typeof details.prepareStep2 === 'function') {
+                            details.prepareStep2();
+                        }
+                    }
+                }, 160);
+                return;
+            }
+
+            if (isSendBtnVisible) {
+                dispatchSendCartFleet();
             } else {
                 clickDevamButton();
                 window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
@@ -3679,6 +3951,7 @@
             // 3. Kuyruk indeksini ilerlet
             session.currentIndex++;
             sessionStorage.setItem(KEYS.CART_QUEUE, JSON.stringify(session));
+        updateAllAutomationStartButtons();
 
             LS_LOGGER.dispatch('CART', `Maliyet filosu gönderiliyor: ${currentItem.name} [${currentItem.coords}] (Adım ${session.currentIndex}/${session.queue.length})`);
 
@@ -3689,25 +3962,31 @@
                     '</div>';
             }
 
-            // Sayfa bağlamında tekil submit tetikle (bridge.js tekil submit mekanizmasıyla çalışır)
+            // Sıradaki hedef URL'yi önceden hazırla
+            let nextUrl = null;
+            if (session.currentIndex < session.queue.length) {
+                const nextItem = session.queue[session.currentIndex];
+                const [nextG, nextS, nextP] = nextItem.coords.split(':');
+                const originParam = (session.originId && session.originId !== 'manual') ? `&cp=${session.originId}` : '';
+                nextUrl = `/game/index.php?page=ingame&component=fleetdispatch${originParam}&galaxy=${nextG}&system=${nextS}&position=${nextP}&type=${nextItem.type}&mission=${nextItem.mission}`;
+            }
+
+            // Sayfa bağlamında tekil submit tetikle (nextUrl ile OGame doğrudan yönlendirilir)
             window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                detail: { type: 'SUBMIT_FLEET2' }
+                detail: { type: 'SUBMIT_FLEET2', nextUrl: nextUrl }
             }));
 
-            // Sıradaki adıma geçiş (AJAX isteğinin tamamlanması için güvenli bekleme)
+            // Sıradaki adıma geçiş (Güvenlik yedeği fallback: OGame yönlendirmesi tetiklenmezse)
             setTimeout(() => {
-                if (session.currentIndex < session.queue.length) {
-                    const nextItem = session.queue[session.currentIndex];
-                    const [nextG, nextS, nextP] = nextItem.coords.split(':');
-                    const originParam = (session.originId && session.originId !== 'manual') ? `&cp=${session.originId}` : '';
-                    const url = `/game/index.php?page=ingame&component=fleetdispatch${originParam}&galaxy=${nextG}&system=${nextS}&position=${nextP}&type=${nextItem.type}&mission=${nextItem.mission}`;
-                    window.location.href = url;
+                if (!sessionStorage.getItem(KEYS.CART_QUEUE)) return;
+                if (nextUrl) {
+                    window.location.href = nextUrl;
                 } else {
                     sessionStorage.removeItem(KEYS.CART_QUEUE);
                     if (banner) banner.remove();
                     showCollectorToast('🎉 Sepetteki tüm seçili gezegenlere nakliye başarıyla tamamlandı!', 6000);
                 }
-            }, 1100);
+            }, 1200);
         };
 
         const retryDispatch = () => {
@@ -3746,12 +4025,14 @@
 
             session.currentIndex++;
             sessionStorage.setItem(KEYS.CART_QUEUE, JSON.stringify(session));
+        updateAllAutomationStartButtons();
 
             if (banner) {
                 banner.innerHTML = '<div style="font-size:12px;color:#f39c12;padding:6px">⏭️ Gezegen atlandı, sıradakine geçiliyor...</div>';
             }
 
             setTimeout(() => {
+                if (!sessionStorage.getItem(KEYS.CART_QUEUE)) return;
                 if (session.currentIndex < session.queue.length) {
                     const nextItem = session.queue[session.currentIndex];
                     const [nextG, nextS, nextP] = nextItem.coords.split(':');
@@ -3769,8 +4050,10 @@
         const closeBanner = () => {
             window.removeEventListener('keydown', keyListener);
             if (typeof details.cancel === 'function') details.cancel();
+            if (activeAutomationCancel === details.cancel) activeAutomationCancel = null;
             sessionStorage.removeItem(KEYS.CART_QUEUE);
             if (banner) banner.remove();
+            updateAllAutomationStartButtons();
         };
 
         const keyListener = (e) => {
@@ -3859,7 +4142,7 @@
         if (!cleanOriginTitle || cleanOriginTitle === 'Ay' || cleanOriginTitle === 'Moon') {
             if (cartOrigin.originType === 3) {
                 const parentP = empire.find(p => p.coords === cartOrigin.originCoord);
-                cleanOriginTitle = parentP ? `${parentP.name} ( ${t('coll_moon_name', 'Ay')} )` : `${t('coll_moon_name', 'Ay')} ( ${t('coll_moon_name', 'Ay')} )`;
+                cleanOriginTitle = (parentP && parentP.moon && parentP.moon.name) ? parentP.moon.name : (parentP ? `${parentP.name} ( ${t('coll_moon_name', 'Ay')} )` : `${t('coll_moon_name', 'Ay')}`);
             } else {
                 cleanOriginTitle = t('coll_planet_name', 'Gezegen');
             }
@@ -4280,13 +4563,18 @@
             '</button>';
 
         document.getElementById('ls-cart-bulk-send-btn')?.addEventListener('click', () => {
-            startCartDelivery('bulk');
+            if (isCartDeliveryRunning()) {
+                stopCartDeliverySession();
+            } else {
+                startCartDelivery('bulk');
+            }
         });
 
         document.getElementById('ls-cp-m')?.addEventListener('click', () => copyNumber(grandM, 'ls-cp-m'));
         document.getElementById('ls-cp-c')?.addEventListener('click', () => copyNumber(grandC, 'ls-cp-c'));
         document.getElementById('ls-cp-d')?.addEventListener('click', () => copyNumber(grandD, 'ls-cp-d'));
         document.getElementById('ls-cp-net')?.addEventListener('click', () => copyNumber(grandTotalCargo, 'ls-cp-net'));
+        updateAllAutomationStartButtons();
     }
 
     function copyCart() {
@@ -6171,9 +6459,11 @@
                     }
                     if (!mId) mId = 'm-' + pId;
 
+                    const realMoonName = extractMoonNameFromElement(mLink, mId, coords, name);
+
                     moonObj = {
                         id: mId,
-                        name: `${name} ( ${t('coll_moon_name', 'Ay')} )`,
+                        name: realMoonName,
                         coords: coords,
                         isMoon: true,
                         type: 3,
@@ -6199,9 +6489,16 @@
             if (cached) {
                 try {
                     list = JSON.parse(cached);
+                    const knownNames = getKnownMoonNames();
                     list.forEach(p => {
-                        if (p.moon && (!p.moon.name || p.moon.name === 'Ay' || p.moon.name === 'Moon')) {
-                            p.moon.name = `${p.name} ( ${t('coll_moon_name', 'Ay')} )`;
+                        if (p.moon) {
+                            if (p.moon.id && knownNames[p.moon.id]) {
+                                p.moon.name = knownNames[p.moon.id];
+                            } else if (p.coords && knownNames[p.coords]) {
+                                p.moon.name = knownNames[p.coords];
+                            } else if (!p.moon.name || p.moon.name === 'Ay' || p.moon.name === 'Moon') {
+                                p.moon.name = `${p.name} ( ${t('coll_moon_name', 'Ay')} )`;
+                            }
                         }
                     });
                 } catch (e) {}
@@ -6241,6 +6538,13 @@
                         const m = (activePlanet.getAttribute('href') || '').match(/cp=(\d+)/);
                         if (m) activeId = m[1];
                     }
+                }
+            }
+
+            if (isMoon && activeId) {
+                const metaName = document.querySelector('meta[name="ogame-planet-name"]')?.getAttribute('content');
+                if (metaName && metaName.trim()) {
+                    saveKnownMoonName(activeId, activeCoords, metaName.trim());
                 }
             }
 
@@ -6362,7 +6666,7 @@
         if (!cleanTargetTitle || cleanTargetTitle === 'Ay' || cleanTargetTitle === 'Moon') {
             if (collectorSettings.targetType === 3) {
                 const parentP = empire.find(p => p.coords === collectorSettings.targetCoord);
-                cleanTargetTitle = parentP ? `${parentP.name} ( ${t('coll_moon_name', 'Ay')} )` : `${t('coll_moon_name', 'Ay')} ( ${t('coll_moon_name', 'Ay')} )`;
+                cleanTargetTitle = (parentP && parentP.moon && parentP.moon.name) ? parentP.moon.name : (parentP ? `${parentP.name} ( ${t('coll_moon_name', 'Ay')} )` : `${t('coll_moon_name', 'Ay')}`);
             } else {
                 cleanTargetTitle = t('coll_planet_name', 'Gezegen');
             }
@@ -6477,6 +6781,7 @@
 
         // 5. Özet Bilgisini Hesapla ve Göster
         updateCollectorSummary();
+        updateAllAutomationStartButtons();
     }
 
     function updateCollectorSummary() {
@@ -6742,7 +7047,11 @@
 
         // Toplamayı Başlat Butonu
         document.getElementById('ls-coll-start-btn')?.addEventListener('click', () => {
-            startCollectorSession();
+            if (isCollectorRunning()) {
+                stopCollectorSession();
+            } else {
+                startCollectorSession();
+            }
         });
     }
 
@@ -6816,6 +7125,7 @@
         };
 
         sessionStorage.setItem(KEYS.COLLECTOR_RUN, JSON.stringify(session));
+        updateAllAutomationStartButtons();
 
         const firstItem = queue[0];
         const [g, s, p] = session.targetCoord.split(':');
@@ -6998,20 +7308,33 @@
             }
         };
 
+        let targetSet = false;
+        let missionSet = false;
+        let resourcesFilled = false;
+        let stableReadyTicks = 0;
+        let totalTicks = 0;
+        let step2CheckTimer = null;
+
         // Step 2 (Görev ve Kaynaklar) Hazırlık Fonksiyonu
         const prepareStep2 = () => {
             if (isStepCancelled) return;
             const missionId = session.mission || 3;
             const targetType = session.targetType || 1;
-            setFleetTargetCoords(g, s, p, targetType);
 
-            let checkCount = 0;
-            const step2CheckTimer = setInterval(() => {
+            if (step2CheckTimer) clearInterval(step2CheckTimer);
+            targetSet = false;
+            missionSet = false;
+            stableReadyTicks = 0;
+            totalTicks = 0;
+            let lastTargetSetTime = 0;
+            let lastResourceFillTime = 0;
+
+            step2CheckTimer = setInterval(() => {
                 if (isStepCancelled) {
                     clearInterval(step2CheckTimer);
                     return;
                 }
-                checkCount++;
+                totalTicks++;
 
                 const slots = getFleetSlotsInfo();
                 if (slots.isKnown && slots.isFull) {
@@ -7019,61 +7342,83 @@
                     return;
                 }
 
-                // 1. Hedef tipi kontrolü (Ay vs Gezegen)
-                let typeMatch = true;
-                const typeInp = document.getElementById('type') || document.querySelector('input[name="type"]');
-                if (typeInp && String(typeInp.value).trim() !== String(targetType).trim()) {
-                    typeMatch = false;
+                // 1. Hedef koordinatlarını ve tipini ata (Sunucu hedef sorgu kilitlenmesini önlemek için kontrollü çağrı)
+                if (!targetSet) {
+                    if (g && s && p) {
+                        setFleetTargetCoords(g, s, p, targetType);
+                        targetSet = true;
+                        lastTargetSetTime = Date.now();
+                    }
+                } else if (!isTargetTypeSelected(targetType) && !isTargetCheckPending() && Date.now() - lastTargetSetTime > 1200) {
+                    setFleetTargetCoords(g, s, p, targetType);
+                    lastTargetSetTime = Date.now();
                 }
-                if (targetType === 3) {
-                    const moonIcon = document.querySelector('#fleet2 .planetIcon.moon, #fleet2 figure.moon, #mbutton, [data-planet-type="3"]');
-                    if (moonIcon && !moonIcon.classList.contains('selected') && !moonIcon.classList.contains('active')) {
-                        typeMatch = false;
+
+                // 2. Görev seçimi
+                if (isMissionSelected(missionId)) {
+                    missionSet = true;
+                } else if (!isTargetCheckPending() && isMissionClickable(missionId)) {
+                    setFleetMission(missionId);
+                    if (isMissionSelected(missionId)) {
+                        missionSet = true;
                     }
                 }
-                if (!typeMatch && checkCount <= 6) {
-                    setFleetTargetCoords(g, s, p, targetType);
+
+                // Sunucu hedef kontrolü devam ederken bekle
+                const targetChecking = isTargetCheckPending();
+
+                // 3. Kaynak doldurma ve doğrulama (Hedef kontrolü bittikten sonra ve görev seçiliyken)
+                const isAllRes = session.resources.met && session.resources.cri && session.resources.deu;
+                const needsCargo = (metLoad > 0 || criLoad > 0 || deuLoad > 0);
+                const isCargoLoaded = !needsCargo || areFleetResourcesLoaded(metLoad, criLoad, deuLoad);
+
+                if (!targetChecking && isMissionSelected(missionId)) {
+                    if (!isCargoLoaded && Date.now() - lastResourceFillTime > 400) {
+                        lastResourceFillTime = Date.now();
+                        if (isAllRes) {
+                            triggerAllResourcesNative(reserve || 0);
+                        } else {
+                            fillFleetResources(metLoad, criLoad, deuLoad);
+                        }
+                        stableReadyTicks = 0;
+                    }
                 }
 
-                // 2. OGame checkTarget AJAX yanıtını bekle
-                if (isTargetCheckPending()) {
-                    return;
-                }
+                // 4. Filo gönderim hazır mı kontrolü (Görev seçili + Kargo yüklü + Buton aktif + Hedef kontrolü bitmiş)
+                const sendBtn = findSendFleetButton();
+                const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || sendBtn.offsetHeight > 0);
+                const isReady = isMissionSelected(missionId) && isCargoLoaded;
 
-                // 3. Kaynak doldurma: Saf OGame #allresources butonu veya hesaplanan miktar
-                if (checkCount === 2 || checkCount === 5) {
-                    const isAllRes = session.resources.met && session.resources.cri && session.resources.deu;
-                    if (isAllRes) {
-                        triggerAllResourcesNative(reserve);
-                    } else {
+                if (isReady && isSendBtnVisible) {
+                    stableReadyTicks++;
+                    if (stableReadyTicks >= 2) {
+                        updateCollectorBannerReady(slots);
+                    }
+                } else {
+                    stableReadyTicks = 0;
+                    if (totalTicks > 20 && !targetChecking && !isCargoLoaded && Date.now() - lastResourceFillTime > 400) {
+                        lastResourceFillTime = Date.now();
                         fillFleetResources(metLoad, criLoad, deuLoad);
                     }
-                }
-
-                // 4. Görev seçimi
-                if (isMissionClickable(missionId) && !isMissionSelected(missionId)) {
-                    setFleetMission(missionId);
-                }
-
-                // 5. Filo gönderim hazır mı?
-                if (isMissionSelected(missionId) && isSendFleetReady()) {
-                    clearInterval(step2CheckTimer);
-                    updateCollectorBannerReady(slots);
-                } else if (checkCount > 40) {
-                    clearInterval(step2CheckTimer);
-                    if (isSendFleetReady()) {
+                    if (totalTicks > 40 && isSendBtnVisible) {
                         updateCollectorBannerReady(slots);
-                    } else {
-                        updateCollectorBannerWarning(slots);
                     }
                 }
-            }, 30);
+
+                // 5. 6 saniye boyunca hazır olmadıysa uyarı göster
+                if (totalTicks > 75 && (!isSendFleetReady() || !isCargoLoaded)) {
+                    updateCollectorBannerWarning(slots);
+                }
+            }, 80);
         };
 
         let ensureShipsTimer = null;
         let step2Interval = null;
         const targetShipTotal = bnCount + knCount + rehberCount;
-        if (targetShipTotal > 0) {
+
+        if (isFleetStep2Active()) {
+            setTimeout(prepareStep2, 100);
+        } else if (targetShipTotal > 0) {
             let shipTries = 0;
             ensureShipsTimer = setInterval(() => {
                 if (isStepCancelled) {
@@ -7081,9 +7426,8 @@
                     return;
                 }
                 shipTries++;
-                const isReady = isFleetStep1ContinueReady();
                 const { total } = getSelectedShipsSummary();
-                if (total > 0 && isReady) {
+                if (total > 0 || shipTries > 6) {
                     clearInterval(ensureShipsTimer);
                     clickDevamButton();
                     window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
@@ -7099,23 +7443,23 @@
                         step2Tries++;
                         if (isFleetStep2Active()) {
                             clearInterval(step2Interval);
-                            prepareStep2();
-                        } else if (step2Tries % 10 === 0) {
+                            setTimeout(prepareStep2, 100);
+                        } else if (step2Tries % 5 === 0) {
                             clickDevamButton();
                             window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
                                 detail: { type: 'SUBMIT_FLEET1' }
                             }));
-                        } else if (step2Tries > 50) {
+                        } else if (step2Tries > 30) {
                             clearInterval(step2Interval);
-                            prepareStep2();
+                            setTimeout(prepareStep2, 100);
                         }
-                    }, 30);
+                    }, 80);
                 } else {
                     setShipAmount(203, bnCount);
                     setShipAmount(202, knCount);
                     setShipAmount(219, rehberCount);
                 }
-            }, 50);
+            }, 100);
         } else {
             clickDevamButton();
             window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
@@ -7131,17 +7475,17 @@
                 step2Tries++;
                 if (isFleetStep2Active()) {
                     clearInterval(step2Interval);
-                    prepareStep2();
-                } else if (step2Tries % 10 === 0) {
+                    setTimeout(prepareStep2, 100);
+                } else if (step2Tries % 5 === 0) {
                     clickDevamButton();
                     window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
                         detail: { type: 'SUBMIT_FLEET1' }
                     }));
-                } else if (step2Tries > 50) {
+                } else if (step2Tries > 30) {
                     clearInterval(step2Interval);
-                    prepareStep2();
+                    setTimeout(prepareStep2, 100);
                 }
-            }, 30);
+            }, 80);
         }
 
         // Asistan Banner'ını Çiz
@@ -7155,11 +7499,14 @@
             missingCri: missingCri,
             missingDeu: missingDeu,
             hasAnyShortage: hasAnyShortage,
+            reserve: reserve,
             g: g, s: s, p: p,
             prepareStep2: prepareStep2,
             cancel: () => {
                 isStepCancelled = true;
                 if (ensureShipsTimer) clearInterval(ensureShipsTimer);
+                if (step2Interval) clearInterval(step2Interval);
+                if (step2CheckTimer) clearInterval(step2CheckTimer);
             }
         });
     }
@@ -7171,6 +7518,7 @@
             banner.id = 'ls-coll-floating-banner';
             document.body.appendChild(banner);
         }
+        activeAutomationCancel = details.cancel;
 
         const totalItems = session.queue.length;
         const currentStep = session.currentIndex + 1;
@@ -7189,7 +7537,7 @@
             if (session.targetType === 3) {
                 const emp = getEmpirePlanetsAndMoons();
                 const matched = emp.find(x => x.coords === session.targetCoord);
-                displayTargetTitle = matched ? `${matched.name} ( ${t('coll_moon_name')} )` : `${t('coll_moon_name')} ( ${t('coll_moon_name')} )`;
+                displayTargetTitle = (matched && matched.moon && matched.moon.name) ? matched.moon.name : (matched ? `${matched.name} ( ${t('coll_moon_name')} )` : `${t('coll_moon_name')}`);
             } else {
                 displayTargetTitle = (currentLang === 'tr' ? 'Hedef' : 'Target');
             }
@@ -7269,21 +7617,43 @@
             }
 
             const sendBtn = findSendFleetButton();
-            const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
-            const isSendBtnDisabled = sendBtn && (sendBtn.classList.contains('off') || sendBtn.classList.contains('disabled') || sendBtn.hasAttribute('disabled'));
-            const hasMissionError = Array.from(document.querySelectorAll('#fleet2 p, #fleet2 span, #fleet2 div')).some(el => (el.textContent || '').includes('Bu görevi başlatamazsın'));
+            const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || sendBtn.offsetHeight > 0);
 
-            if (isSendBtnVisible && !isSendBtnDisabled && !hasMissionError) {
-                dispatchSendFleetButton();
-            } else if (isSendBtnVisible) {
+            const mLoad = (details.met !== undefined ? details.met : details.metLoad) || 0;
+            const cLoad = (details.cri !== undefined ? details.cri : details.criLoad) || 0;
+            const dLoad = (details.deu !== undefined ? details.deu : details.deuLoad) || 0;
+            const needsCargo = (mLoad > 0 || cLoad > 0 || dLoad > 0);
+            if (needsCargo && !areFleetResourcesLoaded(mLoad, cLoad, dLoad)) {
                 if (sendBtnEl) {
                     sendBtnEl.disabled = true;
-                    sendBtnEl.style.background = '#e67e22';
-                    sendBtnEl.innerText = '⏳ ' + t('fleet_mission_error_waiting', 'Hedef Doğrulanıyor...');
+                    sendBtnEl.innerText = '⏳ ' + t('cour_hud_cargo', 'Kaynaklar Yükleniyor...');
                 }
-                if (typeof details.prepareStep2 === 'function') {
-                    details.prepareStep2();
+                const isAll = session.resources && session.resources.met && session.resources.cri && session.resources.deu;
+                if (isAll) {
+                    triggerAllResourcesNative(details.reserve || 0);
                 }
+                fillFleetResources(mLoad, cLoad, dLoad);
+
+                setTimeout(() => {
+                    const sb = findSendFleetButton();
+                    const sbVisible = sb && (sb.offsetWidth > 0 || sb.offsetHeight > 0);
+                    if (sbVisible) {
+                        dispatchSendFleetButton();
+                    } else {
+                        clickDevamButton();
+                        window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                            detail: { type: 'SUBMIT_FLEET1' }
+                        }));
+                        if (typeof details.prepareStep2 === 'function') {
+                            details.prepareStep2();
+                        }
+                    }
+                }, 160);
+                return;
+            }
+
+            if (isSendBtnVisible) {
+                dispatchSendFleetButton();
             } else {
                 clickDevamButton();
                 window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
@@ -7319,6 +7689,7 @@
             // 2. Önce kuyruğu derhal bir sonraki adıma geçir ve kaydet!
             session.currentIndex++;
             sessionStorage.setItem(KEYS.COLLECTOR_RUN, JSON.stringify(session));
+        updateAllAutomationStartButtons();
 
             LS_LOGGER.dispatch('COLLECTOR', `Collector filosu gönderiliyor: ${currentItem.name} -> Hedef: [${session.targetCoord}] (Adım ${session.currentIndex}/${session.queue.length})`);
 
@@ -7329,25 +7700,31 @@
                     '</div>';
             }
 
-            // Sayfa bağlamında (Main World) OGame'in native submit fonksiyonunu çalıştır
+            // Sıradaki hedef URL'yi önceden hazırla
+            let nextUrl = null;
+            if (session.currentIndex < session.queue.length) {
+                const nextItem = session.queue[session.currentIndex];
+                const [g, s, p] = session.targetCoord.split(':');
+                const nextType = nextItem.isMoon ? 3 : 1;
+                nextUrl = `/game/index.php?page=ingame&component=fleetdispatch&cp=${nextItem.id}&type=${nextType}&galaxy=${g}&system=${s}&position=${p}&mission=${session.mission || 3}`;
+            }
+
+            // Sayfa bağlamında tekil submit tetikle (nextUrl ile OGame doğrudan yeni gezegene yönlendirilir)
             window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                detail: { type: 'SUBMIT_FLEET2' }
+                detail: { type: 'SUBMIT_FLEET2', nextUrl: nextUrl }
             }));
 
-            // Bir sonraki gezegene yönlendir
+            // Bir sonraki gezegene yönlendir (Güvenlik yedeği fallback: OGame yönlendirmesi tetiklenmezse)
             setTimeout(() => {
-                if (session.currentIndex < session.queue.length) {
-                    const nextItem = session.queue[session.currentIndex];
-                    const [g, s, p] = session.targetCoord.split(':');
-                    const nextType = nextItem.isMoon ? 3 : 1;
-                    const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${nextItem.id}&type=${nextType}&galaxy=${g}&system=${s}&position=${p}&mission=${session.mission || 3}`;
-                    window.location.href = url;
+                if (!sessionStorage.getItem(KEYS.COLLECTOR_RUN)) return;
+                if (nextUrl) {
+                    window.location.href = nextUrl;
                 } else {
                     sessionStorage.removeItem(KEYS.COLLECTOR_RUN);
                     if (banner) banner.remove();
                     showCollectorToast('🎉 Tebrikler! Tüm filolar başarıyla gönderildi.', 6000);
                 }
-            }, 800);
+            }, 1200);
         };
 
         const proceedToNext = () => {
@@ -7362,12 +7739,14 @@
 
             session.currentIndex++;
             sessionStorage.setItem(KEYS.COLLECTOR_RUN, JSON.stringify(session));
+        updateAllAutomationStartButtons();
 
             if (banner) {
                 banner.innerHTML = '<div style="font-size:12px;color:#f39c12;padding:6px">⏭️ Gezegen atlandı, sıradakine geçiliyor...</div>';
             }
 
             setTimeout(() => {
+                if (!sessionStorage.getItem(KEYS.COLLECTOR_RUN)) return;
                 if (session.currentIndex < session.queue.length) {
                     const nextItem = session.queue[session.currentIndex];
                     const [g, s, p] = session.targetCoord.split(':');
@@ -7385,10 +7764,12 @@
         const cancel = () => {
             window.removeEventListener('keydown', keyListener);
             if (typeof details.cancel === 'function') details.cancel();
+            if (activeAutomationCancel === details.cancel) activeAutomationCancel = null;
             LS_LOGGER.warn('COLLECTOR', 'Toplama işlemi iptal edildi.');
             sessionStorage.removeItem(KEYS.COLLECTOR_RUN);
             if (banner) banner.remove();
             showCollectorToast('Toplama işlemi iptal edildi.', 3000);
+            updateAllAutomationStartButtons();
         };
 
         const keyListener = (e) => {
@@ -7465,10 +7846,10 @@
         if (courierSettings.originType === 3) originIcon = '🌕';
         let rawOriginTitle = courierSettings.originName || 'Merkez';
         let cleanOriginTitle = rawOriginTitle.replace(/^[\s\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]+/u, '').trim();
-        if (!cleanOriginTitle || cleanOriginTitle === 'Ay') {
+        if (!cleanOriginTitle || cleanOriginTitle === 'Ay' || cleanOriginTitle === 'Moon') {
             if (courierSettings.originType === 3) {
                 const parentP = empire.find(p => p.coords === courierSettings.originCoord);
-                cleanOriginTitle = parentP ? `${parentP.name} ( ${t('coll_moon_name', 'Ay')} )` : `${t('coll_moon_name', 'Ay')} ( ${t('coll_moon_name', 'Ay')} )`;
+                cleanOriginTitle = (parentP && parentP.moon && parentP.moon.name) ? parentP.moon.name : (parentP ? `${parentP.name} ( ${t('coll_moon_name', 'Ay')} )` : `${t('coll_moon_name', 'Ay')}`);
             } else {
                 cleanOriginTitle = t('coll_planet_name', 'Gezegen');
             }
@@ -7595,6 +7976,7 @@
 
         // 5. Özet Bilgisini Hesapla ve Göster
         updateCourierSummary();
+        updateAllAutomationStartButtons();
     }
 
     function updateCourierSummary() {
@@ -7965,7 +8347,11 @@
         const startBtn = document.getElementById('ls-cour-start-btn');
         if (startBtn) {
             startBtn.addEventListener('click', () => {
-                startCourierSession();
+                if (isCourierRunning()) {
+                    stopCourierSession();
+                } else {
+                    startCourierSession();
+                }
             });
         }
     }
@@ -8063,6 +8449,7 @@
         };
 
         sessionStorage.setItem(KEYS.COURIER_RUN, JSON.stringify(session));
+        updateAllAutomationStartButtons();
         LS_LOGGER.action('COURIER', `Dağıtım oturumu başlatıldı: ${queue.length} hedef kuyruğa alındı. Merkez: [${session.originCoord}] ${session.originName}`);
 
         const firstItem = queue[0];
@@ -8214,20 +8601,32 @@
             }
         };
 
+        let targetSet = false;
+        let missionSet = false;
+        let resourcesFilled = false;
+        let stableReadyTicks = 0;
+        let totalTicks = 0;
+        let step2CheckTimer = null;
+
         const prepareStep2 = () => {
             if (isStepCancelled) return;
             const missionId = session.mission || 3;
             const targetType = parseInt(currentItem.type, 10) || 1;
 
-            setFleetTargetCoords(g, s, p, targetType);
+            if (step2CheckTimer) clearInterval(step2CheckTimer);
+            targetSet = false;
+            missionSet = false;
+            stableReadyTicks = 0;
+            totalTicks = 0;
+            let lastTargetSetTime = 0;
+            let lastResourceFillTime = 0;
 
-            let checkCount = 0;
-            const step2CheckTimer = setInterval(() => {
+            step2CheckTimer = setInterval(() => {
                 if (isStepCancelled) {
                     clearInterval(step2CheckTimer);
                     return;
                 }
-                checkCount++;
+                totalTicks++;
 
                 const slots = getFleetSlotsInfo();
                 if (slots.isKnown && slots.isFull) {
@@ -8235,137 +8634,145 @@
                     return;
                 }
 
-                // 1. Hedef tipi kontrolü (Ay vs Gezegen)
-                let typeMatch = true;
-                const typeInp = document.getElementById('type') || document.querySelector('input[name="type"]');
-                if (typeInp && String(typeInp.value).trim() !== String(targetType).trim()) {
-                    typeMatch = false;
-                }
-                if (targetType === 3) {
-                    const moonBtn = document.querySelector('#fleet2 .planetIcon.moon, #fleet2 figure.moon, #mbutton, [data-planet-type="3"]');
-                    if (moonBtn && !moonBtn.classList.contains('selected') && !moonBtn.classList.contains('active')) {
-                        typeMatch = false;
+                // 1. Hedef koordinatlarını ve tipini ata (Sunucu hedef sorgu kilitlenmesini önlemek için kontrollü çağrı)
+                if (!targetSet) {
+                    if (g && s && p) {
+                        setFleetTargetCoords(g, s, p, targetType);
+                        targetSet = true;
+                        lastTargetSetTime = Date.now();
                     }
-                } else if (targetType === 1) {
-                    const planetBtn = document.querySelector('#fleet2 .planetIcon.planet, #fleet2 figure.planet, #pbutton, [data-planet-type="1"]');
-                    if (planetBtn && !planetBtn.classList.contains('selected') && !planetBtn.classList.contains('active')) {
-                        typeMatch = false;
-                    }
-                }
-
-                if (!typeMatch && checkCount <= 6) {
+                } else if (!isTargetTypeSelected(targetType) && !isTargetCheckPending() && Date.now() - lastTargetSetTime > 1200) {
                     setFleetTargetCoords(g, s, p, targetType);
+                    lastTargetSetTime = Date.now();
                 }
 
-                // 2. OGame checkTarget AJAX yanıtını bekle
-                if (isTargetCheckPending()) {
-                    return;
-                }
-
-                // 3. Görev seçimi
-                if (isMissionClickable(missionId) && !isMissionSelected(missionId)) {
-                    setFleetMission(missionId);
-                }
-
-                // 4. Kaynak doldurma
+                // 2. Görev seçimi
                 if (isMissionSelected(missionId)) {
-                    fillFleetResources(metLoad, criLoad, deuLoad);
-                }
-
-                // 5. Filo gönderim hazır mı?
-                if (isMissionSelected(missionId) && isSendFleetReady()) {
-                    clearInterval(step2CheckTimer);
-                    updateCourierBannerReady(slots);
-                } else if (checkCount > 40) {
-                    clearInterval(step2CheckTimer);
-                    if (isSendFleetReady()) {
-                        updateCourierBannerReady(slots);
-                    } else {
-                        updateCourierBannerWarning(slots);
+                    missionSet = true;
+                } else if (!isTargetCheckPending() && isMissionClickable(missionId)) {
+                    setFleetMission(missionId);
+                    if (isMissionSelected(missionId)) {
+                        missionSet = true;
                     }
                 }
-            }, 30);
-        };
 
-        // Eğer sayfa zaten Step 2'deyse doğrudan Step 2 hazırlığına geç
-        const isAlreadyOnStep2 = isFleetStep2Active();
+                // Sunucu hedef kontrolü devam ederken bekle
+                const targetChecking = isTargetCheckPending();
+
+                // 3. Kaynak doldurma ve doğrulama (Hedef kontrolü bittikten sonra ve görev seçiliyken)
+                const needsCargo = (metLoad > 0 || criLoad > 0 || deuLoad > 0);
+                const isCargoLoaded = !needsCargo || areFleetResourcesLoaded(metLoad, criLoad, deuLoad);
+
+                if (!targetChecking && isMissionSelected(missionId)) {
+                    if (!isCargoLoaded && Date.now() - lastResourceFillTime > 400) {
+                        lastResourceFillTime = Date.now();
+                        fillFleetResources(metLoad, criLoad, deuLoad);
+                        stableReadyTicks = 0;
+                    }
+                }
+
+                // 4. Filo gönderim hazır mı kontrolü (Görev seçili + Kargo yüklü + Buton aktif + Hedef kontrolü bitmiş)
+                const sendBtn = findSendFleetButton();
+                const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || sendBtn.offsetHeight > 0);
+                const isReady = isMissionSelected(missionId) && isCargoLoaded;
+
+                if (isReady && isSendBtnVisible) {
+                    stableReadyTicks++;
+                    if (stableReadyTicks >= 2) {
+                        updateCourierBannerReady(slots);
+                    }
+                } else {
+                    stableReadyTicks = 0;
+                    if (totalTicks > 20 && !targetChecking && !isCargoLoaded && Date.now() - lastResourceFillTime > 400) {
+                        lastResourceFillTime = Date.now();
+                        fillFleetResources(metLoad, criLoad, deuLoad);
+                    }
+                    if (totalTicks > 40 && isSendBtnVisible) {
+                        updateCourierBannerReady(slots);
+                    }
+                }
+
+                // 5. 6 saniye boyunca hazır olmadıysa uyarı göster ama döngüyü kesme
+                if (totalTicks > 75 && (!isSendFleetReady() || !isCargoLoaded)) {
+                    updateCourierBannerWarning(slots);
+                }
+            }, 80);
+        };
 
         let ensureShipsTimer = null;
         let step2Interval = null;
-        if (isAlreadyOnStep2) {
-            prepareStep2();
+        const targetShipTotal = bnCount + knCount + rehberCount;
+
+        if (isFleetStep2Active()) {
+            setTimeout(prepareStep2, 100);
+        } else if (targetShipTotal > 0) {
+            let shipTries = 0;
+            ensureShipsTimer = setInterval(() => {
+                if (isStepCancelled) {
+                    clearInterval(ensureShipsTimer);
+                    return;
+                }
+                shipTries++;
+                const { total } = getSelectedShipsSummary();
+                if (total > 0 || shipTries > 6) {
+                    clearInterval(ensureShipsTimer);
+                    clickDevamButton();
+                    window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                        detail: { type: 'SUBMIT_FLEET1' }
+                    }));
+
+                    let step2Tries = 0;
+                    step2Interval = setInterval(() => {
+                        if (isStepCancelled) {
+                            clearInterval(step2Interval);
+                            return;
+                        }
+                        step2Tries++;
+                        if (isFleetStep2Active()) {
+                            clearInterval(step2Interval);
+                            setTimeout(prepareStep2, 100);
+                        } else if (step2Tries % 5 === 0) {
+                            clickDevamButton();
+                            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                                detail: { type: 'SUBMIT_FLEET1' }
+                            }));
+                        } else if (step2Tries > 30) {
+                            clearInterval(step2Interval);
+                            setTimeout(prepareStep2, 100);
+                        }
+                    }, 80);
+                } else {
+                    setShipAmount(203, bnCount);
+                    setShipAmount(202, knCount);
+                    setShipAmount(219, rehberCount);
+                }
+            }, 100);
         } else {
-            const targetShipTotal = bnCount + knCount + rehberCount;
-            if (targetShipTotal > 0) {
-                let shipTries = 0;
-                ensureShipsTimer = setInterval(() => {
-                    if (isStepCancelled) {
-                        clearInterval(ensureShipsTimer);
-                        return;
-                    }
-                    shipTries++;
-                    const isReady = isFleetStep1ContinueReady();
-                    const { total } = getSelectedShipsSummary();
-                    if (total > 0 && isReady) {
-                        clearInterval(ensureShipsTimer);
-                        clickDevamButton();
-                        window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                            detail: { type: 'SUBMIT_FLEET1' }
-                        }));
+            clickDevamButton();
+            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                detail: { type: 'SUBMIT_FLEET1' }
+            }));
 
-                        let step2Tries = 0;
-                        step2Interval = setInterval(() => {
-                            if (isStepCancelled) {
-                                clearInterval(step2Interval);
-                                return;
-                            }
-                            step2Tries++;
-                            if (isFleetStep2Active()) {
-                                clearInterval(step2Interval);
-                                prepareStep2();
-                            } else if (step2Tries % 10 === 0) {
-                                clickDevamButton();
-                                window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                                    detail: { type: 'SUBMIT_FLEET1' }
-                                }));
-                            } else if (step2Tries > 50) {
-                                clearInterval(step2Interval);
-                                prepareStep2();
-                            }
-                        }, 30);
-                    } else {
-                        setShipAmount(203, bnCount);
-                        setShipAmount(202, knCount);
-                        setShipAmount(219, rehberCount);
-                    }
-                }, 50);
-            } else {
-                clickDevamButton();
-                window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                    detail: { type: 'SUBMIT_FLEET1' }
-                }));
-
-                let step2Tries = 0;
-                step2Interval = setInterval(() => {
-                    if (isStepCancelled) {
-                        clearInterval(step2Interval);
-                        return;
-                    }
-                    step2Tries++;
-                    if (isFleetStep2Active()) {
-                        clearInterval(step2Interval);
-                        prepareStep2();
-                    } else if (step2Tries % 10 === 0) {
-                        clickDevamButton();
-                        window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                            detail: { type: 'SUBMIT_FLEET1' }
-                        }));
-                    } else if (step2Tries > 50) {
-                        clearInterval(step2Interval);
-                        prepareStep2();
-                    }
-                }, 30);
-            }
+            let step2Tries = 0;
+            step2Interval = setInterval(() => {
+                if (isStepCancelled) {
+                    clearInterval(step2Interval);
+                    return;
+                }
+                step2Tries++;
+                if (isFleetStep2Active()) {
+                    clearInterval(step2Interval);
+                    setTimeout(prepareStep2, 100);
+                } else if (step2Tries % 5 === 0) {
+                    clickDevamButton();
+                    window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                        detail: { type: 'SUBMIT_FLEET1' }
+                    }));
+                } else if (step2Tries > 30) {
+                    clearInterval(step2Interval);
+                    setTimeout(prepareStep2, 100);
+                }
+            }, 80);
         }
 
         // Asistan Banner'ını Çiz
@@ -8384,6 +8791,8 @@
             cancel: () => {
                 isStepCancelled = true;
                 if (ensureShipsTimer) clearInterval(ensureShipsTimer);
+                if (step2Interval) clearInterval(step2Interval);
+                if (step2CheckTimer) clearInterval(step2CheckTimer);
             }
         });
     }
@@ -8395,6 +8804,7 @@
             banner.id = 'ls-cour-floating-banner';
             document.body.appendChild(banner);
         }
+        activeAutomationCancel = details.cancel;
 
         const totalItems = session.queue.length;
         const currentStep = session.currentIndex + 1;
@@ -8484,21 +8894,43 @@
             }
 
             const sendBtn = findSendFleetButton();
-            const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
-            const isSendBtnDisabled = sendBtn && (sendBtn.classList.contains('off') || sendBtn.classList.contains('disabled') || sendBtn.hasAttribute('disabled'));
-            const hasMissionError = Array.from(document.querySelectorAll('#fleet2 p, #fleet2 span, #fleet2 div')).some(el => (el.textContent || '').includes('Bu görevi başlatamazsın'));
+            const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || sendBtn.offsetHeight > 0);
 
-            if (isSendBtnVisible && !isSendBtnDisabled && !hasMissionError) {
-                dispatchSendFleetButton();
-            } else if (isSendBtnVisible) {
+            const mLoad = (details.met !== undefined ? details.met : details.metLoad) || 0;
+            const cLoad = (details.cri !== undefined ? details.cri : details.criLoad) || 0;
+            const dLoad = (details.deu !== undefined ? details.deu : details.deuLoad) || 0;
+            const needsCargo = (mLoad > 0 || cLoad > 0 || dLoad > 0);
+            if (needsCargo && !areFleetResourcesLoaded(mLoad, cLoad, dLoad)) {
                 if (sendBtnEl) {
                     sendBtnEl.disabled = true;
-                    sendBtnEl.style.background = '#e67e22';
-                    sendBtnEl.innerText = '⏳ ' + t('fleet_mission_error_waiting', 'Hedef Doğrulanıyor...');
+                    sendBtnEl.innerText = '⏳ ' + t('cour_hud_cargo', 'Kaynaklar Yükleniyor...');
                 }
-                if (typeof details.prepareStep2 === 'function') {
-                    details.prepareStep2();
+                const isAll = session.resources && session.resources.met && session.resources.cri && session.resources.deu;
+                if (isAll) {
+                    triggerAllResourcesNative(details.reserve || 0);
                 }
+                fillFleetResources(mLoad, cLoad, dLoad);
+
+                setTimeout(() => {
+                    const sb = findSendFleetButton();
+                    const sbVisible = sb && (sb.offsetWidth > 0 || sb.offsetHeight > 0);
+                    if (sbVisible) {
+                        dispatchSendFleetButton();
+                    } else {
+                        clickDevamButton();
+                        window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                            detail: { type: 'SUBMIT_FLEET1' }
+                        }));
+                        if (typeof details.prepareStep2 === 'function') {
+                            details.prepareStep2();
+                        }
+                    }
+                }, 160);
+                return;
+            }
+
+            if (isSendBtnVisible) {
+                dispatchSendFleetButton();
             } else {
                 clickDevamButton();
                 window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
@@ -8534,6 +8966,7 @@
             // 2. Oturum kuyruğunu bir sonraki adıma geçir ve kaydet
             session.currentIndex++;
             sessionStorage.setItem(KEYS.COURIER_RUN, JSON.stringify(session));
+        updateAllAutomationStartButtons();
 
             LS_LOGGER.dispatch('COURIER', `Postacı filosu gönderiliyor: Üs [${session.originCoord}] -> Hedef: ${currentItem.name} [${currentItem.coords}] (Adım ${session.currentIndex}/${session.queue.length})`);
 
@@ -8544,22 +8977,30 @@
                     '</div>';
             }
 
+            // Sıradaki hedef URL'yi önceden hazırla
+            let nextUrl = null;
+            if (session.currentIndex < session.queue.length) {
+                const nextItem = session.queue[session.currentIndex];
+                const [ng, ns, np] = nextItem.coords.split(':');
+                nextUrl = `/game/index.php?page=ingame&component=fleetdispatch&cp=${session.originId}&galaxy=${ng}&system=${ns}&position=${np}&type=${nextItem.type}&mission=${session.mission || 3}`;
+            }
+
+            // Sayfa bağlamında tekil submit tetikle (nextUrl ile OGame doğrudan yönlendirilir)
             window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                detail: { type: 'SUBMIT_FLEET2' }
+                detail: { type: 'SUBMIT_FLEET2', nextUrl: nextUrl }
             }));
 
+            // Bir sonraki hedefe yönlendir (Güvenlik yedeği fallback: OGame yönlendirmesi tetiklenmezse)
             setTimeout(() => {
-                if (session.currentIndex < session.queue.length) {
-                    const nextItem = session.queue[session.currentIndex];
-                    const [ng, ns, np] = nextItem.coords.split(':');
-                    const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${session.originId}&galaxy=${ng}&system=${ns}&position=${np}&type=${nextItem.type}&mission=${session.mission || 3}`;
-                    window.location.href = url;
+                if (!sessionStorage.getItem(KEYS.COURIER_RUN)) return;
+                if (nextUrl) {
+                    window.location.href = nextUrl;
                 } else {
                     sessionStorage.removeItem(KEYS.COURIER_RUN);
                     if (banner) banner.remove();
                     showCollectorToast('🎉 Tebrikler! Tüm dağıtım filoları başarıyla gönderildi.', 6000);
                 }
-            }, 800);
+            }, 1200);
         };
 
         const proceedToNext = () => {
@@ -8574,12 +9015,14 @@
 
             session.currentIndex++;
             sessionStorage.setItem(KEYS.COURIER_RUN, JSON.stringify(session));
+        updateAllAutomationStartButtons();
 
             if (banner) {
                 banner.innerHTML = '<div style="font-size:12px;color:#f39c12;padding:6px">⏭️ Hedef atlandı, sıradakine geçiliyor...</div>';
             }
 
             setTimeout(() => {
+                if (!sessionStorage.getItem(KEYS.COURIER_RUN)) return;
                 if (session.currentIndex < session.queue.length) {
                     const nextItem = session.queue[session.currentIndex];
                     const [ng, ns, np] = nextItem.coords.split(':');
@@ -8596,10 +9039,12 @@
         const cancel = () => {
             window.removeEventListener('keydown', keyListener);
             if (typeof details.cancel === 'function') details.cancel();
+            if (activeAutomationCancel === details.cancel) activeAutomationCancel = null;
             LS_LOGGER.warn('COURIER', 'Dağıtım işlemi iptal edildi.');
             sessionStorage.removeItem(KEYS.COURIER_RUN);
             if (banner) banner.remove();
             showCollectorToast('Dağıtım işlemi iptal edildi.', 3000);
+            updateAllAutomationStartButtons();
         };
 
         const keyListener = (e) => {
@@ -8807,11 +9252,6 @@
                 }
             }
         }
-
-        window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-            detail: { type: 'SELECT_TEMPLATE', id: idNum, name: targetName }
-        }));
-        if (targetName) return true;
 
         const triggerFullClick = (el) => {
             if (!el) return;
@@ -9032,6 +9472,7 @@
         }
 
         updateExpeditionPreview();
+        updateAllAutomationStartButtons();
     }
 
     function updateExpeditionPreview() {
@@ -9131,7 +9572,11 @@
         const startBtn = document.getElementById('ls-exp-start-btn');
         if (startBtn) {
             startBtn.addEventListener('click', () => {
-                startExpeditionSession();
+                if (isExpeditionRunning()) {
+                    stopExpeditionSession();
+                } else {
+                    startExpeditionSession();
+                }
             });
         }
 
@@ -9185,6 +9630,18 @@
             return;
         }
 
+        const fleetSlots = getFleetSlotsInfo();
+        if (fleetSlots.isKnown && fleetSlots.isFull) {
+            alert(t('fleet_slots_full_desc').replace('{current}', fleetSlots.current).replace('{max}', fleetSlots.max));
+            return;
+        }
+
+        const expSlots = getExpeditionSlotsInfo();
+        if (expSlots.isKnown && expSlots.isFull) {
+            alert(currentLang === 'tr' ? `Tüm keşif slotları dolu (${expSlots.current}/${expSlots.max})!` : `All expedition slots are full (${expSlots.current}/${expSlots.max})!`);
+            return;
+        }
+
         const tplInp = document.getElementById('ls-exp-template');
         if (tplInp && tplInp.value) {
             expeditionSettings.templateId = tplInp.value;
@@ -9209,6 +9666,7 @@
         };
 
         sessionStorage.setItem(KEYS.EXPEDITION_RUN, JSON.stringify(session));
+        updateAllAutomationStartButtons();
 
         const firstItem = queue[0];
         const isFleetPage = window.location.href.includes('component=fleetdispatch') ||
@@ -9322,6 +9780,9 @@
 
     function executeExpeditionStep(session, currentItem) {
         let isStepCancelled = false;
+        let ensureShipsInterval = null;
+        let step2Timer = null;
+        let step2Interval = null;
         LS_LOGGER.info('EXPEDITION', `Keşif adımı: [${currentItem.g}:${currentItem.s}:16] (${session.currentIndex + 1}/${session.queue.length})`);
 
         const updateBannerReady = () => {
@@ -9337,38 +9798,53 @@
 
         const prepareStep2 = () => {
             if (isStepCancelled) return;
+            if (step2Timer) clearInterval(step2Timer);
 
             // 1. Hedef koordinatı (g:s:16) Step 2 olarak ata
             setExpeditionTarget(currentItem.g, currentItem.s, true);
             LS_LOGGER.info('EXPEDITION', `Step 2 parametreleri hazırlanıyor: Hedef [${currentItem.g}:${currentItem.s}:16]`);
 
+            const ensureMission15 = () => {
+                if (isStepCancelled) return;
+                if (isMissionSelected(15)) return;
+                if (isTargetCheckPending()) return;
+                if (isMissionClickable(15)) {
+                    setFleetMission(15);
+                }
+            };
+
+            ensureMission15();
+
             // 2. Mission 15 ve gönder butonunun hazır olmasını bekle
             let step2Checks = 0;
-            const step2Timer = setInterval(() => {
+            step2Timer = setInterval(() => {
                 if (isStepCancelled) {
                     clearInterval(step2Timer);
                     return;
                 }
                 step2Checks++;
 
-                // OGame checkTarget yanıtını bekle
-                if (isTargetCheckPending()) {
+                const slots = getFleetSlotsInfo();
+                if (slots.isKnown && slots.isFull) {
+                    return;
+                }
+                const expSlots = getExpeditionSlotsInfo();
+                if (expSlots.isKnown && expSlots.isFull) {
                     return;
                 }
 
-                // Mission 15 seç
-                if (isMissionClickable(15) && !isMissionSelected(15)) {
-                    setFleetMission(15);
+                if (!isMissionSelected(15) && !isTargetCheckPending() && isMissionClickable(15)) {
+                    ensureMission15();
                 }
 
-                if (isMissionSelected(15) && isSendFleetReady()) {
-                    clearInterval(step2Timer);
-                    updateBannerReady();
-                } else if (step2Checks > 40) {
+                const isMission15Active = isMissionSelected(15);
+                const isSendBtnReady = isSendFleetReady();
+
+                if ((isMission15Active && isSendBtnReady && !isTargetCheckPending() && step2Checks >= 2) || step2Checks > 15) {
                     clearInterval(step2Timer);
                     updateBannerReady();
                 }
-            }, 30);
+            }, 100);
         };
 
         // 1. Şablonu seç (Gemileri doldur)
@@ -9382,7 +9858,7 @@
 
         // 3. Gemilerin dolmasını izle ve Devam'a bas
         let checkTries = 0;
-        const ensureShipsInterval = setInterval(() => {
+        ensureShipsInterval = setInterval(() => {
             if (isStepCancelled) {
                 clearInterval(ensureShipsInterval);
                 return;
@@ -9390,61 +9866,73 @@
             checkTries++;
             const { ships, total } = getSelectedShipsSummary();
 
-            if (total > 0 && isFleetStep1ContinueReady()) {
+            if (total > 0) {
                 clearInterval(ensureShipsInterval);
-                setExpeditionTarget(currentItem.g, currentItem.s, false);
-                LS_LOGGER.action('EXPEDITION', 'Step 1 Devam butonu tıklandı, Step 2 bekleniyor.');
-                clickDevamButton();
-                window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                    detail: { type: 'SUBMIT_FLEET1' }
-                }));
 
-                let step2Tries = 0;
-                const step2Interval = setInterval(() => {
-                    if (isStepCancelled) {
-                        clearInterval(step2Interval);
-                        return;
-                    }
-                    step2Tries++;
-                    if (isFleetStep2Active()) {
-                        clearInterval(step2Interval);
-                        prepareStep2();
-                    } else if (step2Tries % 10 === 0) {
-                        clickDevamButton();
-                        window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                            detail: { type: 'SUBMIT_FLEET1' }
-                        }));
-                    } else if (step2Tries > 50) {
-                        clearInterval(step2Interval);
-                        prepareStep2();
-                    }
-                }, 30);
+                setTimeout(() => {
+                    if (isStepCancelled) return;
+                    setExpeditionTarget(currentItem.g, currentItem.s, false);
+                    LS_LOGGER.action('EXPEDITION', 'Step 1 Devam butonu tıklandı, Step 2 bekleniyor.');
+                    clickDevamButton();
+                    window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                        detail: { type: 'SUBMIT_FLEET1' }
+                    }));
+
+                    let step2Tries = 0;
+                    step2Interval = setInterval(() => {
+                        if (isStepCancelled) {
+                            clearInterval(step2Interval);
+                            return;
+                        }
+                        step2Tries++;
+                        const isStep2Active = isFleetStep2Active();
+
+                        if (isStep2Active) {
+                            clearInterval(step2Interval);
+                            setTimeout(prepareStep2, 100);
+                        } else {
+                            if (step2Tries % 5 === 0) {
+                                clickDevamButton();
+                                window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                                    detail: { type: 'SUBMIT_FLEET1' }
+                                }));
+                            }
+                            if (step2Tries > 30) {
+                                clearInterval(step2Interval);
+                                setTimeout(prepareStep2, 100);
+                            }
+                        }
+                    }, 80);
+                }, 150);
             } else if (checkTries === 2 || checkTries === 5) {
                 if (session.templateId || session.templateName) {
                     applyExpeditionTemplate(session.templateId, session.templateName);
                 }
-            } else if (checkTries > 25) {
+            } else if (checkTries > 15) {
                 clearInterval(ensureShipsInterval);
                 clickDevamButton();
                 window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
                     detail: { type: 'SUBMIT_FLEET1' }
                 }));
-                prepareStep2();
+                setTimeout(prepareStep2, 200);
             }
-        }, 50);
+        }, 120);
 
         renderExpeditionBanner(session, currentItem, {
             prepareStep2: prepareStep2,
             retry: () => {
                 isStepCancelled = true;
-                clearInterval(ensureShipsInterval);
-                setTimeout(() => {
-                    executeExpeditionStep(session, currentItem);
-                }, 100);
+                if (ensureShipsInterval) clearInterval(ensureShipsInterval);
+                if (step2Timer) clearInterval(step2Timer);
+                if (step2Interval) clearInterval(step2Interval);
+                const url = `/game/index.php?page=ingame&component=fleetdispatch&galaxy=${currentItem.g}&system=${currentItem.s}&position=16&type=1&mission=15`;
+                window.location.href = url;
             },
             cancel: () => {
                 isStepCancelled = true;
-                clearInterval(ensureShipsInterval);
+                if (ensureShipsInterval) clearInterval(ensureShipsInterval);
+                if (step2Timer) clearInterval(step2Timer);
+                if (step2Interval) clearInterval(step2Interval);
             }
         });
     }
@@ -9456,6 +9944,7 @@
             banner.id = 'ls-coll-floating-banner';
             document.body.appendChild(banner);
         }
+        activeAutomationCancel = details.cancel;
 
         const totalItems = session.queue.length;
         const currentStep = session.currentIndex + 1;
@@ -9485,11 +9974,24 @@
 
         const sendExpedition = () => {
             if (isDispatching) return;
-            const sendBtn = findSendFleetButton();
-            const isSendBtnReady = sendBtn && (sendBtn.offsetWidth > 0 || window.getComputedStyle(sendBtn).display !== 'none');
+            const slots = getFleetSlotsInfo();
+            if (slots.isKnown && slots.isFull) {
+                showCollectorToast(t('fleet_slots_full_desc').replace('{current}', slots.current).replace('{max}', slots.max), 4000);
+                return;
+            }
+            const expSlots = getExpeditionSlotsInfo();
+            if (expSlots.isKnown && expSlots.isFull) {
+                showCollectorToast(currentLang === 'tr' ? `Tüm keşif slotları dolu (${expSlots.current}/${expSlots.max})!` : `All expedition slots are full (${expSlots.current}/${expSlots.max})!`, 4000);
+                return;
+            }
 
-            // Sadece Step 2 aktif ve filo gönder butonu hazır olduğunda gönder
-            if (!isSendBtnReady) {
+            const isSendBtnReady = isSendFleetReady();
+
+            // Sadece Step 2 aktif, Mission 15 seçili ve filo gönder butonu hazır olduğunda gönder
+            if (!isSendBtnReady || !isMissionSelected(15) || isTargetCheckPending()) {
+                if (typeof details.prepareStep2 === 'function') {
+                    details.prepareStep2();
+                }
                 return;
             }
 
@@ -9527,33 +10029,43 @@
 
             session.currentIndex++;
             sessionStorage.setItem(KEYS.EXPEDITION_RUN, JSON.stringify(session));
+            updateAllAutomationStartButtons();
 
             LS_LOGGER.dispatch('EXPEDITION', `Keşif filosu gönderiliyor: [${currentItem.g}:${currentItem.s}:16] (Adım: ${session.currentIndex}/${session.queue.length})`);
 
             if (banner) {
                 banner.innerHTML =
                     '<div style="font-size:12px;color:#2ecc71;padding:8px;font-weight:bold">' +
-                        '🚀 Keşif filosu gönderildi! Sıradaki sisteme geçiliyor...' +
+                        '🚀 ' + (currentLang === 'tr' ? 'Keşif filosu gönderildi! Sıradaki sisteme geçiliyor...' : 'Expedition fleet sent! Moving to next system...') +
                     '</div>';
             }
 
+            // Sıradaki hedef URL'yi önceden hazırla
+            let nextUrl = null;
+            if (session.currentIndex < session.queue.length) {
+                const nextItem = session.queue[session.currentIndex];
+                nextUrl = `/game/index.php?page=ingame&component=fleetdispatch&galaxy=${nextItem.g}&system=${nextItem.s}&position=16&type=1&mission=15`;
+            }
+
+            // Sayfa bağlamında tekil submit tetikle (nextUrl ile OGame doğrudan yeni sisteme yönlendirilir)
             window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
                 detail: {
-                    type: 'SUBMIT_FLEET2'
+                    type: 'SUBMIT_FLEET2',
+                    nextUrl: nextUrl
                 }
             }));
 
+            // Sıradaki sisteme geçiş (Güvenlik yedeği fallback: OGame yönlendirmesi tetiklenmezse)
             setTimeout(() => {
-                if (session.currentIndex < session.queue.length) {
-                    const nextItem = session.queue[session.currentIndex];
-                    const url = `/game/index.php?page=ingame&component=fleetdispatch&galaxy=${nextItem.g}&system=${nextItem.s}&position=16&type=1&mission=15`;
-                    window.location.href = url;
+                if (!sessionStorage.getItem(KEYS.EXPEDITION_RUN)) return;
+                if (nextUrl) {
+                    window.location.href = nextUrl;
                 } else {
                     sessionStorage.removeItem(KEYS.EXPEDITION_RUN);
                     if (banner) banner.remove();
-                    showCollectorToast('🎉 Tebrikler! Tüm keşif filoları başarıyla gönderildi.', 6000);
+                    showCollectorToast('🎉 ' + (currentLang === 'tr' ? 'Tebrikler! Tüm keşif filoları başarıyla gönderildi.' : 'Congratulations! All expedition fleets have been dispatched successfully.'), 6000);
                 }
-            }, 800);
+            }, 1200);
         };
 
         const skipCurrentStep = () => {
@@ -9562,12 +10074,14 @@
             if (typeof details.cancel === 'function') details.cancel();
             session.currentIndex++;
             sessionStorage.setItem(KEYS.EXPEDITION_RUN, JSON.stringify(session));
+        updateAllAutomationStartButtons();
 
             if (banner) {
                 banner.innerHTML = '<div style="font-size:12px;color:#f39c12;padding:6px">⏭️ Sistem atlandı, sıradakine geçiliyor...</div>';
             }
 
             setTimeout(() => {
+                if (!sessionStorage.getItem(KEYS.EXPEDITION_RUN)) return;
                 if (session.currentIndex < session.queue.length) {
                     const nextItem = session.queue[session.currentIndex];
                     const url = `/game/index.php?page=ingame&component=fleetdispatch&galaxy=${nextItem.g}&system=${nextItem.s}&position=16&type=1&mission=15`;
@@ -9585,8 +10099,10 @@
             window.removeEventListener('keydown', keyListener);
             LS_LOGGER.warn('EXPEDITION', 'Keşif işlemi iptal edildi / durduruldu.');
             if (typeof details.cancel === 'function') details.cancel();
+            if (activeAutomationCancel === details.cancel) activeAutomationCancel = null;
             sessionStorage.removeItem(KEYS.EXPEDITION_RUN);
             if (banner) banner.remove();
+            updateAllAutomationStartButtons();
         };
 
         const keyListener = (e) => {
@@ -9606,6 +10122,161 @@
         document.getElementById('ls-exp-banner-retry-btn')?.addEventListener('click', retryCurrentStep);
         document.getElementById('ls-exp-banner-skip-btn')?.addEventListener('click', skipCurrentStep);
         document.getElementById('ls-exp-banner-cancel-btn')?.addEventListener('click', cancelSession);
+    }
+
+    // ============================================================
+    // AUTOMATION SESSION GUARDS & UNIFIED CONTROL
+    // ============================================================
+    function isExpeditionRunning() {
+        try {
+            const raw = sessionStorage.getItem(KEYS.EXPEDITION_RUN);
+            if (!raw) return false;
+            const s = JSON.parse(raw);
+            return !!(s && s.active && Array.isArray(s.queue) && s.currentIndex < s.queue.length);
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function isCollectorRunning() {
+        try {
+            const raw = sessionStorage.getItem(KEYS.COLLECTOR_RUN);
+            if (!raw) return false;
+            const s = JSON.parse(raw);
+            return !!(s && s.active && Array.isArray(s.queue) && s.currentIndex < s.queue.length);
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function isCourierRunning() {
+        try {
+            const raw = sessionStorage.getItem(KEYS.COURIER_RUN);
+            if (!raw) return false;
+            const s = JSON.parse(raw);
+            return !!(s && s.queue && s.currentIndex < s.queue.length);
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function isCartDeliveryRunning() {
+        try {
+            const raw = sessionStorage.getItem(KEYS.CART_QUEUE);
+            if (!raw) return false;
+            const s = JSON.parse(raw);
+            return !!(s && s.active && Array.isArray(s.queue) && s.currentIndex < s.queue.length);
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function stopExpeditionSession() {
+        sessionStorage.removeItem(KEYS.EXPEDITION_RUN);
+        if (typeof activeAutomationCancel === 'function') {
+            try { activeAutomationCancel(); } catch (e) {}
+            activeAutomationCancel = null;
+        }
+        const banner = document.getElementById('ls-exp-floating-banner');
+        if (banner) banner.remove();
+        LS_LOGGER.warn('EXPEDITION', 'Keşif oturumu kullanıcı tarafından durduruldu.');
+        showCollectorToast(currentLang === 'tr' ? 'Keşif oturumu durduruldu.' : 'Expedition session stopped.', 3000);
+        updateAllAutomationStartButtons();
+    }
+
+    function stopCollectorSession() {
+        sessionStorage.removeItem(KEYS.COLLECTOR_RUN);
+        if (typeof activeAutomationCancel === 'function') {
+            try { activeAutomationCancel(); } catch (e) {}
+            activeAutomationCancel = null;
+        }
+        const banner = document.getElementById('ls-coll-floating-banner');
+        if (banner) banner.remove();
+        LS_LOGGER.warn('COLLECTOR', 'Toplama oturumu kullanıcı tarafından durduruldu.');
+        showCollectorToast(currentLang === 'tr' ? 'Toplama oturumu durduruldu.' : 'Collection session stopped.', 3000);
+        updateAllAutomationStartButtons();
+    }
+
+    function stopCourierSession() {
+        sessionStorage.removeItem(KEYS.COURIER_RUN);
+        if (typeof activeAutomationCancel === 'function') {
+            try { activeAutomationCancel(); } catch (e) {}
+            activeAutomationCancel = null;
+        }
+        const banner = document.getElementById('ls-cour-floating-banner');
+        if (banner) banner.remove();
+        LS_LOGGER.warn('COURIER', 'Postacı oturumu kullanıcı tarafından durduruldu.');
+        showCollectorToast(currentLang === 'tr' ? 'Postacı oturumu durduruldu.' : 'Courier session stopped.', 3000);
+        updateAllAutomationStartButtons();
+    }
+
+    function stopCartDeliverySession() {
+        sessionStorage.removeItem(KEYS.CART_QUEUE);
+        if (typeof activeAutomationCancel === 'function') {
+            try { activeAutomationCancel(); } catch (e) {}
+            activeAutomationCancel = null;
+        }
+        const banner = document.getElementById('ls-cart-floating-banner');
+        if (banner) banner.remove();
+        LS_LOGGER.warn('CART', 'Maliyet dağıtım oturumu kullanıcı tarafından durduruldu.');
+        showCollectorToast(currentLang === 'tr' ? 'Dağıtım oturumu durduruldu.' : 'Distribution session stopped.', 3000);
+        updateAllAutomationStartButtons();
+    }
+
+    function updateAllAutomationStartButtons() {
+        const stopText = t('common_stop_btn', '⏹️ Durdur');
+
+        // 1. Keşif
+        const expBtn = document.getElementById('ls-exp-start-btn');
+        if (expBtn) {
+            if (isExpeditionRunning()) {
+                if (!expBtn.classList.contains('ls-btn-running')) expBtn.classList.add('ls-btn-running');
+                if (expBtn.textContent !== stopText) expBtn.textContent = stopText;
+            } else {
+                if (expBtn.classList.contains('ls-btn-running')) expBtn.classList.remove('ls-btn-running');
+                const defText = t('exp_start_btn', '🚀 Keşifleri Başlat');
+                if (expBtn.textContent !== defText) expBtn.textContent = defText;
+            }
+        }
+
+        // 2. Toplayıcı
+        const collBtn = document.getElementById('ls-coll-start-btn');
+        if (collBtn) {
+            if (isCollectorRunning()) {
+                if (!collBtn.classList.contains('ls-btn-running')) collBtn.classList.add('ls-btn-running');
+                if (collBtn.textContent !== stopText) collBtn.textContent = stopText;
+            } else {
+                if (collBtn.classList.contains('ls-btn-running')) collBtn.classList.remove('ls-btn-running');
+                const defText = t('coll_start_btn', '🚀 Toplamayı Başlat');
+                if (collBtn.textContent !== defText) collBtn.textContent = defText;
+            }
+        }
+
+        // 3. Postacı
+        const courBtn = document.getElementById('ls-cour-start-btn');
+        if (courBtn) {
+            if (isCourierRunning()) {
+                if (!courBtn.classList.contains('ls-btn-running')) courBtn.classList.add('ls-btn-running');
+                if (courBtn.textContent !== stopText) courBtn.textContent = stopText;
+            } else {
+                if (courBtn.classList.contains('ls-btn-running')) courBtn.classList.remove('ls-btn-running');
+                const defText = t('cour_start_btn', '📬 Dağıtımı Başlat');
+                if (courBtn.textContent !== defText) courBtn.textContent = defText;
+            }
+        }
+
+        // 4. Sepet / Maliyet
+        const cartBtn = document.getElementById('ls-cart-bulk-send-btn');
+        if (cartBtn) {
+            if (isCartDeliveryRunning()) {
+                if (!cartBtn.classList.contains('ls-btn-running')) cartBtn.classList.add('ls-btn-running');
+                if (cartBtn.textContent !== stopText) cartBtn.textContent = stopText;
+            } else {
+                if (cartBtn.classList.contains('ls-btn-running')) cartBtn.classList.remove('ls-btn-running');
+                const defText = t('cart_bulk_distribute', '⚡ SEÇİLİ GEZEGENLERE SIRAYLA DAĞIT');
+                if (cartBtn.textContent !== defText) cartBtn.textContent = defText;
+            }
+        }
     }
 
     // ============================================================
@@ -9969,6 +10640,12 @@
             '#ls-panel.ls-theme-fb.ls-compact .ls-coll-go::before, #ls-panel.ls-theme-fb.ls-compact .ls-cour-go::before, #ls-panel.ls-theme-fb.ls-compact .ls-exp-go::before, #ls-panel.ls-theme-fb.ls-compact #ls-cart-bulk-send-btn::before{content:"⚽ " !important}',
             '#ls-panel.ls-theme-fb.ls-compact .ls-coll-go::after, #ls-panel.ls-theme-fb.ls-compact .ls-cour-go::after, #ls-panel.ls-theme-fb.ls-compact .ls-exp-go::after, #ls-panel.ls-theme-fb.ls-compact #ls-cart-bulk-send-btn::after{content:"" !important;display:none !important}',
             '#ls-panel.ls-theme-fb .ls-coll-go:hover, #ls-panel.ls-theme-fb .ls-cour-go:hover, #ls-panel.ls-theme-fb .ls-exp-go:hover, #ls-panel.ls-theme-fb #ls-cart-bulk-send-btn:hover{background-color:#002d62 !important;background-image:repeating-linear-gradient(45deg,rgba(255,255,255,0.3) 0,rgba(255,255,255,0.3) 1.5px,transparent 0,transparent 9px),repeating-linear-gradient(-45deg,rgba(255,255,255,0.3) 0,rgba(255,255,255,0.3) 1.5px,transparent 0,transparent 9px),linear-gradient(180deg,#003b80 0%,#001736 100%) !important;border-color:#ffffff !important;color:#ffd700 !important;box-shadow:0 0 20px rgba(255,215,0,0.65), inset 0 0 12px rgba(255,215,0,0.35) !important;filter:brightness(1.15) !important}',
+
+            /* Running / Active State for Bottom Action Buttons (Durdur / Stop) */
+            '#ls-panel .ls-btn-running, #ls-panel.ls-theme-fb .ls-btn-running{background:linear-gradient(135deg,#e74c3c,#c0392b) !important;background-color:#c0392b !important;background-image:none !important;border:2px solid #ff7675 !important;color:#ffffff !important;box-shadow:0 0 16px rgba(231,76,60,0.75), inset 0 0 8px rgba(0,0,0,0.4) !important;animation:ls-pulse-red 1.2s infinite ease-in-out !important;cursor:pointer !important}',
+            '#ls-panel .ls-btn-running:hover, #ls-panel.ls-theme-fb .ls-btn-running:hover{background:linear-gradient(135deg,#ff6b6b,#d63031) !important;box-shadow:0 0 20px rgba(255,107,107,0.9) !important}',
+            '#ls-panel.ls-theme-fb .ls-btn-running::before, #ls-panel.ls-theme-fb .ls-btn-running::after{content:"" !important;display:none !important}',
+            '@keyframes ls-pulse-red{0%{box-shadow:0 0 10px rgba(231,76,60,0.6)}50%{box-shadow:0 0 22px rgba(231,76,60,0.95)}100%{box-shadow:0 0 10px rgba(231,76,60,0.6)}}',
 
             /* Fenerbahçe Kartlar, Satırlar, Kaydırma Çubuğu & Arayüz */
             '#ls-panel.ls-theme-fb .ls-coll-card, #ls-panel.ls-theme-fb .ls-cart-card, #ls-panel.ls-theme-fb .ls-finder-card, #ls-panel.ls-theme-fb #tc-alarm > div, #ls-panel.ls-theme-fb #tc-debris > div, #ls-panel.ls-theme-fb #tc-settings > div{background:#06152b !important;border-color:#132a4a !important}',
@@ -10444,7 +11121,7 @@
                         '</div>' +
                     '</div>' +
 
-                    '<button id="ls-exp-start-btn" class="ls-exp-go" data-i18n="exp_start_btn">🚀 Keşifleri Başlat (Adım Adım)</button>' +
+                    '<button id="ls-exp-start-btn" class="ls-exp-go" data-i18n="exp_start_btn">🚀 Keşifleri Başlat</button>' +
                 '</div>' +
 
                 // SETTINGS TAB (AYARLAR)
@@ -10454,7 +11131,7 @@
                         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
                             '<div style="display:flex;align-items:center;gap:6px">' +
                                 '<span style="font-size:12px;color:#00bcff;font-weight:bold">⚡ LuckyStrike Helper</span>' +
-                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v13.3</span>' +
+                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v13.6</span>' +
                             '</div>' +
                             '<a href="https://github.com/kadirersoy/luckystrike-ogame-helper" target="_blank" style="font-size:10.5px;color:#00bcff;text-decoration:none;display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,0.05);padding:2px 7px;border-radius:4px;border:1px solid #1a2c3f" title="GitHub Proje Sayfası" data-i18n-title="settings_github_title">' +
                                 '<span>🔗</span> <span data-i18n="settings_github">GitHub</span>' +
@@ -10857,6 +11534,7 @@
                 if (t === 'finder') { updateFinderStatusInfo(); updateRefreshButtonCooldown(); }
                 if (t === 'settings' || t === 'debug') renderDebugLogs();
                 LS_LOGGER.action('UI', 'Sekme değiştirildi: ' + t);
+                updateAllAutomationStartButtons();
                 setTimeout(ensurePanelInView, 20);
             });
         });
@@ -11239,7 +11917,7 @@
             const r3 = Array.from(debugFilterState.row3).join(', ');
 
             let out = '==================================================\n' +
-                      '  LuckyStrike OGame Helper v13.3 - Log Kayıtları\n' +
+                      '  LuckyStrike OGame Helper v13.6 - Log Kayıtları\n' +
                       '  Tarih: ' + nowStr + '\n' +
                       '  URL: ' + window.location.href + '\n' +
                       '  Filtreler: [Akış: ' + r1 + '] [Kapsam: ' + r2 + '] [Seviye: ' + r3 + ']\n' +
@@ -11616,7 +12294,7 @@
                     if (!resp.ok) throw new Error('HTTP ' + resp.status);
                     const data = await resp.json();
                     const latestTag = (data.tag_name || '').trim();
-                    const currentTag = 'v13.3';
+                    const currentTag = 'v13.6';
 
                     const parseVer = (v) => v.replace(/^v/, '').split('.').map(n => parseInt(n, 10) || 0);
                     const latParts = parseVer(latestTag);
@@ -11826,6 +12504,8 @@
     checkAndRunCourierAssistant();
     checkAndRunExpeditionAssistant();
     scanAndSaveExpeditionTemplates();
-    console.log(LS, 'LuckyStrike OGame Helper v13.3 hazır!');
+    updateAllAutomationStartButtons();
+    setInterval(updateAllAutomationStartButtons, 400);
+    console.log(LS, 'LuckyStrike OGame Helper v13.6 hazır!');
 
 })();
