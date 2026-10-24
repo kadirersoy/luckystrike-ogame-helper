@@ -1,3 +1,8 @@
+param(
+    [string]$Tab = "all"
+)
+
+$ErrorActionPreference = "Stop"
 $projectRoot = "D:\_Antigravity\OGame"
 $screenshotsDir = "$projectRoot\screenshots"
 $edgePath = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
@@ -269,7 +274,15 @@ $htmlTemplate = @'
 </html>
 '@
 
-$tabs = @("cart", "collector", "courier", "debris", "expedition", "scanner", "finder", "alarm", "settings")
+$allTabs = @("cart", "collector", "courier", "debris", "expedition", "scanner", "finder", "alarm", "settings")
+$tabs = if ($Tab -eq "all" -or [string]::IsNullOrWhiteSpace($Tab)) { 
+    $allTabs 
+} else { 
+    $cleanTab = $Tab.ToLower().Replace("tab_", "").Trim()
+    if ($allTabs -contains $cleanTab) { @($cleanTab) } else { 
+        Write-Error "Invalid tab '$Tab'. Allowed: $($allTabs -join ', ')"
+    }
+}
 
 foreach ($t in $tabs) {
     $tabHtml = $htmlTemplate.Replace("__TARGET_TAB__", $t)
