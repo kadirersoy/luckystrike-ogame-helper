@@ -1,4 +1,4 @@
-# ⚡ LuckyStrike OGame Helper (v13.6)
+# ⚡ LuckyStrike OGame Helper (v13.7)
 
 [English](#-english-description) | [Türkçe](#-türkçe-açıklama)
 
@@ -315,7 +315,7 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ## 🚀 Kurulum / Installation
 
 ### Chrome & Microsoft Edge
-1. İndirin / Download: [`luckystrike-ogame-helper-v13.6.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
+1. İndirin / Download: [`luckystrike-ogame-helper-v13.7.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
 2. Tarayıcıda eklentiler sayfasına gidin / Open extensions page:
    - **Chrome:** `chrome://extensions`
    - **Edge:** `edge://extensions`
@@ -325,6 +325,18 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ---
 
 ## 📝 Sürüm Geçmişi / Changelog
+
+### v13.7
+- **🌕 Ay İsimleri Filtresi & Çap/Menü Metinleri Temizliği / Clean Moon Names Without Diameter or Menu Texts:**
+  - Ay isimleri taranırken OGame tooltip ve başlıklarında yer alan çap (`8.717km`, `ø 8.717km`), alan sayısı (`(38/39)`) ve hızlı menü metinleri (`Sıçrama Geçidi`, `Genel Bakış`, `Kaynaklar`, `Tesisler`, `Savunma`, `Filo`, `Galaksi`) filtrelendi.
+  - Açılır menülerde (combobox) ve Asistan HUD başlıklarında yalnızca ayın gerçek adı (örn: `520`, `FB_520`) gösterilecek şekilde `cleanMoonName` sterilizasyonu sağlandı ve eski kirlenmiş önbellek değerleri otomatik temizlendi.
+  - Purged diameter metrics, field capacities, and sub-menu links from moon name tooltips, displaying only the authentic custom moon identifier across all assistants.
+- **🚀 Keşif Asistanı (Expedition) Gönder Butonu Kilitlenmesi & Space Sorunu Çözüldü / Fixed Expedition Send Button Block & Space Trigger:**
+  - Keşif Asistanı'nda filo gönder butonu sayfada görünür ve hazır durumdayken, sunucu görev senkronizasyon gecikmelerinin filo gönderimini engellemesi ve kullanıcıyı kısır `prepareStep2` döngüsüne sokması engellendi.
+  - Kullanıcı `Space` tuşuna bastığında veya `🚀 Keşif Gönder` butonuna tıkladığında ekranda gönder butonu mevcutsa doğrudan `dispatchSendExpeditionFleet` çalıştırılarak filo yola çıkarılır.
+  - `isMissionSelected(missionId)` kontrolüne `bridge.js` üzerinden `window.fleetDispatcher.mission` (`document.body.dataset.lsSelectedMission`) ve OGame'in `li#button`, `.on`, `.selected`, `.active` sınıfları entegre edildi.
+  - `prepareStep2` içerisindeki görev tıklamaları 1200ms zaman aşımı kısıtlamasına alınarak sunucuya gereksiz tıklama flood'u gitmesi engellendi.
+  - Allowed direct expedition dispatch when the fleet send button is visible on Step 2, synchronized authoritative mission state via `bridge.js`, and throttled mission clicks to prevent target inquiry lockouts.
 
 ### v13.6
 - **🌕 Ayların Kendi Gerçek İsimleri Algılanıp Tanımlandı / Real Moon Names Parsing & Persistent Caching:**

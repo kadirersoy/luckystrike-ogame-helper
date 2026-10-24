@@ -2,7 +2,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v13.6 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v13.7 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -1460,6 +1460,9 @@
         selectedItems: {}
     }, JSON.parse(localStorage.getItem(KEYS.COLLECTOR) || '{}'));
     if (!collectorSettings.priorityMode) collectorSettings.priorityMode = 'speed';
+    if (collectorSettings.targetType === 3 && collectorSettings.targetName) {
+        collectorSettings.targetName = cleanMoonName(collectorSettings.targetName);
+    }
 
     function saveCollectorSettings() {
         localStorage.setItem(KEYS.COLLECTOR, JSON.stringify(collectorSettings));
@@ -1479,6 +1482,9 @@
         selectedItems: {}
     }, JSON.parse(localStorage.getItem(KEYS.COURIER) || '{}'));
     if (!courierSettings.priorityMode) courierSettings.priorityMode = 'speed';
+    if (courierSettings.originType === 3 && courierSettings.originName) {
+        courierSettings.originName = cleanMoonName(courierSettings.originName);
+    }
 
     function saveCourierSettings() {
         localStorage.setItem(KEYS.COURIER, JSON.stringify(courierSettings));
@@ -1631,9 +1637,49 @@
         };
     }
 
+    function cleanMoonName(raw) {
+        if (!raw) return '';
+        let str = String(raw).trim();
+
+        // 1. <b>...</b> etiketi içindeki gerçek ay ismini al
+        const bMatch = str.match(/<b[^>]*>(.*?)<\/b>/i);
+        if (bMatch && bMatch[1]) {
+            str = bMatch[1];
+        }
+
+        // 2. <br>, yeni satır veya koordinat öncesindeki ilk kısmı al
+        str = str.split(/<br\s*\/?>|\r?\n|\[/i)[0];
+
+        // 3. HTML etiketlerini ve koordinatları temizle
+        str = str.replace(/<[^>]+>/g, ' ').replace(/\[\d+:\d+:\d+\]/g, ' ').trim();
+
+        // 4. Ay çapı (8.717km, ø 8.717km), alan sayısı ((38/39)) veya menü kelimelerinden itibaren sonrasını kesinlikle kes
+        str = str.replace(/\s*(çap|diameter|durchmesser)?:?\s*[øØ]?\s*\d+[\.,]?\d*\s*km.*/i, '');
+        str = str.replace(/\s*\(\d+\/\d+\).*/i, '');
+        str = str.replace(/\s*(Genel Bakış|Overview|Kaynaklar|Resources|Sıçrama Geçidi|Jump Gate|Sprungtor|Tesisler|Facilities|Savunma|Defense|Filo|Fleet|Galaksi|Galaxy).*/i, '');
+
+        // 5. Başındaki emoji veya boşlukları temizle
+        str = str.replace(/^[\s\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]+/u, '').trim();
+
+        return str.trim();
+    }
+
     function getKnownMoonNames() {
         try {
-            return JSON.parse(localStorage.getItem('LS_KNOWN_MOON_NAMES') || '{}');
+            const raw = JSON.parse(localStorage.getItem('LS_KNOWN_MOON_NAMES') || '{}');
+            const cleaned = {};
+            let changed = false;
+            for (const k in raw) {
+                const c = cleanMoonName(raw[k]);
+                if (c && c !== 'Ay' && c !== 'Moon' && c !== 'Mond') {
+                    cleaned[k] = c;
+                    if (c !== raw[k]) changed = true;
+                }
+            }
+            if (changed) {
+                localStorage.setItem('LS_KNOWN_MOON_NAMES', JSON.stringify(cleaned));
+            }
+            return cleaned;
         } catch (e) {
             return {};
         }
@@ -1641,7 +1687,7 @@
 
     function saveKnownMoonName(id, coords, name) {
         if (!name) return;
-        const clean = name.replace(/<[^>]+>/g, '').replace(/\[\d+:\d+:\d+\]/g, '').trim();
+        const clean = cleanMoonName(name);
         if (!clean || clean === 'Ay' || clean === 'Moon' || clean === 'Mond') return;
         try {
             const names = getKnownMoonNames();
@@ -1669,7 +1715,7 @@
                              mLink.getAttribute('title') ||
                              (mLink.dataset ? mLink.dataset.tooltipTitle : '') || '';
             if (rawTitle) {
-                const stripped = rawTitle.replace(/<[^>]+>/g, ' ').replace(/\[\d+:\d+:\d+\]/g, '').trim();
+                const stripped = cleanMoonName(rawTitle);
                 if (stripped && stripped !== 'Ay' && stripped !== 'Moon' && stripped !== 'Mond') {
                     saveKnownMoonName(mId, coords, stripped);
                     return stripped;
@@ -1677,7 +1723,7 @@
             }
             const innerNameEl = mLink.querySelector('.planet-name, .moon-name');
             if (innerNameEl && innerNameEl.textContent.trim()) {
-                const innerName = innerNameEl.textContent.trim();
+                const innerName = cleanMoonName(innerNameEl.textContent.trim());
                 if (innerName && innerName !== 'Ay' && innerName !== 'Moon' && innerName !== 'Mond') {
                     saveKnownMoonName(mId, coords, innerName);
                     return innerName;
@@ -1691,15 +1737,18 @@
         const metaId = document.querySelector('meta[name="ogame-planet-id"]')?.getAttribute('content');
         if (metaType === 'moon' && ((metaId && String(metaId) === String(mId)) || (metaCoords && metaCoords === coords))) {
             const metaName = document.querySelector('meta[name="ogame-planet-name"]')?.getAttribute('content');
-            if (metaName && metaName.trim() && metaName.trim() !== 'Ay' && metaName.trim() !== 'Moon' && metaName.trim() !== 'Mond') {
-                saveKnownMoonName(mId, coords, metaName.trim());
-                return metaName.trim();
+            if (metaName && metaName.trim()) {
+                const cleanedMeta = cleanMoonName(metaName.trim());
+                if (cleanedMeta && cleanedMeta !== 'Ay' && cleanedMeta !== 'Moon' && cleanedMeta !== 'Mond') {
+                    saveKnownMoonName(mId, coords, cleanedMeta);
+                    return cleanedMeta;
+                }
             }
         }
 
         // 3. Bilinen isimler önbelleğinden bak
-        if (mId && knownNames[mId]) return knownNames[mId];
-        if (coords && knownNames[coords]) return knownNames[coords];
+        if (mId && knownNames[mId]) return cleanMoonName(knownNames[mId]);
+        if (coords && knownNames[coords]) return cleanMoonName(knownNames[coords]);
 
         // 4. Varsayılan Ay ismi fallback
         return parentPlanetName ? `${parentPlanetName} ( ${t('coll_moon_name', 'Ay')} )` : t('coll_moon_name', 'Ay');
@@ -2808,13 +2857,19 @@
     }
 
     function isMissionSelected(missionId) {
-        const mBtn = document.querySelector('#missionButton' + missionId + ', [data-mission="' + missionId + '"], .ogl-mission-' + missionId);
-        if (mBtn) {
-            if (mBtn.classList.contains('selected') || mBtn.classList.contains('active')) return true;
-            const childA = mBtn.querySelector('a');
-            if (childA && (childA.classList.contains('selected') || childA.classList.contains('active'))) return true;
-            const parentLi = mBtn.closest('li');
-            if (parentLi && (parentLi.classList.contains('selected') || parentLi.classList.contains('active'))) return true;
+        if (document.body.dataset.lsSelectedMission !== undefined &&
+            String(document.body.dataset.lsSelectedMission).trim() === String(missionId)) {
+            return true;
+        }
+        const candidates = document.querySelectorAll(
+            '#missionButton' + missionId + ', [data-mission="' + missionId + '"], .ogl-mission-' + missionId + ', li#button' + missionId + ', li#missionButton' + missionId
+        );
+        for (const el of candidates) {
+            if (el.classList.contains('selected') || el.classList.contains('active') || el.classList.contains('on')) return true;
+            const childA = el.querySelector('a');
+            if (childA && (childA.classList.contains('selected') || childA.classList.contains('active') || childA.classList.contains('on'))) return true;
+            const parentLi = el.closest('li');
+            if (parentLi && (parentLi.classList.contains('selected') || parentLi.classList.contains('active') || parentLi.classList.contains('on'))) return true;
         }
         const missionInp = document.getElementById('mission') || document.querySelector('input[name="mission"]');
         if (missionInp && String(missionInp.value).trim() === String(missionId)) return true;
@@ -2822,7 +2877,7 @@
     }
 
     function isMissionClickable(missionId) {
-        const mBtn = document.querySelector('#missionButton' + missionId + ', [data-mission="' + missionId + '"], .ogl-mission-' + missionId);
+        const mBtn = document.querySelector('#missionButton' + missionId + ', [data-mission="' + missionId + '"], .ogl-mission-' + missionId + ', li#button' + missionId + ', li#missionButton' + missionId);
         if (!mBtn) return false;
         if (mBtn.classList.contains('off') || mBtn.classList.contains('disabled') || mBtn.hasAttribute('disabled')) return false;
         const parentLi = mBtn.closest('li');
@@ -3038,6 +3093,9 @@
         try {
             const raw = localStorage.getItem(KEYS.CART_ORIGIN);
             if (raw) origin = Object.assign(origin, JSON.parse(raw));
+            if (origin.originType === 3 && origin.originName) {
+                origin.originName = cleanMoonName(origin.originName);
+            }
         } catch (e) {}
         if (!origin.mission) origin.mission = 3;
         return origin;
@@ -4138,11 +4196,12 @@
         let originIcon = '🪐';
         if (cartOrigin.originType === 3) originIcon = '🌕';
         let rawOriginTitle = cartOrigin.originName || t('cour_origin_head', 'Merkez');
+        if (cartOrigin.originType === 3) rawOriginTitle = cleanMoonName(rawOriginTitle);
         let cleanOriginTitle = rawOriginTitle.replace(/^[\s\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]+/u, '').trim();
         if (!cleanOriginTitle || cleanOriginTitle === 'Ay' || cleanOriginTitle === 'Moon') {
             if (cartOrigin.originType === 3) {
                 const parentP = empire.find(p => p.coords === cartOrigin.originCoord);
-                cleanOriginTitle = (parentP && parentP.moon && parentP.moon.name) ? parentP.moon.name : (parentP ? `${parentP.name} ( ${t('coll_moon_name', 'Ay')} )` : `${t('coll_moon_name', 'Ay')}`);
+                cleanOriginTitle = (parentP && parentP.moon && parentP.moon.name) ? cleanMoonName(parentP.moon.name) : (parentP ? `${parentP.name} ( ${t('coll_moon_name', 'Ay')} )` : `${t('coll_moon_name', 'Ay')}`);
             } else {
                 cleanOriginTitle = t('coll_planet_name', 'Gezegen');
             }
@@ -4160,7 +4219,7 @@
                 `<span>🪐 ${escapeHtml(p.name)}</span><span class="crd">${p.coords}</span></div>`;
             if (p.moon) {
                 const isMActive = (cartOrigin.originCoord === p.coords && cartOrigin.originType === 3);
-                const mTitle = p.moon.name || `${p.name} ( ${t('coll_moon_name', 'Ay')} )`;
+                const mTitle = cleanMoonName(p.moon.name) || `${p.name} ( ${t('coll_moon_name', 'Ay')} )`;
                 ddHtml += `<div class="ls-coll-dd-item moon ${isMActive ? 'active' : ''}" data-id="${p.moon.id}" data-coord="${p.coords}" data-type="3" data-name="${escapeHtml(mTitle)}">` +
                     `<span>🌕 ${escapeHtml(mTitle)}</span><span class="crd">${p.coords}</span></div>`;
             }
@@ -4291,7 +4350,7 @@
                 cartOrigin.originId = item.getAttribute('data-id');
                 cartOrigin.originCoord = item.getAttribute('data-coord');
                 cartOrigin.originType = parseInt(item.getAttribute('data-type'), 10) || 1;
-                cartOrigin.originName = item.getAttribute('data-name');
+                cartOrigin.originName = (cartOrigin.originType === 3) ? cleanMoonName(item.getAttribute('data-name')) : item.getAttribute('data-name');
                 saveCartOrigin(cartOrigin);
                 renderCartOrigin();
                 ddEl.style.display = 'none';
@@ -6459,7 +6518,7 @@
                     }
                     if (!mId) mId = 'm-' + pId;
 
-                    const realMoonName = extractMoonNameFromElement(mLink, mId, coords, name);
+                    const realMoonName = cleanMoonName(extractMoonNameFromElement(mLink, mId, coords, name));
 
                     moonObj = {
                         id: mId,
@@ -6492,10 +6551,11 @@
                     const knownNames = getKnownMoonNames();
                     list.forEach(p => {
                         if (p.moon) {
+                            if (p.moon.name) p.moon.name = cleanMoonName(p.moon.name);
                             if (p.moon.id && knownNames[p.moon.id]) {
-                                p.moon.name = knownNames[p.moon.id];
+                                p.moon.name = cleanMoonName(knownNames[p.moon.id]);
                             } else if (p.coords && knownNames[p.coords]) {
-                                p.moon.name = knownNames[p.coords];
+                                p.moon.name = cleanMoonName(knownNames[p.coords]);
                             } else if (!p.moon.name || p.moon.name === 'Ay' || p.moon.name === 'Moon') {
                                 p.moon.name = `${p.name} ( ${t('coll_moon_name', 'Ay')} )`;
                             }
@@ -6662,11 +6722,12 @@
         let targetIcon = '🪐';
         if (collectorSettings.targetType === 3) targetIcon = '🌕';
         let rawTargetTitle = collectorSettings.targetName || t('coll_target_head', 'Merkez');
+        if (collectorSettings.targetType === 3) rawTargetTitle = cleanMoonName(rawTargetTitle);
         let cleanTargetTitle = rawTargetTitle.replace(/^[\s\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]+/u, '').trim();
         if (!cleanTargetTitle || cleanTargetTitle === 'Ay' || cleanTargetTitle === 'Moon') {
             if (collectorSettings.targetType === 3) {
                 const parentP = empire.find(p => p.coords === collectorSettings.targetCoord);
-                cleanTargetTitle = (parentP && parentP.moon && parentP.moon.name) ? parentP.moon.name : (parentP ? `${parentP.name} ( ${t('coll_moon_name', 'Ay')} )` : `${t('coll_moon_name', 'Ay')}`);
+                cleanTargetTitle = (parentP && parentP.moon && parentP.moon.name) ? cleanMoonName(parentP.moon.name) : (parentP ? `${parentP.name} ( ${t('coll_moon_name', 'Ay')} )` : `${t('coll_moon_name', 'Ay')}`);
             } else {
                 cleanTargetTitle = t('coll_planet_name', 'Gezegen');
             }
@@ -6685,7 +6746,7 @@
                 `<span>🪐 ${escapeHtml(p.name)}</span><span class="crd">${p.coords}</span></div>`;
             if (p.moon) {
                 const isMActive = (collectorSettings.targetCoord === p.coords && collectorSettings.targetType === 3);
-                const mTitle = p.moon.name || `${p.name} ( ${t('coll_moon_name', 'Ay')} )`;
+                const mTitle = cleanMoonName(p.moon.name) || `${p.name} ( ${t('coll_moon_name', 'Ay')} )`;
                 ddHtml += `<div class="ls-coll-dd-item moon ${isMActive ? 'active' : ''}" data-id="${p.moon.id}" data-coord="${p.coords}" data-type="3" data-name="${escapeHtml(mTitle)}">` +
                     `<span>🌕 ${escapeHtml(mTitle)}</span><span class="crd">${p.coords}</span></div>`;
             }
@@ -6880,7 +6941,7 @@
                     collectorSettings.targetId = item.getAttribute('data-id');
                     collectorSettings.targetCoord = item.getAttribute('data-coord');
                     collectorSettings.targetType = parseInt(item.getAttribute('data-type'), 10) || 1;
-                    collectorSettings.targetName = item.getAttribute('data-name');
+                    collectorSettings.targetName = (collectorSettings.targetType === 3) ? cleanMoonName(item.getAttribute('data-name')) : item.getAttribute('data-name');
                     saveCollectorSettings();
                     renderCollector();
                 }
@@ -7531,18 +7592,23 @@
         if (details.rehber > 0) shipDesc.push(details.rehber + ' ' + t('coll_rehber'));
         const shipText = shipDesc.length > 0 ? shipDesc.join(', ') : '<span style="color:#e74c3c">' + t('coll_hud_no_ships') + '</span>';
 
-        const cleanTName = (session.targetName || '').replace(/^[\s\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]+/u, '').trim();
+        const cleanTName = session.targetType === 3
+            ? cleanMoonName(session.targetName)
+            : (session.targetName || '').replace(/^[\s\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]+/u, '').trim();
         let displayTargetTitle = cleanTName;
         if (!displayTargetTitle || displayTargetTitle === 'Ay' || displayTargetTitle === 'Moon') {
             if (session.targetType === 3) {
                 const emp = getEmpirePlanetsAndMoons();
                 const matched = emp.find(x => x.coords === session.targetCoord);
-                displayTargetTitle = (matched && matched.moon && matched.moon.name) ? matched.moon.name : (matched ? `${matched.name} ( ${t('coll_moon_name')} )` : `${t('coll_moon_name')}`);
+                displayTargetTitle = (matched && matched.moon && matched.moon.name) ? cleanMoonName(matched.moon.name) : (matched ? `${matched.name} ( ${t('coll_moon_name')} )` : `${t('coll_moon_name')}`);
             } else {
                 displayTargetTitle = (currentLang === 'tr' ? 'Hedef' : 'Target');
             }
         }
         const displayTargetIcon = session.targetType === 3 ? '🌕' : '🪐';
+        const cleanCurrentName = currentItem.isMoon
+            ? cleanMoonName(currentItem.name)
+            : (currentItem.name || '').replace(/^[\s\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]+/u, '').trim();
 
         banner.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);background:rgba(13,27,42,0.96);border:2px solid #00bcff;box-shadow:0 10px 32px rgba(0,0,0,0.85);border-radius:8px;padding:12px 18px;min-width:400px;max-width:90vw;z-index:9999999;font-family:sans-serif;color:#d1d8e0;text-align:center;box-sizing:border-box';
 
@@ -7580,7 +7646,7 @@
         banner.innerHTML =
             '<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1a2c3f;padding-bottom:6px;margin-bottom:8px">' +
                 '<span style="font-size:12px;font-weight:bold;color:#00bcff">📦 ' + t('tab_collector') + ' [' + currentStep + ' / ' + totalItems + ']' + slotHtml + '</span>' +
-                '<span style="font-size:11px;color:#fff">' + (currentItem.isMoon ? '🌕' : '🪐') + ' ' + escapeHtml(currentItem.name) + ' ➔ ' + displayTargetIcon + ' ' + escapeHtml(displayTargetTitle) + ' <span style="color:#ffbe3b;font-family:monospace">[' + session.targetCoord + ']</span></span>' +
+                '<span style="font-size:11px;color:#fff">' + (currentItem.isMoon ? '🌕' : '🪐') + ' ' + escapeHtml(cleanCurrentName) + ' ➔ ' + displayTargetIcon + ' ' + escapeHtml(displayTargetTitle) + ' <span style="color:#ffbe3b;font-family:monospace">[' + session.targetCoord + ']</span></span>' +
             '</div>' +
             warningHtml +
             '<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;margin-bottom:6px">' +
@@ -7845,11 +7911,12 @@
         let originIcon = '🪐';
         if (courierSettings.originType === 3) originIcon = '🌕';
         let rawOriginTitle = courierSettings.originName || 'Merkez';
+        if (courierSettings.originType === 3) rawOriginTitle = cleanMoonName(rawOriginTitle);
         let cleanOriginTitle = rawOriginTitle.replace(/^[\s\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]+/u, '').trim();
         if (!cleanOriginTitle || cleanOriginTitle === 'Ay' || cleanOriginTitle === 'Moon') {
             if (courierSettings.originType === 3) {
                 const parentP = empire.find(p => p.coords === courierSettings.originCoord);
-                cleanOriginTitle = (parentP && parentP.moon && parentP.moon.name) ? parentP.moon.name : (parentP ? `${parentP.name} ( ${t('coll_moon_name', 'Ay')} )` : `${t('coll_moon_name', 'Ay')}`);
+                cleanOriginTitle = (parentP && parentP.moon && parentP.moon.name) ? cleanMoonName(parentP.moon.name) : (parentP ? `${parentP.name} ( ${t('coll_moon_name', 'Ay')} )` : `${t('coll_moon_name', 'Ay')}`);
             } else {
                 cleanOriginTitle = t('coll_planet_name', 'Gezegen');
             }
@@ -7868,7 +7935,7 @@
                 `<span>🪐 ${escapeHtml(p.name)}</span><span class="crd">${p.coords}</span></div>`;
             if (p.moon) {
                 const isMActive = (courierSettings.originCoord === p.coords && courierSettings.originType === 3);
-                const mTitle = p.moon.name || `${p.name} ( ${t('coll_moon_name', 'Ay')} )`;
+                const mTitle = cleanMoonName(p.moon.name) || `${p.name} ( ${t('coll_moon_name', 'Ay')} )`;
                 ddHtml += `<div class="ls-coll-dd-item moon ${isMActive ? 'active' : ''}" data-id="${p.moon.id}" data-coord="${p.coords}" data-type="3" data-name="${escapeHtml(mTitle)}">` +
                     `<span>🌕 ${escapeHtml(mTitle)}</span><span class="crd">${p.coords}</span></div>`;
             }
@@ -8147,7 +8214,7 @@
                 courierSettings.originId = item.getAttribute('data-id');
                 courierSettings.originCoord = item.getAttribute('data-coord');
                 courierSettings.originType = parseInt(item.getAttribute('data-type'), 10) || 1;
-                courierSettings.originName = item.getAttribute('data-name');
+                courierSettings.originName = (courierSettings.originType === 3) ? cleanMoonName(item.getAttribute('data-name')) : item.getAttribute('data-name');
                 saveCourierSettings();
                 ddEl.style.display = 'none';
                 ddEl.classList.remove('show');
@@ -8817,9 +8884,14 @@
         if (details.rehber > 0) shipDesc.push(details.rehber + ' ' + t('cour_rehber'));
         const shipText = shipDesc.length > 0 ? shipDesc.join(', ') : '<span style="color:#e74c3c">' + t('coll_hud_no_ships') + '</span>';
 
-        const cleanTName = (currentItem.name || '').replace(/^[\s\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]+/u, '').trim();
+        const cleanTName = currentItem.isMoon
+            ? cleanMoonName(currentItem.name)
+            : (currentItem.name || '').replace(/^[\s\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]+/u, '').trim();
         const displayTargetIcon = currentItem.isMoon ? '🌕' : '🪐';
         const displayOriginIcon = session.originType === 3 ? '🌕' : '🪐';
+        const cleanOriginName = session.originType === 3
+            ? cleanMoonName(session.originName || 'Üs')
+            : (session.originName || 'Üs').replace(/^[\s\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]+/u, '').trim();
 
         banner.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);background:rgba(13,27,42,0.96);border:2px solid #2980b9;box-shadow:0 10px 32px rgba(0,0,0,0.85);border-radius:8px;padding:12px 18px;min-width:400px;max-width:90vw;z-index:9999999;font-family:sans-serif;color:#d1d8e0;text-align:center;box-sizing:border-box';
 
@@ -8857,7 +8929,7 @@
         banner.innerHTML =
             '<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1a2c3f;padding-bottom:6px;margin-bottom:8px">' +
                 '<span style="font-size:12px;font-weight:bold;color:#2980b9">📬 ' + t('cour_hud_title', 'Postacı Asistanı') + ' [' + currentStep + ' / ' + totalItems + ']' + slotHtml + '</span>' +
-                '<span style="font-size:11px;color:#fff">' + displayOriginIcon + ' ' + escapeHtml(session.originName || 'Üs') + ' ➔ ' + displayTargetIcon + ' ' + escapeHtml(cleanTName) + ' <span style="color:#ffbe3b;font-family:monospace">[' + currentItem.coords + ']</span></span>' +
+                '<span style="font-size:11px;color:#fff">' + displayOriginIcon + ' ' + escapeHtml(cleanOriginName) + ' ➔ ' + displayTargetIcon + ' ' + escapeHtml(cleanTName) + ' <span style="color:#ffbe3b;font-family:monospace">[' + currentItem.coords + ']</span></span>' +
             '</div>' +
             warningHtml +
             '<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;margin-bottom:6px">' +
@@ -9804,11 +9876,15 @@
             setExpeditionTarget(currentItem.g, currentItem.s, true);
             LS_LOGGER.info('EXPEDITION', `Step 2 parametreleri hazırlanıyor: Hedef [${currentItem.g}:${currentItem.s}:16]`);
 
+            let lastMissionSetTime = 0;
             const ensureMission15 = () => {
                 if (isStepCancelled) return;
                 if (isMissionSelected(15)) return;
                 if (isTargetCheckPending()) return;
+                const now = Date.now();
+                if (now - lastMissionSetTime < 1200) return;
                 if (isMissionClickable(15)) {
+                    lastMissionSetTime = now;
                     setFleetMission(15);
                 }
             };
@@ -9985,28 +10061,32 @@
                 return;
             }
 
-            const isSendBtnReady = isSendFleetReady();
+            const sb = findSendFleetButton();
+            const isSendBtnVisible = sb && (sb.offsetWidth > 0 || sb.offsetHeight > 0 || sb.offsetParent !== null);
 
-            // Sadece Step 2 aktif, Mission 15 seçili ve filo gönder butonu hazır olduğunda gönder
-            if (!isSendBtnReady || !isMissionSelected(15) || isTargetCheckPending()) {
-                if (typeof details.prepareStep2 === 'function') {
-                    details.prepareStep2();
+            if (isSendBtnVisible) {
+                if (document.activeElement && document.activeElement.blur) {
+                    document.activeElement.blur();
                 }
+
+                isDispatching = true;
+                const bannerSendBtn = document.getElementById('ls-exp-banner-send-btn');
+                if (bannerSendBtn) {
+                    bannerSendBtn.disabled = true;
+                    bannerSendBtn.style.opacity = '0.5';
+                }
+                LS_LOGGER.action('EXPEDITION', `Keşif gönder emri verildi (Space/Tık). [${currentItem.g}:${currentItem.s}:16]`);
+                dispatchSendExpeditionFleet();
                 return;
             }
 
-            if (document.activeElement && document.activeElement.blur) {
-                document.activeElement.blur();
+            clickDevamButton();
+            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                detail: { type: 'SUBMIT_FLEET1' }
+            }));
+            if (typeof details.prepareStep2 === 'function') {
+                details.prepareStep2();
             }
-
-            isDispatching = true;
-            const bannerSendBtn = document.getElementById('ls-exp-banner-send-btn');
-            if (bannerSendBtn) {
-                bannerSendBtn.disabled = true;
-                bannerSendBtn.style.opacity = '0.5';
-            }
-            LS_LOGGER.action('EXPEDITION', `Keşif gönder emri verildi (Space/Tık). [${currentItem.g}:${currentItem.s}:16]`);
-            dispatchSendExpeditionFleet();
         };
 
         const retryCurrentStep = () => {
@@ -11131,7 +11211,7 @@
                         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
                             '<div style="display:flex;align-items:center;gap:6px">' +
                                 '<span style="font-size:12px;color:#00bcff;font-weight:bold">⚡ LuckyStrike Helper</span>' +
-                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v13.6</span>' +
+                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v13.7</span>' +
                             '</div>' +
                             '<a href="https://github.com/kadirersoy/luckystrike-ogame-helper" target="_blank" style="font-size:10.5px;color:#00bcff;text-decoration:none;display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,0.05);padding:2px 7px;border-radius:4px;border:1px solid #1a2c3f" title="GitHub Proje Sayfası" data-i18n-title="settings_github_title">' +
                                 '<span>🔗</span> <span data-i18n="settings_github">GitHub</span>' +
@@ -11917,7 +11997,7 @@
             const r3 = Array.from(debugFilterState.row3).join(', ');
 
             let out = '==================================================\n' +
-                      '  LuckyStrike OGame Helper v13.6 - Log Kayıtları\n' +
+                      '  LuckyStrike OGame Helper v13.7 - Log Kayıtları\n' +
                       '  Tarih: ' + nowStr + '\n' +
                       '  URL: ' + window.location.href + '\n' +
                       '  Filtreler: [Akış: ' + r1 + '] [Kapsam: ' + r2 + '] [Seviye: ' + r3 + ']\n' +
@@ -12294,7 +12374,7 @@
                     if (!resp.ok) throw new Error('HTTP ' + resp.status);
                     const data = await resp.json();
                     const latestTag = (data.tag_name || '').trim();
-                    const currentTag = 'v13.6';
+                    const currentTag = 'v13.7';
 
                     const parseVer = (v) => v.replace(/^v/, '').split('.').map(n => parseInt(n, 10) || 0);
                     const latParts = parseVer(latestTag);
@@ -12506,6 +12586,6 @@
     scanAndSaveExpeditionTemplates();
     updateAllAutomationStartButtons();
     setInterval(updateAllAutomationStartButtons, 400);
-    console.log(LS, 'LuckyStrike OGame Helper v13.6 hazır!');
+    console.log(LS, 'LuckyStrike OGame Helper v13.7 hazır!');
 
 })();

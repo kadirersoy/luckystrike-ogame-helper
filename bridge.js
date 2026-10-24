@@ -86,6 +86,9 @@
                 if (window.fleetDispatcher.targetPlanetType !== undefined && window.fleetDispatcher.targetPlanetType !== null) {
                     document.body.dataset.lsTargetPlanetType = String(window.fleetDispatcher.targetPlanetType);
                 }
+                if (window.fleetDispatcher.mission !== undefined && window.fleetDispatcher.mission !== null) {
+                    document.body.dataset.lsSelectedMission = String(window.fleetDispatcher.mission);
+                }
             }
         } catch (e) {}
     }
