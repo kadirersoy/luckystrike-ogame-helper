@@ -1,4 +1,4 @@
-# ⚡ LuckyStrike OGame Helper (v13.1)
+# ⚡ LuckyStrike OGame Helper (v13.2)
 
 [English](#-english-description) | [Türkçe](#-türkçe-açıklama)
 
@@ -315,7 +315,7 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ## 🚀 Kurulum / Installation
 
 ### Chrome & Microsoft Edge
-1. İndirin / Download: [`luckystrike-ogame-helper-v13.1.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
+1. İndirin / Download: [`luckystrike-ogame-helper-v13.2.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
 2. Tarayıcıda eklentiler sayfasına gidin / Open extensions page:
    - **Chrome:** `chrome://extensions`
    - **Edge:** `edge://extensions`
@@ -325,6 +325,18 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ---
 
 ## 📝 Sürüm Geçmişi / Changelog
+
+### v13.2
+- **⚡ Zamansız Başlık Tasarımı (Timeless Header):**
+  - Panel üst başlığındaki sabit versiyon rozeti kaldırıldı (`⚡ LuckyStrike Helper`). Böylece her versiyon geçişinde ekran görüntüleri eskimeden geçerliliğini koruyor.
+- **⚙️ Ayarlar Sekmesinde Sürüm & GitHub Kartı (About & Updates):**
+  - Ayarlar sekmesinin en üstüne şık ve modern "Sürüm & Güncelleme" kartı eklendi.
+  - Aktif sürüm numarası (`v13.2`) ve doğrudan GitHub proje sayfası bağlantısı (`🔗 GitHub`) entegre edildi.
+- **🔄 Otomatik Güncelleme Kontrolü (Check for Updates):**
+  - Ayarlar sekmesine tek tıkla çalışan `🔄 Güncelleme Kontrolü` butonu eklendi.
+  - Doğrudan GitHub Releases API'sini sorgulayarak yeni sürüm olup olmadığını anında denetler; yeni sürüm varsa doğrudan indirme bağlantısını ekrana getirir.
+- **📸 GitHub-Fix Görsel Kuralına Zorunlu Ön Değerlendirme:**
+  - Salt versiyon numarası artışları için ekran görüntülerinin gereksiz yere tekrar render edilmesi kalıcı olarak yasaklandı; sadece arayüzde tasarımsal bir değişiklik olduğunda ve yalnızca ilgili sekme için render kuralı getirildi.
 
 ### v13.1
 - **⛽ Yakıt ve ⚡ Hız Öncelik Sıralaması İnce Ayarı (Mathematical Fleet Optimization):**

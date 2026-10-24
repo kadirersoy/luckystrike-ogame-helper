@@ -2,7 +2,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v13.1 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v13.2 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -323,6 +323,10 @@
             alarm_sound_sonar_echo: 'Taktik Yankı Sonarı (Çift Eko)',
 
             // Settings Tab (Ayarlar)
+            settings_github: 'GitHub',
+            settings_github_title: 'GitHub Proje Sayfası',
+            settings_update_ready: 'Sürüm kontrolü hazır',
+            settings_check_update: '🔄 Güncelleme Kontrolü',
             settings_general: 'Genel Tercihler',
             settings_lang: '🌐 Dil:',
             settings_theme: '🎨 Görünüm:',
@@ -633,6 +637,10 @@
             alarm_sound_sonar_echo: 'Tactical Echo Sonar (Double Echo)',
 
             // Settings Tab (Ayarlar)
+            settings_github: 'GitHub',
+            settings_github_title: 'GitHub Project Page',
+            settings_update_ready: 'Update check ready',
+            settings_check_update: '🔄 Check Updates',
             settings_general: 'General Preferences',
             settings_lang: '🌐 Language:',
             settings_theme: '🎨 Theme:',
@@ -9623,7 +9631,7 @@
         panel.id = 'ls-panel';
         panel.innerHTML =
             '<div id="ls-header">' +
-                '<span id="ls-header-title">' + boltSvg + ' LuckyStrike Helper <span style="font-size:10px;color:#8899aa;font-weight:normal;opacity:0.8">v13.1</span></span>' +
+                '<span id="ls-header-title">' + boltSvg + ' LuckyStrike Helper</span>' +
                 '<div style="display:flex;align-items:center;gap:6px">' +
                     '<button id="ls-header-stop-btn" class="ls-btn-d ls-btn-sm" style="display:none;padding:2px 7px;font-size:10px;align-items:center;gap:3px;cursor:pointer" title="Tekrarlayan bu alarmı sustur">⏹️ Sustur</button>' +
                     '<span id="ls-close">✖</span>' +
@@ -10068,6 +10076,27 @@
 
                 // SETTINGS TAB (AYARLAR)
                 '<div id="tc-settings" class="ls-tc">' +
+                    // VERSİYON & GÜNCELLEME KARTI (EN ÜSTTE)
+                    '<div style="background:linear-gradient(135deg,rgba(0,188,255,0.08),rgba(13,27,42,0.6));border:1px solid #1a3c5a;border-radius:6px;padding:8px 10px;margin-bottom:8px;flex-shrink:0">' +
+                        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
+                            '<div style="display:flex;align-items:center;gap:6px">' +
+                                '<span style="font-size:12px;color:#00bcff;font-weight:bold">⚡ LuckyStrike Helper</span>' +
+                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v13.2</span>' +
+                            '</div>' +
+                            '<a href="https://github.com/kadirersoy/luckystrike-ogame-helper" target="_blank" style="font-size:10.5px;color:#00bcff;text-decoration:none;display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,0.05);padding:2px 7px;border-radius:4px;border:1px solid #1a2c3f" title="GitHub Proje Sayfası" data-i18n-title="settings_github_title">' +
+                                '<span>🔗</span> <span data-i18n="settings_github">GitHub</span>' +
+                            '</a>' +
+                        '</div>' +
+                        '<div style="display:flex;justify-content:space-between;align-items:center;padding-top:4px;border-top:1px dashed rgba(26,60,90,0.6)">' +
+                            '<div id="ls-update-status" style="font-size:10px;color:#8899aa;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px" data-i18n="settings_update_ready">' +
+                                'Sürüm kontrolü hazır' +
+                            '</div>' +
+                            '<button id="ls-check-update-btn" class="ls-btn-sm" style="background:#1a2c3f;color:#00bcff;border:1px solid #2c3e50;padding:2px 8px;font-size:10px;cursor:pointer;display:inline-flex;align-items:center;gap:3px" data-i18n="settings_check_update">' +
+                                '🔄 Güncelleme Kontrolü' +
+                            '</button>' +
+                        '</div>' +
+                    '</div>' +
+
                     // GENEL AYARLAR KARTI (DİL & GÖRÜNÜM)
                     '<div style="background:rgba(255,255,255,0.03);border:1px solid #1a2c3f;border-radius:6px;padding:8px 10px;margin-bottom:8px;flex-shrink:0">' +
                         '<div style="font-size:11px;font-weight:bold;color:#00bcff;margin-bottom:8px;display:flex;align-items:center;gap:4px">' +
@@ -10837,7 +10866,7 @@
             const r3 = Array.from(debugFilterState.row3).join(', ');
 
             let out = '==================================================\n' +
-                      '  LuckyStrike OGame Helper v13.1 - Log Kayıtları\n' +
+                      '  LuckyStrike OGame Helper v13.2 - Log Kayıtları\n' +
                       '  Tarih: ' + nowStr + '\n' +
                       '  URL: ' + window.location.href + '\n' +
                       '  Filtreler: [Akış: ' + r1 + '] [Kapsam: ' + r2 + '] [Seviye: ' + r3 + ']\n' +
@@ -11202,6 +11231,48 @@
             });
         }
 
+        // UPDATE CHECK HANDLER
+        const checkUpdateBtn = document.getElementById('ls-check-update-btn');
+        const updateStatusEl = document.getElementById('ls-update-status');
+        if (checkUpdateBtn && updateStatusEl) {
+            checkUpdateBtn.addEventListener('click', async () => {
+                checkUpdateBtn.disabled = true;
+                updateStatusEl.innerHTML = '<span style="color:#f39c12">⏳ ' + (currentLang === 'en' ? 'Checking...' : 'Kontrol ediliyor...') + '</span>';
+                try {
+                    const resp = await fetch('https://api.github.com/repos/kadirersoy/luckystrike-ogame-helper/releases/latest');
+                    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                    const data = await resp.json();
+                    const latestTag = (data.tag_name || '').trim();
+                    const currentTag = 'v13.2';
+
+                    const parseVer = (v) => v.replace(/^v/, '').split('.').map(n => parseInt(n, 10) || 0);
+                    const latParts = parseVer(latestTag);
+                    const curParts = parseVer(currentTag);
+
+                    let isNewer = false;
+                    for (let i = 0; i < Math.max(latParts.length, curParts.length); i++) {
+                        const l = latParts[i] || 0;
+                        const c = curParts[i] || 0;
+                        if (l > c) { isNewer = true; break; }
+                        if (l < c) { break; }
+                    }
+
+                    if (isNewer) {
+                        const downloadUrl = (data.assets && data.assets[0] && data.assets[0].browser_download_url) || data.html_url;
+                        updateStatusEl.innerHTML = `<span style="color:#2ecc71">🚀 ${currentLang === 'en' ? 'New:' : 'Yeni:'} ${latestTag}</span> <a href="${downloadUrl}" target="_blank" style="color:#00bcff;font-weight:bold;text-decoration:underline">${currentLang === 'en' ? 'Download' : 'İndir'}</a>`;
+                    } else {
+                        updateStatusEl.innerHTML = `<span style="color:#2ecc71">✔ ${currentLang === 'en' ? 'Up to date (' + currentTag + ')' : 'Sürümünüz güncel (' + currentTag + ')'}</span>`;
+                    }
+                    LS_LOGGER.info('SETTINGS', `Update check completed: latest=${latestTag}, current=${currentTag}, isNewer=${isNewer}`);
+                } catch (err) {
+                    updateStatusEl.innerHTML = '<span style="color:#e74c3c">⚠️ ' + (currentLang === 'en' ? 'Check failed' : 'Kontrol edilemedi') + '</span>';
+                    LS_LOGGER.warn('SETTINGS', `Update check failed: ${err.message}`);
+                } finally {
+                    checkUpdateBtn.disabled = false;
+                }
+            });
+        }
+
         // Intercept clicks on OGame jQuery UI selectmenu popup items (which reside outside #ls-panel in document.body)
         document.addEventListener('click', (e) => {
             const item = e.target && e.target.closest && e.target.closest('.ui-menu-item, .ui-selectmenu-menu li, .ui-selectmenu-menu a');
@@ -11382,6 +11453,6 @@
     checkAndRunCourierAssistant();
     checkAndRunExpeditionAssistant();
     scanAndSaveExpeditionTemplates();
-    console.log(LS, 'LuckyStrike OGame Helper v13.1 hazır!');
+    console.log(LS, 'LuckyStrike OGame Helper v13.2 hazır!');
 
 })();
