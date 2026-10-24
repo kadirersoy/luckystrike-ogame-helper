@@ -1,4 +1,4 @@
-# ⚡ LuckyStrike OGame Helper (v12.3)
+# ⚡ LuckyStrike OGame Helper (v13.0)
 
 [English](#-english-description) | [Türkçe](#-türkçe-açıklama)
 
@@ -315,7 +315,7 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ## 🚀 Kurulum / Installation
 
 ### Chrome & Microsoft Edge
-1. İndirin / Download: [`luckystrike-ogame-helper-v12.3.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
+1. İndirin / Download: [`luckystrike-ogame-helper-v13.0.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
 2. Tarayıcıda eklentiler sayfasına gidin / Open extensions page:
    - **Chrome:** `chrome://extensions`
    - **Edge:** `edge://extensions`
@@ -325,6 +325,21 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ---
 
 ## 📝 Sürüm Geçmişi / Changelog
+
+### v13.0
+- **⚡ Hız / ⛽ Yakıt Öncelik Anahtarı (Smart Fleet Speed/Fuel Priority Switch):**
+  - Maliyet Sepeti, Maden Toplayıcı ve Postacı sekmelerindeki Nakliye / Konuşlandır butonlarının yanına dinamik Hız ve Yakıt odaklı öncelik değiştirme butonu (`⚡ Hız` / `⛽ Yakıt`) eklendi.
+  - Her sekme kendi mod tercihini tarayıcı oturumunda ve yerel depolamasında bağımsız olarak saklar.
+  - **Hız Önceliği:** 1- Full Rehber > 2- Full KN > 3- KN + Rehber > 4- Full BN > 5- BN + KN > 6- BN + Rehber > 7- BN + KN + Rehber (Hızlı kargo filoları öncelikli doldurulur).
+  - **Yakıt Önceliği:** 1- Full BN > 2- Full KN > 3- BN + KN > 4- Full Rehber > 5- BN + Rehber > 6- KN + Rehber > 7- BN + KN + Rehber (En az yakıt yakan ağır kargolar öncelikli tutulur).
+  - Yetersiz kapasite veya eksik gemi kombinasyonlarında kademeli tamamlama algoritması ve 0 gemili kombinasyon koruması optimize edildi.
+- **📍 "Merkez" (Hub) Terminoloji Sadeleştirmesi:**
+  - Maliyet, Toplama ve Postacı sekmelerindeki "Dağıtım üssü", "Toplama hedefi" ve parantez içi kafa karıştırıcı ibareler sadeleştirilerek ortak **"📍 Merkez" (TR) / "📍 Hub" (ENG)** standardına dönüştürüldü.
+  - Bildirim ve sistem işlem logları ("Merkeze geçiliyor") terminolojiye tam uyumlu hale getirildi.
+- **⚙️ Ayarlar Sekmesinde Tek Dil Temizliği:**
+  - Ayarlar sekmesindeki tüm `/ Language`, `/ Skin`, `/ Opacity`, `(Focus)` gibi çift dilli slaşlı ifadeler kaldırıldı; eklenti aktif dilinde (Türkçe veya İngilizce) temiz ve sade bir görünüm sunuyor.
+- **🌐 Çift Dil ve Tema Uyumluluk Güvencesi (Rule 8):**
+  - Tüm yeni butonlar, durum rozetleri ve başlıklar hem Türkçe hem İngilizce dil seçeneklerinde ve hem Uzay Karanlığı hem Fenerbahçe skinlerinde piksel taşması olmaksızın test edildi ve doğrulandı.
 
 ### v12.3
 - **🔭 Harabe Avcısı (16. Slot Sonsuz Uzaklar / Expedition) Tam Düzeltmesi:**

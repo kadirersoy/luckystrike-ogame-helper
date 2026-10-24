@@ -2,7 +2,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v12.3 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v13.0 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -67,9 +67,9 @@
             tab_tip_title_cart: '🏗️ Maliyet Sepeti',
             tab_tip_desc_cart: 'Bina ve araştırma kademelerinin hammadde maliyetlerini sepete ekler, gezegendeki mevcut stoğu düşerek net açığı hesaplar ve gereken nakliye filosunu tek tuşla (Space) yola çıkarır.',
             tab_tip_title_collector: '📦 Maden Toplayıcı',
-            tab_tip_desc_collector: 'İmparatorluğunuzdaki tüm gezegen ve aylarda biriken madenleri (deuterium rezervini koruyarak) tek bir hedef üsse otomatik kargo hesabı ve Space tuşu ile sıra sıra toplar.',
+            tab_tip_desc_collector: 'İmparatorluğunuzdaki tüm gezegen ve aylarda biriken madenleri (deuterium rezervini koruyarak) tek bir merkeze otomatik kargo hesabı ve Space tuşu ile sıra sıra toplar.',
             tab_tip_title_courier: '📬 Postacı Asistanı',
-            tab_tip_desc_courier: 'Seçilen merkezi dağıtım üssünden diğer tüm kolonilerinize genel veya özel maden tutarlarını (Metal, Kristal, Deuterium) hızlıca paylaştırır ve tek tuşla sıra sıra sevk eder.',
+            tab_tip_desc_courier: 'Seçilen merkezden diğer tüm kolonilerinize genel veya özel maden tutarlarını (Metal, Kristal, Deuterium) hızlıca paylaştırır ve tek tuşla sıra sıra sevk eder.',
             tab_tip_title_debris: '🛰️ Harabe Takipçisi',
             tab_tip_desc_debris: 'Galaksi sayfasında gezinirken ekrandaki ve 16. keşif slotundaki harabeleri otomatik listeler, gereken Geri Dönüşümcü (GD) sayısını hesaplar ve eşik üstü harabelerde sesle uyarır.',
             tab_tip_title_expedition: '🧭 Keşif Asistanı',
@@ -133,7 +133,7 @@
             cart_stepper_up_title: 'Kademe artır',
 
             // Collector Tab
-            coll_target_head: '🎯 Toplama Hedefi',
+            coll_target_head: '📍 Merkez',
             coll_here: 'Burası',
             coll_here_title: 'Hedefi şu an bulunduğunuz gezegen/ay yapar',
             coll_transport: 'Nakliye',
@@ -182,7 +182,8 @@
             coll_hud_cap_shortage: 'Kargo Kapasitesi Yetersiz',
 
             // Courier Tab (Postacı)
-            cour_origin_head: '📮 Dağıtım Üssü (Çıkış Noktası)',
+            target_center_head: '📍 Merkez',
+            cour_origin_head: '📍 Merkez',
             cour_here: 'Burası',
             cour_here_title: 'Çıkış noktasını şu an bulunduğunuz gezegen/ay yapar',
             cour_transport: 'Nakliye',
@@ -200,7 +201,7 @@
             cour_sel_none: '✖ Kaldır',
             cour_planets_moons: '🪐 Hedef Gezegenler & Aylar',
             cour_res_cols: 'M / K / D Dağıtımı',
-            cour_origin_badge: '📍 Dağıtım Merkezi',
+            cour_origin_badge: '📍 Merkez',
             cour_start_btn: '📬 Dağıtımı Başlat',
             cour_loading: 'Yükleniyor...',
             cour_no_selection: 'Dağıtım yapılacak gezegen veya ay seçilmedi!',
@@ -212,6 +213,14 @@
             cart_hud_shortage_title: '⚠️ Yetersiz Kaynak veya Gemi Kapasitesi!',
             cart_hud_stop_btn: '⏹️ Dağıtımı Durdur',
             cart_hud_proceed_btn: '⏩ Olduğu Kadar Gönder (Devam Et)',
+
+            // Taşıma Öncelik Modu (Hız / Yakıt)
+            mode_speed: '⚡ Hız',
+            mode_fuel: '⛽ Yakıt',
+            mode_speed_title: 'Taşıma Önceliği: Hız (Rehber > KN > BN). Tıkla: Yakıt Moduna Geç',
+            mode_fuel_title: 'Taşıma Önceliği: Yakıt Tasarrufu (BN > KN > Rehber). Tıkla: Hız Moduna Geç',
+            mode_speed_toast: '⚡ Hız Öncelikli Taşıma Modu Aktif (Rehber > KN > BN)',
+            mode_fuel_toast: '⛽ Yakıt Tasarruflu Taşıma Modu Aktif (BN > KN > Rehber)',
             cart_hud_title: 'Maliyet Dağıtımı',
             exp_own_system: 'Kendi Sistemi',
             exp_system_offset: 'Sistem',
@@ -315,8 +324,8 @@
 
             // Settings Tab (Ayarlar)
             settings_general: 'Genel Tercihler',
-            settings_lang: '🌐 Dil / Language:',
-            settings_theme: '🎨 Görünüm / Skin:',
+            settings_lang: '🌐 Dil:',
+            settings_theme: '🎨 Görünüm:',
             settings_theme_dark: '🌌 Uzay Karanlığı (Varsayılan)',
             settings_theme_fb: '🟡🔵 Fenerbahçe (Koyu & Kanarya)',
             settings_theme_light: '☀️ Aydınlık (Çok Yakında)',
@@ -345,8 +354,8 @@
             settings_debug_on: '● Debug: Açık',
             settings_trace_off: '○ Trace: Kapalı',
             settings_trace_on: '● Trace: Açık',
-            settings_opacity: '👁️ Saydamlık / Opacity:',
-            settings_hover_focus: '🎯 Fare Üzerindeyken %100 Yap (Focus)',
+            settings_opacity: '👁️ Saydamlık:',
+            settings_hover_focus: '🎯 Fare Üzerindeyken %100 Yap',
             settings_hover_focus_title: 'Fare panelin üzerine geldiğinde otomatik olarak %100 görünür yapar',
             find_refresh_title: 'Evren ve oyuncu verisini sunucudan zorla yenile',
             find_cached: 'Önbellek',
@@ -368,9 +377,9 @@
             tab_tip_title_cart: '🏗️ Cost Cart',
             tab_tip_desc_cart: 'Calculates multi-level resource costs for buildings and researches, deducts current planet stock to find deficits, and prepares cargo fleets for dispatch with Space.',
             tab_tip_title_collector: '📦 Resource Collector',
-            tab_tip_desc_collector: 'Collects accumulated resources across all empire colonies (respecting protected deuterium reserves) to a single destination base with automatic cargo sizing and Spacebar dispatch.',
+            tab_tip_desc_collector: 'Collects accumulated resources across all empire colonies (respecting protected deuterium reserves) to a single hub with automatic cargo sizing and Spacebar dispatch.',
             tab_tip_title_courier: '📬 Resource Courier',
-            tab_tip_desc_courier: 'Distributes resources (Metal, Crystal, Deuterium) from a central origin base to selected colonies using global fill or custom amounts with sequential Spacebar dispatch.',
+            tab_tip_desc_courier: 'Distributes resources (Metal, Crystal, Deuterium) from a central hub to selected colonies using global fill or custom amounts with sequential Spacebar dispatch.',
             tab_tip_title_debris: '🛰️ Debris Tracker',
             tab_tip_desc_debris: 'Tracks debris fields and slot 16 expedition debris while browsing the galaxy view, calculates required Recyclers, and alerts on debris exceeding your threshold.',
             tab_tip_title_expedition: '🧭 Expedition Assistant',
@@ -434,7 +443,7 @@
             cart_stepper_up_title: 'Increase level',
 
             // Collector Tab
-            coll_target_head: '🎯 Target Destination',
+            coll_target_head: '📍 Hub',
             coll_here: 'Current',
             coll_here_title: 'Sets destination to your current planet/moon',
             coll_transport: 'Transport',
@@ -483,7 +492,8 @@
             coll_hud_cap_shortage: 'Insufficient Cargo Capacity',
 
             // Courier Tab (Postacı)
-            cour_origin_head: '📮 Distribution Base (Origin)',
+            target_center_head: '📍 Hub',
+            cour_origin_head: '📍 Hub',
             cour_here: 'Here',
             cour_here_title: 'Sets distribution base to current planet/moon',
             cour_transport: 'Transport',
@@ -501,7 +511,7 @@
             cour_sel_none: '✖ Clear',
             cour_planets_moons: '🪐 Target Planets & Moons',
             cour_res_cols: 'M / C / D Distribution',
-            cour_origin_badge: '📍 Origin Base',
+            cour_origin_badge: '📍 Hub',
             cour_start_btn: '📬 Start Distribution',
             cour_loading: 'Loading...',
             cour_no_selection: 'No destination planet or moon selected!',
@@ -514,6 +524,14 @@
             cart_hud_stop_btn: '⏹️ Stop Distribution',
             cart_hud_proceed_btn: '⏩ Send Partial Fleet (Proceed)',
             cart_hud_title: 'Cost Distribution',
+
+            // Cargo Priority Mode (Speed / Fuel)
+            mode_speed: '⚡ Speed',
+            mode_fuel: '⛽ Fuel',
+            mode_speed_title: 'Cargo Priority: Speed (Pathfinder > LC > SC). Click to switch to Fuel Mode',
+            mode_fuel_title: 'Cargo Priority: Fuel-Saving (LC > SC > Pathfinder). Click to switch to Speed Mode',
+            mode_speed_toast: '⚡ Speed-Optimized Cargo Mode Active (Pathfinder > LC > SC)',
+            mode_fuel_toast: '⛽ Fuel-Saving Cargo Mode Active (LC > SC > Pathfinder)',
             exp_own_system: 'Own System',
             exp_system_offset: 'System',
             exp_deep_space: 'Deep Space',
@@ -616,8 +634,8 @@
 
             // Settings Tab (Ayarlar)
             settings_general: 'General Preferences',
-            settings_lang: '🌐 Dil / Language:',
-            settings_theme: '🎨 Theme / Skin:',
+            settings_lang: '🌐 Language:',
+            settings_theme: '🎨 Theme:',
             settings_theme_dark: '🌌 Deep Space (Default)',
             settings_theme_fb: '🟡🔵 Fenerbahçe (Dark Canary)',
             settings_theme_light: '☀️ Light (Coming Soon)',
@@ -646,8 +664,8 @@
             settings_debug_on: '● Debug: On',
             settings_trace_off: '○ Trace: Off',
             settings_trace_on: '● Trace: On',
-            settings_opacity: '👁️ Opacity / Saydamlık:',
-            settings_hover_focus: '🎯 Hover to Focus (100% Opacity)',
+            settings_opacity: '👁️ Opacity:',
+            settings_hover_focus: '🎯 Hover to Focus',
             settings_hover_focus_title: 'Automatically restore 100% opacity when mouse hovers over panel',
             find_refresh_title: 'Force refresh universe and player data from server',
             find_cached: 'Cache',
@@ -708,6 +726,18 @@
         try { if (typeof updateRefreshButtonCooldown === 'function') updateRefreshButtonCooldown(); } catch (e) {}
         try { if (typeof renderDebugLogs === 'function') renderDebugLogs(); } catch (e) {}
         try { if (typeof applyPanelOpacity === 'function') applyPanelOpacity(); } catch (e) {}
+        try {
+            if (typeof updateModeBtnUI === 'function') {
+                const cPrefs = typeof getCartShipPrefs === 'function' ? getCartShipPrefs() : {};
+                updateModeBtnUI(document.getElementById('ls-cart-mode-btn'), cPrefs.priorityMode || 'speed');
+                if (typeof collectorSettings !== 'undefined') {
+                    updateModeBtnUI(document.getElementById('ls-coll-mode-btn'), collectorSettings.priorityMode || 'speed');
+                }
+                if (typeof courierSettings !== 'undefined') {
+                    updateModeBtnUI(document.getElementById('ls-cour-mode-btn'), courierSettings.priorityMode || 'speed');
+                }
+            }
+        } catch (e) {}
 
         const langBtnText = document.querySelector('#ls-setting-lang-button .ui-selectmenu-status, #ls-setting-lang-button .ui-selectmenu-text');
         if (langBtnText) {
@@ -1377,11 +1407,13 @@
         targetName: '',
         manualTarget: false,
         mission: 3,
+        priorityMode: 'speed',
         selectedShips: { bn: true, kn: true, rehber: false },
         selectedRes: { deu: true, cri: true, met: true },
         reserves: {},
         selectedItems: {}
     }, JSON.parse(localStorage.getItem(KEYS.COLLECTOR) || '{}'));
+    if (!collectorSettings.priorityMode) collectorSettings.priorityMode = 'speed';
 
     function saveCollectorSettings() {
         localStorage.setItem(KEYS.COLLECTOR, JSON.stringify(collectorSettings));
@@ -1393,12 +1425,14 @@
         originType: 1,
         originName: '',
         mission: 3,
+        priorityMode: 'speed',
         selectedShips: { bn: true, kn: true, rehber: false },
         syncEnabled: false,
         syncAmount: { met: 0, cri: 0, deu: 0 },
         targets: {},
         selectedItems: {}
     }, JSON.parse(localStorage.getItem(KEYS.COURIER) || '{}'));
+    if (!courierSettings.priorityMode) courierSettings.priorityMode = 'speed';
 
     function saveCourierSettings() {
         localStorage.setItem(KEYS.COURIER, JSON.stringify(courierSettings));
@@ -2566,11 +2600,12 @@
     // CART PREFERENCES & MULTI-PLANET GROUPING
     // ============================================================
     function getCartShipPrefs() {
-        let prefs = { rehber: false, kn: true, bn: true };
+        let prefs = { rehber: false, kn: true, bn: true, priorityMode: 'speed' };
         try {
             const raw = localStorage.getItem(KEYS.CART_SHIPS);
             if (raw) prefs = Object.assign(prefs, JSON.parse(raw));
         } catch (e) {}
+        if (!prefs.priorityMode) prefs.priorityMode = 'speed';
         return prefs;
     }
 
@@ -2712,46 +2747,172 @@
         return groups;
     }
 
-    function calculateCartShips(totalCargoNeeded, shipPrefs) {
+    // ============================================================
+    // SMART CARGO FLEET CALCULATION (Hız & Yakıt Hibrit Optimizasyonu)
+    // Hız Modu (⚡): Full Rehber > Full KN > KN+Rehber > Full BN > BN+KN > BN+Rehber > Cascade
+    // Yakıt Modu (⛽): Full BN > BN+KN > Full KN > BN+Rehber > KN+Rehber > Full Rehber > Cascade
+    // ============================================================
+    function calculateSmartCargoFleet(totalCargoNeeded, shipPrefs, customAvailable) {
         const caps = calculateShipCapacities();
-        const prefs = shipPrefs || getCartShipPrefs();
+        const prefs = shipPrefs || { bn: true, kn: true, rehber: false, priorityMode: 'speed' };
+        const mode = prefs.priorityMode || prefs.mode || 'speed';
 
-        const rehberAvail = getAvailableCount(219);
-        const knAvail = getAvailableCount(202);
-        const bnAvail = getAvailableCount(203);
+        const avail = {
+            bn: customAvailable && customAvailable.bn !== undefined ? customAvailable.bn : getAvailableCount(203),
+            kn: customAvailable && customAvailable.kn !== undefined ? customAvailable.kn : getAvailableCount(202),
+            rehber: customAvailable && customAvailable.rehber !== undefined ? customAvailable.rehber : getAvailableCount(219)
+        };
 
-        let rehberCount = 0;
-        let knCount = 0;
         let bnCount = 0;
+        let knCount = 0;
+        let rehberCount = 0;
 
-        let rem = Math.max(0, totalCargoNeeded);
+        const needed = Math.max(0, Math.round(totalCargoNeeded || 0));
 
-        // Cascade Öncelik: Rehber > KN > BN
-        if (prefs.rehber && rem > 0 && rehberAvail > 0) {
-            rehberCount = Math.min(rehberAvail, Math.ceil(rem / caps.rehber));
-            rem = Math.max(0, rem - (rehberCount * caps.rehber));
-        }
-        if (prefs.kn && rem > 0 && knAvail > 0) {
-            knCount = Math.min(knAvail, Math.ceil(rem / caps.kn));
-            rem = Math.max(0, rem - (knCount * caps.kn));
-        }
-        if (prefs.bn && rem > 0 && bnAvail > 0) {
-            bnCount = Math.min(bnAvail, Math.ceil(rem / caps.bn));
-            rem = Math.max(0, rem - (bnCount * caps.bn));
+        if (needed > 0) {
+            const useRehber = !!prefs.rehber;
+            const useKN = !!prefs.kn;
+            const useBN = !!prefs.bn;
+
+            const availRehber = useRehber ? Math.max(0, avail.rehber || 0) : 0;
+            const availKN = useKN ? Math.max(0, avail.kn || 0) : 0;
+            const availBN = useBN ? Math.max(0, avail.bn || 0) : 0;
+
+            const capRehber = caps.rehber || 10000;
+            const capKN = caps.kn || 5000;
+            const capBN = caps.bn || 25000;
+
+            const reqRehber = capRehber > 0 ? Math.ceil(needed / capRehber) : 0;
+            const reqKN = capKN > 0 ? Math.ceil(needed / capKN) : 0;
+            const reqBN = capBN > 0 ? Math.ceil(needed / capBN) : 0;
+
+            const totalCapRehber = availRehber * capRehber;
+            const totalCapKN = availKN * capKN;
+            const totalCapBN = availBN * capBN;
+
+            if (mode === 'fuel') {
+                // ==========================================
+                // YAKIT ÖNCELİKLİ (Fuel-Saving Mode)
+                // 1. Full BN (Minimum Yakıt)
+                // 2. BN + KN (Yakıtı artırmadan açığı kapatma)
+                // 3. Full KN (BN yoksa / kapalıysa)
+                // 4. BN + Rehber (KN kapalıysa BN açığını Rehber ile kapatma)
+                // 5. KN + Rehber (BN kapalıysa KN açığını Rehber ile kapatma)
+                // 6. Full Rehber (Yalnızca Rehber)
+                // 7. BN + KN + Rehber (Son Çare / Cascade)
+                // ==========================================
+                if (useBN && availBN >= reqBN) {
+                    bnCount = reqBN;
+                } else if (useBN && useKN && availBN > 0 && availKN > 0 && (totalCapBN + totalCapKN >= needed)) {
+                    bnCount = availBN;
+                    const rem = Math.max(0, needed - (bnCount * capBN));
+                    knCount = Math.min(availKN, Math.ceil(rem / capKN));
+                } else if (useKN && availKN >= reqKN) {
+                    knCount = reqKN;
+                } else if (useBN && useRehber && availBN > 0 && availRehber > 0 && (totalCapBN + totalCapRehber >= needed)) {
+                    bnCount = availBN;
+                    const rem = Math.max(0, needed - (bnCount * capBN));
+                    rehberCount = Math.min(availRehber, Math.ceil(rem / capRehber));
+                } else if (useKN && useRehber && availKN > 0 && availRehber > 0 && (totalCapKN + totalCapRehber >= needed)) {
+                    knCount = availKN;
+                    const rem = Math.max(0, needed - (knCount * capKN));
+                    rehberCount = Math.min(availRehber, Math.ceil(rem / capRehber));
+                } else if (useRehber && availRehber >= reqRehber) {
+                    rehberCount = reqRehber;
+                } else {
+                    let rem = needed;
+                    if (useBN && availBN > 0) {
+                        bnCount = Math.min(availBN, Math.ceil(rem / capBN));
+                        rem = Math.max(0, rem - (bnCount * capBN));
+                    }
+                    if (rem > 0 && useKN && availKN > 0) {
+                        knCount = Math.min(availKN, Math.ceil(rem / capKN));
+                        rem = Math.max(0, rem - (knCount * capKN));
+                    }
+                    if (rem > 0 && useRehber && availRehber > 0) {
+                        rehberCount = Math.min(availRehber, Math.ceil(rem / capRehber));
+                        rem = Math.max(0, rem - (rehberCount * capRehber));
+                    }
+                }
+            } else {
+                // ==========================================
+                // HIZ ÖNCELİKLİ (Speed Mode)
+                // 1. Full Rehber (Maksimum Hız)
+                // 2. Full KN (Hızlı & Çok Düşük Yakıt)
+                // 3. KN + Rehber (Hızı BN'ye düşürmeden hızlı taşıma)
+                // 4. Full BN (Hız zaten BN'ye düşecekse minimum yakıt ve az gemi)
+                // 5. BN + KN (BN yetmiyorsa açığı ucuz KN ile kapatma, Rehber yakmama)
+                // 5b. BN + Rehber (KN yoksa veya kapalıysa, BN + Rehber ile taşıma)
+                // 6. BN + KN + Rehber (Son Çare - Eldeki tüm filoyu seferber etme)
+                // ==========================================
+                if (useRehber && availRehber >= reqRehber) {
+                    rehberCount = reqRehber;
+                } else if (useKN && availKN >= reqKN) {
+                    knCount = reqKN;
+                } else if (useKN && useRehber && availKN > 0 && availRehber > 0 && (totalCapKN + totalCapRehber >= needed)) {
+                    knCount = availKN;
+                    const rem = Math.max(0, needed - (knCount * capKN));
+                    rehberCount = Math.min(availRehber, Math.ceil(rem / capRehber));
+                } else if (useBN && availBN >= reqBN) {
+                    bnCount = reqBN;
+                } else if (useBN && useKN && availBN > 0 && availKN > 0 && (totalCapBN + totalCapKN >= needed)) {
+                    bnCount = availBN;
+                    const rem = Math.max(0, needed - (bnCount * capBN));
+                    knCount = Math.min(availKN, Math.ceil(rem / capKN));
+                } else if (useBN && useRehber && availBN > 0 && availRehber > 0 && (totalCapBN + totalCapRehber >= needed)) {
+                    bnCount = availBN;
+                    const rem = Math.max(0, needed - (bnCount * capBN));
+                    rehberCount = Math.min(availRehber, Math.ceil(rem / capRehber));
+                } else {
+                    let rem = needed;
+                    if (useBN && availBN > 0) {
+                        bnCount = Math.min(availBN, Math.ceil(rem / capBN));
+                        rem = Math.max(0, rem - (bnCount * capBN));
+                    }
+                    if (rem > 0 && useKN && availKN > 0) {
+                        knCount = Math.min(availKN, Math.ceil(rem / capKN));
+                        rem = Math.max(0, rem - (knCount * capKN));
+                    }
+                    if (rem > 0 && useRehber && availRehber > 0) {
+                        rehberCount = Math.min(availRehber, Math.ceil(rem / capRehber));
+                        rem = Math.max(0, rem - (rehberCount * capRehber));
+                    }
+                }
+            }
         }
 
-        const totalCap = (rehberCount * caps.rehber) + (knCount * caps.kn) + (bnCount * caps.bn);
-        const missingCargo = Math.max(0, totalCargoNeeded - totalCap);
+        const totalCap = (bnCount * caps.bn) + (knCount * caps.kn) + (rehberCount * caps.rehber);
+        const missingCargo = Math.max(0, needed - totalCap);
 
         return {
-            rehber: rehberCount,
-            kn: knCount,
             bn: bnCount,
+            kn: knCount,
+            rehber: rehberCount,
             totalCap: totalCap,
             missingCargo: missingCargo,
-            insufficientShips: missingCargo > 0
+            insufficientShips: missingCargo > 0,
+            caps: caps
         };
     }
+
+    function updateModeBtnUI(btnEl, mode) {
+        if (!btnEl) return;
+        const isFuel = (mode === 'fuel');
+        btnEl.classList.toggle('fuel', isFuel);
+        if (isFuel) {
+            btnEl.textContent = t('mode_fuel', '⛽ Yakıt');
+            btnEl.title = t('mode_fuel_title', 'Taşıma Önceliği: Yakıt Tasarrufu (BN > KN > Rehber). Tıkla: Hız Moduna Geç');
+        } else {
+            btnEl.textContent = t('mode_speed', '⚡ Hız');
+            btnEl.title = t('mode_speed_title', 'Taşıma Önceliği: Hız (Rehber > KN > BN). Tıkla: Yakıt Moduna Geç');
+        }
+    }
+
+    function calculateCartShips(totalCargoNeeded, shipPrefs) {
+        const prefs = shipPrefs || getCartShipPrefs();
+        return calculateSmartCargoFleet(totalCargoNeeded, prefs);
+    }
+    window.lsCalculateSmartCargoFleet = calculateSmartCargoFleet;
 
     function selectAllCartPlanets(mode) {
         const groups = getCartGroups();
@@ -2876,7 +3037,7 @@
         if (session.originId && session.originId !== 'manual') {
             const currentCp = document.querySelector('meta[name="ogame-planet-id"]')?.getAttribute('content');
             if (currentCp && String(currentCp) !== String(session.originId)) {
-                LS_LOGGER.dispatch('CART', `Dağıtım üssüne geçiliyor (cp: ${session.originId})...`);
+                LS_LOGGER.dispatch('CART', `Merkeze geçiliyor (cp: ${session.originId})...`);
                 const currentItem = session.queue[session.currentIndex];
                 const [g, s, p] = currentItem.coords.split(':');
                 const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${session.originId}&galaxy=${g}&system=${s}&position=${p}&type=${currentItem.type}&mission=${currentItem.mission}`;
@@ -3392,11 +3553,17 @@
         const ddEl = document.getElementById('ls-cart-origin-dd');
         const m3 = document.getElementById('ls-cart-mission-3');
         const m4 = document.getElementById('ls-cart-mission-4');
+        const cartModeBtn = document.getElementById('ls-cart-mode-btn');
 
         if (m3 && m4) {
             const activeMission = cartOrigin.mission || 3;
             m3.classList.toggle('active', activeMission === 3);
             m4.classList.toggle('active', activeMission === 4);
+        }
+
+        const cartPrefs = getCartShipPrefs();
+        if (cartModeBtn) {
+            updateModeBtnUI(cartModeBtn, cartPrefs.priorityMode || 'speed');
         }
 
         if (!originLabelEl || !ddEl) return;
@@ -3418,7 +3585,7 @@
 
         let originIcon = '🪐';
         if (cartOrigin.originType === 3) originIcon = '🌕';
-        let rawOriginTitle = cartOrigin.originName || 'Dağıtım Üssü';
+        let rawOriginTitle = cartOrigin.originName || 'Merkez';
         let cleanOriginTitle = rawOriginTitle.replace(/^[\s\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]+/u, '').trim();
         if (!cleanOriginTitle || cleanOriginTitle === 'Ay') {
             if (cartOrigin.originType === 3) {
@@ -3461,6 +3628,19 @@
         const cartCurBtn = document.getElementById('ls-cart-cur-btn');
         const m3 = document.getElementById('ls-cart-mission-3');
         const m4 = document.getElementById('ls-cart-mission-4');
+        const cartModeBtn = document.getElementById('ls-cart-mode-btn');
+
+        if (cartModeBtn && !cartModeBtn.dataset.bound) {
+            cartModeBtn.dataset.bound = '1';
+            cartModeBtn.addEventListener('click', () => {
+                let prefs = getCartShipPrefs();
+                prefs.priorityMode = (prefs.priorityMode === 'fuel') ? 'speed' : 'fuel';
+                saveCartShipPrefs(prefs);
+                updateModeBtnUI(cartModeBtn, prefs.priorityMode);
+                renderCart();
+                showCollectorToast(prefs.priorityMode === 'fuel' ? t('mode_fuel_toast') : t('mode_speed_toast'));
+            });
+        }
 
         if (m3 && m4) {
             m3.addEventListener('click', () => {
@@ -3510,7 +3690,7 @@
                     };
                     saveCartOrigin(cartOrigin);
                     renderCartOrigin();
-                    showCollectorToast('📮 Dağıtım üssü güncellendi: ' + (cur.type === 3 ? '🌕 ' : '🪐 ') + cur.name);
+                    showCollectorToast('📍 Merkez güncellendi: ' + (cur.type === 3 ? '🌕 ' : '🪐 ') + cur.name);
                 }
             });
         }
@@ -3540,8 +3720,8 @@
                 if (item.classList.contains('ls-coll-dd-manual')) {
                     const reqType = parseInt(item.getAttribute('data-type'), 10) || 1;
                     const promptMsg = (reqType === 3)
-                        ? 'Dağıtım üssü olacak Ay koordinatını girin (Örn: 1:20:5):'
-                        : 'Dağıtım üssü olacak Gezegen koordinatını girin (Örn: 1:20:5):';
+                        ? 'Merkez olacak Ay koordinatını girin (Örn: 1:20:5):'
+                        : 'Merkez olacak Gezegen koordinatını girin (Örn: 1:20:5):';
                     const manualCoord = window.prompt(promptMsg, cartOrigin.originCoord || '');
                     if (manualCoord && /^\d+:\d+:\d+$/.test(manualCoord.trim())) {
                         cartOrigin.originCoord = manualCoord.trim();
@@ -5884,7 +6064,12 @@
         const listEl = document.getElementById('ls-coll-list');
         const targetLabelEl = document.getElementById('ls-coll-target-label');
         const ddEl = document.getElementById('ls-coll-dd');
+        const collModeBtn = document.getElementById('ls-coll-mode-btn');
         if (!listEl || !targetLabelEl || !ddEl) return;
+
+        if (collModeBtn) {
+            updateModeBtnUI(collModeBtn, collectorSettings.priorityMode || 'speed');
+        }
 
         // Varsayılan hedef seçimi: SADECE hedef henüz hiç belirlenmemişse veya geçersizse VE aktif toplama oturumu yoksa bulunulan aktif gezegen/ayı seç
         const hasValidTarget = collectorSettings.targetCoord && /^\d+:\d+:\d+$/.test(collectorSettings.targetCoord);
@@ -5903,7 +6088,7 @@
         // 1. Hedef Buton Başlığı
         let targetIcon = '🪐';
         if (collectorSettings.targetType === 3) targetIcon = '🌕';
-        let rawTargetTitle = collectorSettings.targetName || 'Hedef Gezegen';
+        let rawTargetTitle = collectorSettings.targetName || 'Merkez';
         let cleanTargetTitle = rawTargetTitle.replace(/^[\s\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]+/u, '').trim();
         if (!cleanTargetTitle || cleanTargetTitle === 'Ay') {
             if (collectorSettings.targetType === 3) {
@@ -6081,7 +6266,7 @@
                     collectorSettings.targetName = cur.name;
                     saveCollectorSettings();
                     renderCollector();
-                    showCollectorToast('🎯 Hedef güncellendi: ' + (cur.type === 3 ? '🌕 ' : '🪐 ') + cur.name);
+                    showCollectorToast('📍 Merkez güncellendi: ' + (cur.type === 3 ? '🌕 ' : '🪐 ') + cur.name);
                 }
             });
         }
@@ -6148,6 +6333,22 @@
             saveCollectorSettings();
             updateMissionUi();
         });
+
+        // Öncelik Modu Butonu (Hız / Yakıt)
+        const collModeBtn = document.getElementById('ls-coll-mode-btn');
+        const updateCollModeUi = () => {
+            updateModeBtnUI(collModeBtn, collectorSettings.priorityMode || 'speed');
+        };
+        updateCollModeUi();
+        if (collModeBtn && !collModeBtn.dataset.bound) {
+            collModeBtn.dataset.bound = '1';
+            collModeBtn.addEventListener('click', () => {
+                collectorSettings.priorityMode = (collectorSettings.priorityMode === 'fuel') ? 'speed' : 'fuel';
+                saveCollectorSettings();
+                updateCollModeUi();
+                showCollectorToast(collectorSettings.priorityMode === 'fuel' ? t('mode_fuel_toast') : t('mode_speed_toast'));
+            });
+        }
 
         // Gemi Seçimleri
         const bindShip = (id, key) => {
@@ -6321,7 +6522,8 @@
             targetType: collectorSettings.targetType || 1,
             targetName: collectorSettings.targetName || 'Hedef',
             mission: collectorSettings.mission || 3,
-            ships: collectorSettings.selectedShips,
+            priorityMode: collectorSettings.priorityMode || 'speed',
+            ships: { ...collectorSettings.selectedShips, priorityMode: collectorSettings.priorityMode || 'speed' },
             resources: collectorSettings.selectedRes,
             queue: queue,
             currentIndex: 0,
@@ -6447,46 +6649,11 @@
         const totalCargoNeeded = deuAvail + criAvail + metAvail;
 
         const caps = calculateShipCapacities();
-        const bnAvail = getAvailableCount(203);
-        const knAvail = getAvailableCount(202);
-        const rehberAvail = getAvailableCount(219);
-
-        let bnCount = 0;
-        let knCount = 0;
-        let rehberCount = 0;
-
-        const checkedShips = [];
-        if (session.ships.bn) checkedShips.push('bn');
-        if (session.ships.kn) checkedShips.push('kn');
-        if (session.ships.rehber) checkedShips.push('rehber');
-
-        if (checkedShips.length === 1) {
-            const only = checkedShips[0];
-            if (only === 'bn') {
-                bnCount = Math.min(bnAvail, Math.ceil(totalCargoNeeded / caps.bn));
-            } else if (only === 'kn') {
-                knCount = Math.min(knAvail, Math.ceil(totalCargoNeeded / caps.kn));
-            } else if (only === 'rehber') {
-                rehberCount = Math.min(rehberAvail, Math.ceil(totalCargoNeeded / caps.rehber));
-            }
-        } else if (checkedShips.length > 1) {
-            // Öncelik: BN > KN > Rehber
-            let rem = totalCargoNeeded;
-            if (session.ships.bn && bnAvail > 0) {
-                bnCount = Math.min(bnAvail, Math.ceil(rem / caps.bn));
-                rem = Math.max(0, rem - (bnCount * caps.bn));
-            }
-            if (rem > 0 && session.ships.kn && knAvail > 0) {
-                knCount = Math.min(knAvail, Math.ceil(rem / caps.kn));
-                rem = Math.max(0, rem - (knCount * caps.kn));
-            }
-            if (rem > 0 && session.ships.rehber && rehberAvail > 0) {
-                rehberCount = Math.min(rehberAvail, Math.ceil(rem / caps.rehber));
-                rem = Math.max(0, rem - (rehberCount * caps.rehber));
-            }
-        }
-
-        const totalCap = (bnCount * caps.bn) + (knCount * caps.kn) + (rehberCount * caps.rehber);
+        const shipCounts = calculateSmartCargoFleet(totalCargoNeeded, session.ships);
+        const bnCount = shipCounts.bn;
+        const knCount = shipCounts.kn;
+        const rehberCount = shipCounts.rehber;
+        const totalCap = shipCounts.totalCap;
 
         // Değer Önceliği: Deuterium > Kristal > Metal
         let remCap = totalCap;
@@ -6891,9 +7058,14 @@
         const listEl = document.getElementById('ls-cour-list');
         const originLabelEl = document.getElementById('ls-cour-origin-label');
         const ddEl = document.getElementById('ls-cour-origin-dd');
+        const courModeBtn = document.getElementById('ls-cour-mode-btn');
         if (!listEl || !originLabelEl || !ddEl) return;
 
-        // Varsayılan çıkış noktası (Dağıtım Üssü): Sadece henüz hiç belirlenmemişse veya geçersizse VE aktif oturum yoksa bulunulan aktif gezegen/ayı seç
+        if (courModeBtn) {
+            updateModeBtnUI(courModeBtn, courierSettings.priorityMode || 'speed');
+        }
+
+        // Varsayılan çıkış noktası (Merkez): Sadece henüz hiç belirlenmemişse veya geçersizse VE aktif oturum yoksa bulunulan aktif gezegen/ayı seç
         const hasValidOrigin = courierSettings.originCoord && /^\d+:\d+:\d+$/.test(courierSettings.originCoord);
         const isSessionRunning = !!sessionStorage.getItem(KEYS.COURIER_RUN);
         if (empire.length > 0 && !hasValidOrigin && !isSessionRunning) {
@@ -6910,7 +7082,7 @@
         // 1. Çıkış Buton Başlığı
         let originIcon = '🪐';
         if (courierSettings.originType === 3) originIcon = '🌕';
-        let rawOriginTitle = courierSettings.originName || 'Dağıtım Üssü';
+        let rawOriginTitle = courierSettings.originName || 'Merkez';
         let cleanOriginTitle = rawOriginTitle.replace(/^[\s\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]+/u, '').trim();
         if (!cleanOriginTitle || cleanOriginTitle === 'Ay') {
             if (courierSettings.originType === 3) {
@@ -7165,7 +7337,7 @@
                     courierSettings.originName = cur.name;
                     saveCourierSettings();
                     renderCourier();
-                    showCollectorToast('📮 Çıkış üssü güncellendi: ' + (cur.type === 3 ? '🌕 ' : '🪐 ') + cur.name);
+                    showCollectorToast('📍 Merkez güncellendi: ' + (cur.type === 3 ? '🌕 ' : '🪐 ') + cur.name);
                 }
             });
         }
@@ -7193,8 +7365,8 @@
                 if (item.classList.contains('ls-coll-dd-manual')) {
                     const reqType = parseInt(item.getAttribute('data-type'), 10) || 1;
                     const promptMsg = (reqType === 3)
-                        ? 'Dağıtım üssü olacak Ay koordinatını girin (Örn: 1:20:5):'
-                        : 'Dağıtım üssü olacak Gezegen koordinatını girin (Örn: 1:20:5):';
+                        ? 'Merkez olacak Ay koordinatını girin (Örn: 1:20:5):'
+                        : 'Merkez olacak Gezegen koordinatını girin (Örn: 1:20:5):';
                     const manualCoord = window.prompt(promptMsg, courierSettings.originCoord || '');
                     if (manualCoord && /^\d+:\d+:\d+$/.test(manualCoord.trim())) {
                         courierSettings.originCoord = manualCoord.trim();
@@ -7235,6 +7407,22 @@
                 m4Btn.classList.add('active');
                 m3Btn.classList.remove('active');
                 saveCourierSettings();
+            });
+        }
+
+        // Öncelik Modu Butonu (Hız / Yakıt)
+        const courModeBtn = document.getElementById('ls-cour-mode-btn');
+        const updateCourModeUi = () => {
+            updateModeBtnUI(courModeBtn, courierSettings.priorityMode || 'speed');
+        };
+        updateCourModeUi();
+        if (courModeBtn && !courModeBtn.dataset.bound) {
+            courModeBtn.dataset.bound = '1';
+            courModeBtn.addEventListener('click', () => {
+                courierSettings.priorityMode = (courierSettings.priorityMode === 'fuel') ? 'speed' : 'fuel';
+                saveCourierSettings();
+                updateCourModeUi();
+                showCollectorToast(courierSettings.priorityMode === 'fuel' ? t('mode_fuel_toast') : t('mode_speed_toast'));
             });
         }
 
@@ -7403,7 +7591,7 @@
 
     function startCourierSession() {
         if (!courierSettings.originCoord || !courierSettings.originId) {
-            showCollectorToast(t('cour_origin_head', 'Lütfen dağıtım üssünü belirleyin!'));
+            showCollectorToast(t('cour_origin_head', 'Lütfen merkezi belirleyin!'));
             return;
         }
 
@@ -7471,13 +7659,14 @@
             originType: courierSettings.originType,
             originName: courierSettings.originName,
             mission: courierSettings.mission || 3,
-            selectedShips: { ...courierSettings.selectedShips },
+            priorityMode: courierSettings.priorityMode || 'speed',
+            selectedShips: { ...courierSettings.selectedShips, priorityMode: courierSettings.priorityMode || 'speed' },
             currentIndex: 0,
             queue: queue
         };
 
         sessionStorage.setItem(KEYS.COURIER_RUN, JSON.stringify(session));
-        LS_LOGGER.action('COURIER', `Dağıtım oturumu başlatıldı: ${queue.length} hedef kuyruğa alındı. Üs: [${session.originCoord}] ${session.originName}`);
+        LS_LOGGER.action('COURIER', `Dağıtım oturumu başlatıldı: ${queue.length} hedef kuyruğa alındı. Merkez: [${session.originCoord}] ${session.originName}`);
 
         const firstItem = queue[0];
         const [g, s, p] = firstItem.coords.split(':');
@@ -7514,7 +7703,7 @@
             const typeMismatch = (isCurrentOnMoon !== shouldBeOnMoon);
 
             if ((currentCp && String(currentCp) !== String(session.originId)) || typeMismatch) {
-                LS_LOGGER.dispatch('COURIER', `Dağıtım üssüne geçiliyor (cp: ${session.originId}, tip: ${session.originType})...`);
+                LS_LOGGER.dispatch('COURIER', `Merkeze geçiliyor (cp: ${session.originId}, tip: ${session.originType})...`);
                 const currentItem = session.queue[session.currentIndex];
                 const [g, s, p] = currentItem.coords.split(':');
                 const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${session.originId}&galaxy=${g}&system=${s}&position=${p}&type=${currentItem.type}&mission=${session.mission || 3}`;
@@ -7546,44 +7735,19 @@
         if (!session || !currentItem) return;
 
         const shipCaps = calculateShipCapacities();
-        const bnCap = shipCaps.bn;
-        const knCap = shipCaps.kn;
-        const rehberCap = shipCaps.rehber;
-
         const totalCargoNeeded = (currentItem.met || 0) + (currentItem.cri || 0) + (currentItem.deu || 0);
-
-        const availBn = getAvailableCount(203);
-        const availKn = getAvailableCount(202);
-        const availRehber = getAvailableCount(219);
 
         const liveRes = getLiveResources();
         const availMet = liveRes.metal || 0;
         const availCri = liveRes.crystal || 0;
         const availDeu = liveRes.deuterium || 0;
 
-        let neededCargo = totalCargoNeeded;
-        let bnCount = 0, knCount = 0, rehberCount = 0;
-        const selectedShips = session.selectedShips || { bn: true, kn: true };
-
-        if (selectedShips.bn && bnCap > 0) {
-            const req = Math.ceil(neededCargo / bnCap);
-            bnCount = Math.min(availBn, req);
-            neededCargo = Math.max(0, neededCargo - (bnCount * bnCap));
-        }
-
-        if (neededCargo > 0 && selectedShips.kn && knCap > 0) {
-            const req = Math.ceil(neededCargo / knCap);
-            knCount = Math.min(availKn, req);
-            neededCargo = Math.max(0, neededCargo - (knCount * knCap));
-        }
-
-        if (neededCargo > 0 && selectedShips.rehber && rehberCap > 0) {
-            const req = Math.ceil(neededCargo / rehberCap);
-            rehberCount = Math.min(availRehber, req);
-            neededCargo = Math.max(0, neededCargo - (rehberCount * rehberCap));
-        }
-
-        const totalCap = (bnCount * bnCap) + (knCount * knCap) + (rehberCount * rehberCap);
+        const selectedShips = session.selectedShips || { bn: true, kn: true, rehber: false };
+        const shipCounts = calculateSmartCargoFleet(totalCargoNeeded, selectedShips);
+        const bnCount = shipCounts.bn;
+        const knCount = shipCounts.kn;
+        const rehberCount = shipCounts.rehber;
+        const totalCap = shipCounts.totalCap;
 
         let metLoad = Math.min(currentItem.met || 0, availMet);
         let criLoad = Math.min(currentItem.cri || 0, availCri);
@@ -9224,6 +9388,9 @@
             '.ls-coll-mbtn.active, #ls-coll-mission-3.active, #ls-cour-mission-3.active, #ls-cart-mission-3.active{background:#27ae60 !important;color:#fff !important;border-color:#2ecc71 !important}',
             '.ls-coll-mbtn.deploy.active, #ls-coll-mission-4.active, #ls-cour-mission-4.active, #ls-cart-mission-4.active{background:#2980b9 !important;color:#fff !important;border-color:#3498db !important}',
             '.ls-coll-mbtn:hover:not(.active){background:#243a52;color:#fff}',
+            '.ls-mode-btn{background:#00344d;color:#00bcff;border:1px solid #00bcff;padding:2px 7px;border-radius:3px;cursor:pointer;font-size:10px;font-weight:bold;transition:all .15s;white-space:nowrap}',
+            '.ls-mode-btn:hover{filter:brightness(1.2)}',
+            '.ls-mode-btn.fuel{background:#123a24;color:#2ecc71;border-color:#2ecc71}',
             '.ls-btn-here, #ls-cart-cur-btn, #ls-coll-cur-btn, #ls-cour-cur-btn{background:#8e44ad !important;color:#fff !important;border:1px solid #9b59b6 !important;border-radius:3px;cursor:pointer;font-size:10px;font-weight:bold;padding:2px 7px;transition:all .15s}',
             '.ls-btn-here:hover, #ls-cart-cur-btn:hover, #ls-coll-cur-btn:hover, #ls-cour-cur-btn:hover{background:#9b59b6 !important;border-color:#bb86fc !important}',
 
@@ -9422,6 +9589,8 @@
             '#ls-panel.ls-theme-fb #ls-body::-webkit-scrollbar-track, #ls-panel.ls-theme-fb .ls-coll-list::-webkit-scrollbar-track, #ls-panel.ls-theme-fb #ls-cart-list::-webkit-scrollbar-track, #ls-panel.ls-theme-fb #ls-find-results::-webkit-scrollbar-track, #ls-panel.ls-theme-fb #ls-scan-results::-webkit-scrollbar-track{background:#020914 !important}',
             '#ls-panel.ls-theme-fb #ls-body::-webkit-scrollbar-thumb, #ls-panel.ls-theme-fb .ls-coll-list::-webkit-scrollbar-thumb, #ls-panel.ls-theme-fb #ls-cart-list::-webkit-scrollbar-thumb, #ls-panel.ls-theme-fb #ls-find-results::-webkit-scrollbar-thumb, #ls-panel.ls-theme-fb #ls-scan-results::-webkit-scrollbar-thumb{background:#ffd700 !important}',
             '#ls-panel.ls-theme-fb .ls-toggle-switch input:checked + .ls-toggle-slider{background-color:#ffd700 !important}',
+            '#ls-panel.ls-theme-fb .ls-mode-btn{background:#00224d !important;color:#ffd700 !important;border-color:#ffd700 !important}',
+            '#ls-panel.ls-theme-fb .ls-mode-btn.fuel{background:#123a24 !important;color:#2ecc71 !important;border-color:#2ecc71 !important}',
         ].join('\n');
         document.head.appendChild(style);
 
@@ -9440,7 +9609,7 @@
         panel.id = 'ls-panel';
         panel.innerHTML =
             '<div id="ls-header">' +
-                '<span id="ls-header-title">' + boltSvg + ' LuckyStrike Helper <span style="font-size:10px;color:#8899aa;font-weight:normal;opacity:0.8">v12.3</span></span>' +
+                '<span id="ls-header-title">' + boltSvg + ' LuckyStrike Helper <span style="font-size:10px;color:#8899aa;font-weight:normal;opacity:0.8">v13.0</span></span>' +
                 '<div style="display:flex;align-items:center;gap:6px">' +
                     '<button id="ls-header-stop-btn" class="ls-btn-d ls-btn-sm" style="display:none;padding:2px 7px;font-size:10px;align-items:center;gap:3px;cursor:pointer" title="Tekrarlayan bu alarmı sustur">⏹️ Sustur</button>' +
                     '<span id="ls-close">✖</span>' +
@@ -9464,11 +9633,12 @@
                 '<div id="tc-cart" class="ls-tc">' +
                     '<div id="ls-cart-card-origin" class="ls-coll-card" style="margin-bottom:8px;flex-shrink:0">' +
                         '<div class="ls-origin-head-row">' +
-                            '<span class="ls-label" data-i18n="cour_origin_head">📮 Dağıtım Üssü (Çıkış Noktası)</span>' +
+                            '<span class="ls-label" data-i18n="target_center_head">📍 Merkez</span>' +
                             '<button type="button" id="ls-cart-cur-btn" class="ls-btn-sm ls-btn-here" style="background:#8e44ad;color:#fff;padding:2px 7px;font-size:10px;margin-left:auto;margin-right:6px;border:1px solid #9b59b6;border-radius:3px;cursor:pointer;font-weight:bold" title="Çıkış noktasını şu an bulunduğunuz gezegen/ay yapar" data-i18n-title="cour_here_title" data-i18n="cour_here">Burası</button>' +
                             '<div style="display:flex;gap:4px">' +
                                 '<button type="button" id="ls-cart-mission-3" class="ls-coll-mbtn active" data-i18n="coll_transport">Nakliye</button>' +
                                 '<button type="button" id="ls-cart-mission-4" class="ls-coll-mbtn deploy" data-i18n="coll_deploy">Konuşlandır</button>' +
+                                '<button type="button" id="ls-cart-mode-btn" class="ls-mode-btn" title="Taşıma Önceliği: Hız (Rehber > KN > BN). Tıkla: Yakıt Moduna Geç" data-i18n-title="mode_speed_title" data-i18n="mode_speed">⚡ Hız</button>' +
                             '</div>' +
                         '</div>' +
                         '<div class="ls-coll-row">' +
@@ -9708,11 +9878,12 @@
                 '<div id="tc-collector" class="ls-tc">' +
                     '<div id="ls-coll-card-target" class="ls-coll-card">' +
                         '<div class="ls-origin-head-row">' +
-                            '<span class="ls-label" data-i18n="coll_target_head">🎯 Toplama Hedefi</span>' +
+                            '<span class="ls-label" data-i18n="target_center_head">📍 Merkez</span>' +
                             '<button type="button" id="ls-coll-cur-btn" class="ls-btn-sm ls-btn-here" style="background:#8e44ad;color:#fff;padding:2px 7px;font-size:10px;margin-left:auto;margin-right:6px;border:1px solid #9b59b6;border-radius:3px;cursor:pointer;font-weight:bold" title="Hedefi şu an bulunduğunuz gezegen/ay yapar" data-i18n-title="coll_here_title" data-i18n="coll_here">Burası</button>' +
                             '<div style="display:flex;gap:4px">' +
                                 '<button type="button" id="ls-coll-mission-3" class="ls-coll-mbtn ' + (collectorSettings.mission === 3 ? 'active' : '') + '" data-i18n="coll_transport">Nakliye</button>' +
                                 '<button type="button" id="ls-coll-mission-4" class="ls-coll-mbtn deploy ' + (collectorSettings.mission === 4 ? 'active' : '') + '" data-i18n="coll_deploy">Konuşlandır</button>' +
+                                '<button type="button" id="ls-coll-mode-btn" class="ls-mode-btn" title="Taşıma Önceliği: Hız (Rehber > KN > BN). Tıkla: Yakıt Moduna Geç" data-i18n-title="mode_speed_title" data-i18n="mode_speed">⚡ Hız</button>' +
                             '</div>' +
                         '</div>' +
                         '<div class="ls-coll-row">' +
@@ -9767,11 +9938,12 @@
                 '<div id="tc-courier" class="ls-tc">' +
                     '<div id="ls-cour-card-origin" class="ls-coll-card">' +
                         '<div class="ls-origin-head-row">' +
-                            '<span class="ls-label" data-i18n="cour_origin_head">📮 Dağıtım Üssü (Çıkış Noktası)</span>' +
+                            '<span class="ls-label" data-i18n="target_center_head">📍 Merkez</span>' +
                             '<button type="button" id="ls-cour-cur-btn" class="ls-btn-sm ls-btn-here" style="background:#8e44ad;color:#fff;padding:2px 7px;font-size:10px;margin-left:auto;margin-right:6px;border:1px solid #9b59b6;border-radius:3px;cursor:pointer;font-weight:bold" title="Çıkış noktasını şu an bulunduğunuz gezegen/ay yapar" data-i18n-title="cour_here_title" data-i18n="cour_here">Burası</button>' +
                             '<div style="display:flex;gap:4px">' +
                                 '<button type="button" id="ls-cour-mission-3" class="ls-coll-mbtn ' + (courierSettings.mission === 3 ? 'active' : '') + '" data-i18n="cour_transport">Nakliye</button>' +
                                 '<button type="button" id="ls-cour-mission-4" class="ls-coll-mbtn deploy ' + (courierSettings.mission === 4 ? 'active' : '') + '" data-i18n="cour_deploy">Konuşlandır</button>' +
+                                '<button type="button" id="ls-cour-mode-btn" class="ls-mode-btn" title="Taşıma Önceliği: Hız (Rehber > KN > BN). Tıkla: Yakıt Moduna Geç" data-i18n-title="mode_speed_title" data-i18n="mode_speed">⚡ Hız</button>' +
                             '</div>' +
                         '</div>' +
                         '<div class="ls-coll-row">' +
@@ -9888,14 +10060,14 @@
                             '<span>⚙️</span> <span data-i18n="settings_general">Genel Tercihler</span>' +
                         '</div>' +
                         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
-                            '<span style="font-size:11px;color:#d1d8e0" data-i18n="settings_lang">🌐 Dil / Language:</span>' +
+                            '<span style="font-size:11px;color:#d1d8e0" data-i18n="settings_lang">🌐 Dil:</span>' +
                             '<select id="ls-setting-lang" class="ls-inp" style="width:160px;padding:3px 6px;font-size:11px">' +
                                 '<option value="tr">TR (Türkçe)</option>' +
                                 '<option value="en">ENG (English)</option>' +
                             '</select>' +
                         '</div>' +
                         '<div style="display:flex;justify-content:space-between;align-items:center">' +
-                            '<span style="font-size:11px;color:#d1d8e0" data-i18n="settings_theme">🎨 Görünüm / Skin:</span>' +
+                            '<span style="font-size:11px;color:#d1d8e0" data-i18n="settings_theme">🎨 Görünüm:</span>' +
                             '<select id="ls-setting-theme" class="ls-inp" style="width:160px;padding:3px 6px;font-size:11px">' +
                                 '<option value="dark" data-i18n="settings_theme_dark">🌌 Uzay Karanlığı (Varsayılan)</option>' +
                                 '<option value="fb" data-i18n="settings_theme_fb">🟡🔵 Fenerbahçe (Koyu & Kanarya)</option>' +
@@ -9904,7 +10076,7 @@
                             '</select>' +
                         '</div>' +
                         '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">' +
-                            '<span style="font-size:11px;color:#d1d8e0" data-i18n="settings_opacity">👁️ Saydamlık / Opacity:</span>' +
+                            '<span style="font-size:11px;color:#d1d8e0" data-i18n="settings_opacity">👁️ Saydamlık:</span>' +
                             '<div style="display:flex;align-items:center;gap:8px;width:160px">' +
                                 '<input type="range" id="ls-setting-opacity" min="20" max="100" step="5" value="100" style="flex:1;cursor:pointer;accent-color:#00bcff">' +
                                 '<span id="ls-setting-opacity-val" style="font-size:11px;font-weight:bold;color:#00bcff;min-width:32px;text-align:right">100%</span>' +
@@ -9913,7 +10085,7 @@
                         '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">' +
                             '<label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:#d1d8e0" title="Fare panelin üzerine geldiğinde otomatik olarak %100 görünür yapar" data-i18n-title="settings_hover_focus_title">' +
                                 '<input type="checkbox" id="ls-setting-hover-focus" style="accent-color:#00bcff;cursor:pointer">' +
-                                '<span data-i18n="settings_hover_focus">🎯 Fare Üzerindeyken %100 Yap (Focus)</span>' +
+                                '<span data-i18n="settings_hover_focus">🎯 Fare Üzerindeyken %100 Yap</span>' +
                             '</label>' +
                         '</div>' +
                     '</div>' +
@@ -10651,7 +10823,7 @@
             const r3 = Array.from(debugFilterState.row3).join(', ');
 
             let out = '==================================================\n' +
-                      '  LuckyStrike OGame Helper v12.3 - Log Kayıtları\n' +
+                      '  LuckyStrike OGame Helper v13.0 - Log Kayıtları\n' +
                       '  Tarih: ' + nowStr + '\n' +
                       '  URL: ' + window.location.href + '\n' +
                       '  Filtreler: [Akış: ' + r1 + '] [Kapsam: ' + r2 + '] [Seviye: ' + r3 + ']\n' +
@@ -11196,6 +11368,6 @@
     checkAndRunCourierAssistant();
     checkAndRunExpeditionAssistant();
     scanAndSaveExpeditionTemplates();
-    console.log(LS, 'LuckyStrike OGame Helper v12.3 hazır!');
+    console.log(LS, 'LuckyStrike OGame Helper v13.0 hazır!');
 
 })();
