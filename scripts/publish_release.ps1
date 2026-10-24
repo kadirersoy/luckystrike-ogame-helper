@@ -63,11 +63,11 @@ Get-ChildItem -Path $projectRoot -Filter "*.zip" | ForEach-Object {
 Write-Host "Creating fresh ZIP package: $zipName..."
 if (Test-Path $zipPath) { Remove-Item -Force $zipPath }
 $extFiles = @(
-    Join-Path $projectRoot "manifest.json",
-    Join-Path $projectRoot "content.js",
-    Join-Path $projectRoot "background.js",
-    Join-Path $projectRoot "bridge.js",
-    Join-Path $projectRoot "icons"
+    (Join-Path $projectRoot "manifest.json"),
+    (Join-Path $projectRoot "content.js"),
+    (Join-Path $projectRoot "background.js"),
+    (Join-Path $projectRoot "bridge.js"),
+    (Join-Path $projectRoot "icons")
 )
 Compress-Archive -Path $extFiles -DestinationPath $zipPath -Force
 Write-Host "  ZIP created ($((Get-Item $zipPath).Length) bytes)."
