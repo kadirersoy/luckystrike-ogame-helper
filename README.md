@@ -335,6 +335,10 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 - **🛡️ Asistan Arayüzlerinde Null/Undefined Güvenlik Kalkanı / Defensive Parameter Guards in Assistant Handlers:**
   - `executeFleetDispatchStep`, `renderCollectorAssistantBanner`, `renderCourierAssistantBanner`, `executeExpeditionStep` ve `renderExpeditionBanner` fonksiyonlarına parametre koruma kalkanları eklenerek sekme veya sayfa geçişlerindeki olası render hataları önlendi.
   - Hardened assistant lifecycle and HUD render pipelines against transient null or undefined session states during rapid page navigation.
+- **🧹 Ayarlar Sekmesi Sadeleştirildi & İşlevsiz Güncelleme Butonu Kaldırıldı / Clean Settings Header (Removed Redundant Update Button):**
+  - Paketlenmemiş (unpacked) eklentiler tarayıcı içinden dosya sistemini güncelleyemediği için Ayarlar sekmesindeki gereksiz "Güncelleme Kontrolü" butonu ve durum satırı kaldırıldı.
+  - Üst kart sadece eklenti başlığı, `v13.8` versiyon rozeti ve GitHub bağlantısı kalacak şekilde sadeleştirildi.
+  - Removed the non-functional in-page update check button and status text from the Settings tab, leaving only the version badge and project link.
 
 ### v13.7
 - **🌕 Ay İsimleri Filtresi & Çap/Menü Metinleri Temizliği / Clean Moon Names Without Diameter or Menu Texts:**
