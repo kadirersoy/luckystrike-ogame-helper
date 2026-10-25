@@ -1,4 +1,4 @@
-# ⚡ LuckyStrike OGame Helper (v13.8)
+# ⚡ LuckyStrike OGame Helper (v13.9)
 
 [English](#-english-description) | [Türkçe](#-türkçe-açıklama)
 
@@ -315,7 +315,7 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ## 🚀 Kurulum / Installation
 
 ### Chrome & Microsoft Edge
-1. İndirin / Download: [`luckystrike-ogame-helper-v13.8.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
+1. İndirin / Download: [`luckystrike-ogame-helper-v13.9.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
 2. Tarayıcıda eklentiler sayfasına gidin / Open extensions page:
    - **Chrome:** `chrome://extensions`
    - **Edge:** `edge://extensions`
@@ -325,6 +325,12 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ---
 
 ## 📝 Sürüm Geçmişi / Changelog
+
+### v13.9
+- **🛡️ Keşif Şablon Seçimi ve Tüm Oyun İçi Tıklamalardan Native `.click()` Kaldırıldı / Completely Eliminated Native `.click()` on Game Elements:**
+  - `triggerFullClick` fonksiyonunda yer alan yerel `.click()` çağrıları tamamen kaldırıldı. Keşif şablonu (1xKeşif vb.) seçilirken dropdown ve option etiketleri içindeki `<span>` ve `<li>` gibi alt düğümlere yapılan tıklamaların OGame'in `javascript:void(0)` bağlantılarına sıçrayarak Chrome Manifest V3 CSP ihlaline yol açması kalıcı olarak engellendi.
+  - `clickDevamButton`, `triggerAllResourcesNative`, `advanceFleetStep` ve `navigateToGalaxy` fonksiyonları tamamen sentetik `PointerEvent` ve `MouseEvent` (`pointerdown`, `mousedown`, `pointerup`, `mouseup`, `click`) modellerine geçirilerek native `.click()` kaynaklı tüm tarayıcı navigasyon ve inline script tetiklemeleri sıfırlandı.
+  - Purged all native `.click()` calls across `content.js` interaction helpers, transitioning strictly to synthetic pointer/mouse event dispatching and permanently eliminating CSP inline script violations during expedition template selection.
 
 ### v13.8
 - **🛡️ Chrome Manifest V3 CSP İhlali ve `javascript:void(0)` Tıklama Hatası Giderildi / Fixed CSP Violation on `javascript:` Links:**

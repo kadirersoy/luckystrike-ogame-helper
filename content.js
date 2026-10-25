@@ -2,7 +2,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v13.8 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v13.9 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -2764,9 +2764,6 @@
                 return false;
             }
             triggerRealClick(btn);
-            if (btn.tagName !== 'A' || !String(btn.getAttribute('href') || '').toLowerCase().startsWith('javascript:')) {
-                try { btn.click(); } catch (e) {}
-            }
             return true;
         }
         return false;
@@ -2851,9 +2848,6 @@
                        document.querySelector('a#allresources, .sendall, .allresources, [data-action="allresources"], .ogl-resources-all, .ogl-all-resources');
         if (allBtn) {
             triggerRealClick(allBtn);
-            if (allBtn.tagName !== 'A' || !String(allBtn.getAttribute('href') || '').toLowerCase().startsWith('javascript:')) {
-                try { allBtn.click(); } catch(e) {}
-            }
         }
         window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
             detail: { type: 'SELECT_ALL_RESOURCES', deuReserve: deuReserve }
@@ -2909,9 +2903,6 @@
                         document.querySelector('#fleet1 button.continue');
             if (btn) {
                 triggerRealClick(btn);
-                if (btn.tagName !== 'A' || !String(btn.getAttribute('href') || '').toLowerCase().startsWith('javascript:')) {
-                    try { btn.click(); } catch(e) {}
-                }
             }
         } else if (stepNum === 3) {
             const btn = document.getElementById('continueToFleet3') ||
@@ -2919,9 +2910,6 @@
                         document.querySelector('#fleet2 button.continue');
             if (btn) {
                 triggerRealClick(btn);
-                if (btn.tagName !== 'A' || !String(btn.getAttribute('href') || '').toLowerCase().startsWith('javascript:')) {
-                    try { btn.click(); } catch(e) {}
-                }
             }
         }
     }
@@ -5239,9 +5227,6 @@
                            document.querySelector('button[type="submit"]');
             if (submit) {
                 triggerRealClick(submit);
-                if (submit.tagName !== 'A' || !String(submit.getAttribute('href') || '').toLowerCase().startsWith('javascript:')) {
-                    try { submit.click(); } catch (e) {}
-                }
                 return;
             }
         }
@@ -9357,13 +9342,6 @@
             try { el.dispatchEvent(new MouseEvent('mouseup', opts)); } catch(e) {}
             try { el.dispatchEvent(new MouseEvent('click', opts)); } catch(e) {}
 
-            // CSP ihlali koruması: <a href="javascript:void(0)"> öğelerinde native .click() çağrısı tarayıcı CSP'sine takılır
-            const isJsHref = (node) => node && node.tagName === 'A' && String(node.getAttribute('href') || '').toLowerCase().startsWith('javascript:');
-
-            if (!isJsHref(el)) {
-                try { el.click(); } catch(e) {}
-            }
-
             const parent = el.closest('li, a, [data-value]') || el.parentElement;
             if (parent && parent !== el && !isLuckyElement(parent)) {
                 try { parent.dispatchEvent(new PointerEvent('pointerdown', opts)); } catch(e) {}
@@ -9371,9 +9349,6 @@
                 try { parent.dispatchEvent(new PointerEvent('pointerup', opts)); } catch(e) {}
                 try { parent.dispatchEvent(new MouseEvent('mouseup', opts)); } catch(e) {}
                 try { parent.dispatchEvent(new MouseEvent('click', opts)); } catch(e) {}
-                if (!isJsHref(parent)) {
-                    try { parent.click(); } catch(e) {}
-                }
             }
         };
 
@@ -11246,7 +11221,7 @@
                         '<div style="display:flex;justify-content:space-between;align-items:center">' +
                             '<div style="display:flex;align-items:center;gap:6px">' +
                                 '<span style="font-size:12px;color:#00bcff;font-weight:bold">⚡ LuckyStrike Helper</span>' +
-                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v13.8</span>' +
+                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v13.9</span>' +
                             '</div>' +
                             '<a href="https://github.com/kadirersoy/luckystrike-ogame-helper" target="_blank" style="font-size:10.5px;color:#00bcff;text-decoration:none;display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,0.05);padding:2px 7px;border-radius:4px;border:1px solid #1a2c3f" title="GitHub Proje Sayfası" data-i18n-title="settings_github_title">' +
                                 '<span>🔗</span> <span data-i18n="settings_github">GitHub</span>' +
@@ -12024,7 +11999,7 @@
             const r3 = Array.from(debugFilterState.row3).join(', ');
 
             let out = '==================================================\n' +
-                      '  LuckyStrike OGame Helper v13.8 - Log Kayıtları\n' +
+                      '  LuckyStrike OGame Helper v13.9 - Log Kayıtları\n' +
                       '  Tarih: ' + nowStr + '\n' +
                       '  URL: ' + window.location.href + '\n' +
                       '  Filtreler: [Akış: ' + r1 + '] [Kapsam: ' + r2 + '] [Seviye: ' + r3 + ']\n' +
@@ -12572,6 +12547,6 @@
     scanAndSaveExpeditionTemplates();
     updateAllAutomationStartButtons();
     setInterval(updateAllAutomationStartButtons, 400);
-    console.log(LS, 'LuckyStrike OGame Helper v13.8 hazır!');
+    console.log(LS, 'LuckyStrike OGame Helper v13.9 hazır!');
 
 })();
