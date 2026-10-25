@@ -7294,7 +7294,8 @@
     }
 
     function executeFleetDispatchStep(session, currentItem) {
-        LS_LOGGER.info('COLLECTOR', `Toplama adımı: ${currentItem.name} [${currentItem.g}:${currentItem.s}:${currentItem.p}] (${session.currentIndex + 1}/${session.queue.length}) -> Hedef: [${session.targetCoord}]`);
+        if (!session || !currentItem) return;
+        LS_LOGGER.info('COLLECTOR', `Toplama adımı: ${currentItem.name || ''} [${currentItem.g}:${currentItem.s}:${currentItem.p}] (${session.currentIndex + 1}/${session.queue ? session.queue.length : 1}) -> Hedef: [${session.targetCoord}]`);
         const liveRes = getLiveResources();
         updateActivePlanetCache();
 
@@ -7573,6 +7574,7 @@
     }
 
     function renderCollectorAssistantBanner(session, currentItem, details) {
+        if (!session || !currentItem || !details) return;
         let banner = document.getElementById('ls-coll-floating-banner');
         if (!banner) {
             banner = document.createElement('div');
@@ -8865,6 +8867,7 @@
     }
 
     function renderCourierAssistantBanner(session, currentItem, details) {
+        if (!session || !currentItem || !details) return;
         let banner = document.getElementById('ls-cour-floating-banner');
         if (!banner) {
             banner = document.createElement('div');
@@ -9851,6 +9854,7 @@
     }
 
     function executeExpeditionStep(session, currentItem) {
+        if (!session || !currentItem) return;
         let isStepCancelled = false;
         let ensureShipsInterval = null;
         let step2Timer = null;
@@ -10014,6 +10018,7 @@
     }
 
     function renderExpeditionBanner(session, currentItem, details) {
+        if (!session || !currentItem || !details) return;
         let banner = document.getElementById('ls-coll-floating-banner');
         if (!banner) {
             banner = document.createElement('div');
