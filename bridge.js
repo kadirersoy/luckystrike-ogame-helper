@@ -77,8 +77,12 @@
                 }
                 var expCur = (window.fleetDispatcher.busyExpeditions !== undefined && window.fleetDispatcher.busyExpeditions !== null)
                     ? window.fleetDispatcher.busyExpeditions
-                    : (window.fleetDispatcher.currentExpeditions || 0);
-                var expMax = window.fleetDispatcher.maxExpeditions || 0;
+                    : (window.fleetDispatcher.currentExpeditions !== undefined && window.fleetDispatcher.currentExpeditions !== null
+                        ? window.fleetDispatcher.currentExpeditions
+                        : (window.fleetDispatcher.expeditionsCount !== undefined ? window.fleetDispatcher.expeditionsCount : (window.fleetDispatcher.busyExpeditionFleets || 0)));
+                var expMax = (window.fleetDispatcher.maxExpeditions !== undefined && window.fleetDispatcher.maxExpeditions !== null)
+                    ? window.fleetDispatcher.maxExpeditions
+                    : (window.fleetDispatcher.maxExpeditionFleets || 0);
                 if (expMax > 0) {
                     document.body.dataset.lsCurrentExpeditions = String(expCur);
                     document.body.dataset.lsMaxExpeditions = String(expMax);

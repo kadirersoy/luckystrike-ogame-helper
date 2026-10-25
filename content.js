@@ -2,7 +2,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v14.2 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v14.3 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -236,6 +236,10 @@
             fleet_hud_wait_cargo: '⚠️ Kaynak yüklemesi bekleniyor...',
             fleet_hud_wait_send_btn: '⚠️ Gönder butonu hazır değil',
             fleet_slot_label: 'Slot:',
+            exp_slots_full_desc: 'Tüm keşif slotlarınız dolu ({current}/{max})! Lütfen filoların dönmesini bekleyin.',
+            exp_slots_warning_partial: 'Dikkat: Sadece {avail} boş keşif slotunuz var ({current}/{max}), ancak {queue} sefer seçildi. Slotlar dolduğunda işlem duraklatılacak. Devam etmek istiyor musunuz?',
+            exp_slots_hud_waiting: '⚠️ Tüm keşif slotları dolu ({current}/{max})! Filoların dönmesi bekleniyor...',
+            exp_slots_hud_wait_btn: '⏳ Keşif Slotu Bekleniyor ({current}/{max})',
 
             // Taşıma Öncelik Modu (Hız / Yakıt)
             mode_speed: '⚡ Hız',
@@ -572,6 +576,10 @@
             fleet_hud_wait_cargo: '⚠️ Verifying cargo loading...',
             fleet_hud_wait_send_btn: '⚠️ Send button not ready',
             fleet_slot_label: 'Slots:',
+            exp_slots_full_desc: 'All expedition slots are full ({current}/{max})! Please wait for fleets to return.',
+            exp_slots_warning_partial: 'Notice: Only {avail} free expedition slots available ({current}/{max}), but {queue} expeditions selected. Process will pause when slots run out. Do you want to proceed?',
+            exp_slots_hud_waiting: '⚠️ All expedition slots full ({current}/{max})! Waiting for fleets to return...',
+            exp_slots_hud_wait_btn: '⏳ Waiting for Expedition Slots ({current}/{max})',
             cart_hud_title: 'Cost Distribution',
 
             // Cargo Priority Mode (Speed / Fuel)
@@ -2639,7 +2647,7 @@
         if (max <= 0) {
             const slotsEl = document.getElementById('slots') || document.querySelector('.fleetStatus, #fleetdispatchcomponent #slots');
             const textToSearch = slotsEl ? slotsEl.textContent : (document.body ? document.body.innerText : '');
-            const m = textToSearch.match(/(?:Keşifler|Expeditions|Expeditionen|Expéditions)\s*:\s*(\d+)\s*\/\s*(\d+)/i);
+            const m = textToSearch.match(/(?:Keşif(?:ler)?|Expeditions?|Expeditionen|Expéditions)\s*:\s*(\d+)\s*\/\s*(\d+)/i);
             if (m) {
                 current = parseInt(m[1], 10);
                 max = parseInt(m[2], 10);
@@ -9736,8 +9744,28 @@
 
         const expSlots = getExpeditionSlotsInfo();
         if (expSlots.isKnown && expSlots.isFull) {
-            alert(currentLang === 'tr' ? `Tüm keşif slotları dolu (${expSlots.current}/${expSlots.max})!` : `All expedition slots are full (${expSlots.current}/${expSlots.max})!`);
+            alert(t('exp_slots_full_desc', 'Tüm keşif slotlarınız dolu ({current}/{max})! Lütfen filoların dönmesini bekleyin.').replace('{current}', expSlots.current).replace('{max}', expSlots.max));
             return;
+        }
+
+        if (expSlots.isKnown && expSlots.available < queue.length) {
+            const proceed = confirm(
+                t('exp_slots_warning_partial', 'Dikkat: Sadece {avail} boş keşif slotunuz var ({current}/{max}), ancak {queue} sefer seçildi. Slotlar dolduğunda işlem duraklatılacak. Devam etmek istiyor musunuz?')
+                    .replace('{avail}', expSlots.available)
+                    .replace('{current}', expSlots.current)
+                    .replace('{max}', expSlots.max)
+                    .replace('{queue}', queue.length)
+            );
+            if (!proceed) return;
+        } else if (fleetSlots.isKnown && fleetSlots.available < queue.length) {
+            const proceed = confirm(
+                t('fleet_slots_warning_partial')
+                    .replace('{avail}', fleetSlots.available)
+                    .replace('{current}', fleetSlots.current)
+                    .replace('{max}', fleetSlots.max)
+                    .replace('{queue}', queue.length)
+            );
+            if (!proceed) return;
         }
 
         const tplInp = document.getElementById('ls-exp-template');
@@ -9893,6 +9921,32 @@
                 btn.style.cursor = 'pointer';
                 btn.innerText = '🚀 ' + t('exp_hud_send') + ' (Space)';
             }
+            const statusEl = document.getElementById('ls-exp-hud-status');
+            if (statusEl) {
+                statusEl.style.display = 'none';
+            }
+        };
+
+        const updateExpeditionBannerSlotWaiting = (expSlots, fleetSlots) => {
+            const btn = document.getElementById('ls-exp-banner-send-btn');
+            const isExpFull = expSlots && expSlots.isKnown && expSlots.isFull;
+            const cur = isExpFull ? expSlots.current : (fleetSlots ? fleetSlots.current : 0);
+            const max = isExpFull ? expSlots.max : (fleetSlots ? fleetSlots.max : 0);
+            const label = isExpFull ? t('exp_slots_hud_wait_btn') : t('fleet_slots_hud_wait_btn');
+            const waitMsg = isExpFull ? t('exp_slots_hud_waiting') : t('fleet_slots_hud_waiting');
+
+            if (btn) {
+                btn.disabled = true;
+                btn.style.background = '#c0392b';
+                btn.style.color = '#fff';
+                btn.style.cursor = 'not-allowed';
+                btn.innerText = label.replace('{current}', cur).replace('{max}', max);
+            }
+            const statusEl = document.getElementById('ls-exp-hud-status');
+            if (statusEl) {
+                statusEl.innerText = waitMsg.replace('{current}', cur).replace('{max}', max);
+                statusEl.style.display = 'block';
+            }
         };
 
         const prepareStep2 = () => {
@@ -9928,11 +9982,9 @@
                 step2Checks++;
 
                 const slots = getFleetSlotsInfo();
-                if (slots.isKnown && slots.isFull) {
-                    return;
-                }
                 const expSlots = getExpeditionSlotsInfo();
-                if (expSlots.isKnown && expSlots.isFull) {
+                if ((slots.isKnown && slots.isFull) || (expSlots.isKnown && expSlots.isFull)) {
+                    updateExpeditionBannerSlotWaiting(expSlots, slots);
                     return;
                 }
 
@@ -9946,6 +9998,14 @@
                 if ((isMission15Active && isSendBtnReady && !isTargetCheckPending() && step2Checks >= 2) || step2Checks > 15) {
                     clearInterval(step2Timer);
                     updateBannerReady();
+                } else if (step2Checks > 5) {
+                    const statusEl = document.getElementById('ls-exp-hud-status');
+                    if (statusEl) {
+                        if (isTargetCheckPending()) statusEl.innerText = t('fleet_hud_wait_target_check', '⏳ Sunucu hedef kontrolü bekleniyor...');
+                        else if (!isMission15Active) statusEl.innerText = t('fleet_hud_wait_mission', '⚠️ Görev seçimi bekleniyor...');
+                        else if (!isSendBtnReady) statusEl.innerText = t('fleet_hud_wait_send_btn', '⚠️ Gönder butonu hazır değil');
+                        statusEl.style.display = 'block';
+                    }
                 }
             }, 100);
         };
@@ -10056,11 +10116,17 @@
         const offsetText = currentItem.offset === 0 ? t('exp_own_system') : (currentItem.offset > 0 ? `+${currentItem.offset} ${t('exp_system_offset')}` : `${currentItem.offset} ${t('exp_system_offset')}`);
         const templateName = session.templateName || (session.templateId ? `${t('exp_hud_template')} #${session.templateId}` : (currentLang === 'tr' ? 'Varsayılan' : 'Default'));
 
+        const expSlots = getExpeditionSlotsInfo();
+        const slotColor = expSlots.isFull ? '#e74c3c' : '#2ecc71';
+        const slotHtml = expSlots.isKnown
+            ? ` <span style="font-size:10px;padding:2px 6px;border-radius:3px;background:rgba(255,255,255,0.08);color:${slotColor};font-weight:bold;margin-left:6px">🧭 ${t('fleet_slot_label', 'Slot:')} ${expSlots.current}/${expSlots.max}</span>`
+            : '';
+
         banner.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);background:rgba(13,27,42,0.96);border:2px solid #9b59b6;box-shadow:0 10px 32px rgba(0,0,0,0.85);border-radius:8px;padding:12px 18px;min-width:420px;max-width:90vw;z-index:9999999;font-family:sans-serif;color:#d1d8e0;text-align:center;box-sizing:border-box';
 
         banner.innerHTML =
             '<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1a2c3f;padding-bottom:6px;margin-bottom:8px">' +
-                '<span style="font-size:12px;font-weight:bold;color:#bb86fc">🧭 ' + t('exp_hud_title') + ' [' + currentStep + ' / ' + totalItems + ']</span>' +
+                '<span style="font-size:12px;font-weight:bold;color:#bb86fc">🧭 ' + t('exp_hud_title') + ' [' + currentStep + ' / ' + totalItems + ']' + slotHtml + '</span>' +
                 '<span style="font-size:11px;color:#fff">🪐 ' + escapeHtml(departure) + ' ➔ 🌌 ' + t('exp_deep_space') + ' <span style="color:#ffbe3b;font-family:monospace">[' + currentItem.coord + ']</span></span>' +
             '</div>' +
             '<div style="display:flex;justify-content:space-between;align-items:center;font-size:11.5px;margin-bottom:8px">' +
@@ -10072,7 +10138,8 @@
                 '<button id="ls-exp-banner-retry-btn" style="background:#e67e22;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer" title="' + t('exp_hud_retry') + '">🔄 ' + t('exp_hud_retry') + '</button>' +
                 '<button id="ls-exp-banner-skip-btn" style="background:#34495e;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏭️ ' + t('exp_hud_skip') + '</button>' +
                 '<button id="ls-exp-banner-cancel-btn" style="background:#e74c3c;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏹️ ' + t('exp_hud_cancel') + '</button>' +
-            '</div>';
+            '</div>' +
+            '<div id="ls-exp-hud-status" style="display:none;font-size:11px;color:#f39c12;margin-top:6px;font-weight:bold"></div>';
 
         let isDispatching = false;
 
@@ -10085,7 +10152,7 @@
             }
             const expSlots = getExpeditionSlotsInfo();
             if (expSlots.isKnown && expSlots.isFull) {
-                showCollectorToast(currentLang === 'tr' ? `Tüm keşif slotları dolu (${expSlots.current}/${expSlots.max})!` : `All expedition slots are full (${expSlots.current}/${expSlots.max})!`, 4000);
+                showCollectorToast(t('exp_slots_full_desc', 'Tüm keşif slotlarınız dolu ({current}/{max})! Lütfen filoların dönmesini bekleyin.').replace('{current}', expSlots.current).replace('{max}', expSlots.max), 4000);
                 return;
             }
 
@@ -11241,7 +11308,7 @@
                         '<div style="display:flex;justify-content:space-between;align-items:center">' +
                             '<div style="display:flex;align-items:center;gap:6px">' +
                                 '<span style="font-size:12px;color:#00bcff;font-weight:bold">⚡ LuckyStrike Helper</span>' +
-                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v14.2</span>' +
+                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v14.3</span>' +
                             '</div>' +
                             '<a href="https://github.com/kadirersoy/luckystrike-ogame-helper" target="_blank" style="font-size:10.5px;color:#00bcff;text-decoration:none;display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,0.05);padding:2px 7px;border-radius:4px;border:1px solid #1a2c3f" title="GitHub Proje Sayfası" data-i18n-title="settings_github_title">' +
                                 '<span>🔗</span> <span data-i18n="settings_github">GitHub</span>' +
@@ -12019,7 +12086,7 @@
             const r3 = Array.from(debugFilterState.row3).join(', ');
 
             let out = '==================================================\n' +
-                      '  LuckyStrike OGame Helper v14.2 - Log Kayıtları\n' +
+                      '  LuckyStrike OGame Helper v14.3 - Log Kayıtları\n' +
                       '  Tarih: ' + nowStr + '\n' +
                       '  URL: ' + window.location.href + '\n' +
                       '  Filtreler: [Akış: ' + r1 + '] [Kapsam: ' + r2 + '] [Seviye: ' + r3 + ']\n' +
@@ -12567,6 +12634,6 @@
     scanAndSaveExpeditionTemplates();
     updateAllAutomationStartButtons();
     setInterval(updateAllAutomationStartButtons, 400);
-    console.log(LS, 'LuckyStrike OGame Helper v14.2 hazır!');
+    console.log(LS, 'LuckyStrike OGame Helper v14.3 hazır!');
 
 })();

@@ -1,4 +1,4 @@
-# ⚡ LuckyStrike OGame Helper (v14.2)
+# ⚡ LuckyStrike OGame Helper (v14.3)
 
 [English](#-english-description) | [Türkçe](#-türkçe-açıklama)
 
@@ -315,7 +315,7 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ## 🚀 Kurulum / Installation
 
 ### Chrome & Microsoft Edge
-1. İndirin / Download: [`luckystrike-ogame-helper-v14.2.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
+1. İndirin / Download: [`luckystrike-ogame-helper-v14.3.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
 2. Tarayıcıda eklentiler sayfasına gidin / Open extensions page:
    - **Chrome:** `chrome://extensions`
    - **Edge:** `edge://extensions`
@@ -325,6 +325,14 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ---
 
 ## 📝 Sürüm Geçmişi / Changelog
+
+### v14.3
+- **🧭 Keşif Asistanında Slot Takibi, Canlı Bekleme Durumu ve Başlangıç Uyarısı / Expedition Slot Awareness & Live Waiting Status:**
+  - Keşif asistanında (`Expedition`), keşif slotları dolduğunda (`expSlots.isFull`) asistanın belirsiz bir şekilde `⏳ Hazırlanıyor...` durumunda donup kalması sorunu düzeltildi.
+  - Keşif asistanı butonu artık slotlar dolduğunda doğrudan kırmızıya dönerek net bir şekilde `⏳ Keşif Slotu Bekleniyor (X/Y)` gösterir ve altında filoların dönüşünü beklediğini açıklayan durum mesajı (`#ls-exp-hud-status`) sunar.
+  - Keşif HUD başlığına canlı keşif slot bilgisi (`🧭 Slot: X/Y`) eklendi.
+  - Başlatma öncesinde (`Sefer Sayısı`), boş keşif slotundan daha fazla sefer girildiğinde kullanıcıyı bilgilendiren ve onay alan koruyucu uyarı eklendi.
+  - OGame köprü katmanında (`bridge.js`) ve DOM tarayıcısında keşif slotlarının okunması (`maxExpeditionFleets`, tekil/çoğul regex) güçlendirildi.
 
 ### v14.2
 - **🛡️ Toplayıcıda Döteryum Rezerv ve Kargo Döngüsü (Yazıp-Silme) Hatası Düzeltildi / Fixed Deuterium Reserve & Cargo Loop in Collector:**
