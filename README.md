@@ -1,4 +1,4 @@
-# ⚡ LuckyStrike OGame Helper (v13.7)
+# ⚡ LuckyStrike OGame Helper (v13.8)
 
 [English](#-english-description) | [Türkçe](#-türkçe-açıklama)
 
@@ -315,7 +315,7 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ## 🚀 Kurulum / Installation
 
 ### Chrome & Microsoft Edge
-1. İndirin / Download: [`luckystrike-ogame-helper-v13.7.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
+1. İndirin / Download: [`luckystrike-ogame-helper-v13.8.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
 2. Tarayıcıda eklentiler sayfasına gidin / Open extensions page:
    - **Chrome:** `chrome://extensions`
    - **Edge:** `edge://extensions`
@@ -325,6 +325,16 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ---
 
 ## 📝 Sürüm Geçmişi / Changelog
+
+### v13.8
+- **🛡️ Chrome Manifest V3 CSP İhlali ve `javascript:void(0)` Tıklama Hatası Giderildi / Fixed CSP Violation on `javascript:` Links:**
+  - `chrome://extensions` hata panelinde raporlanan `Running the JavaScript URL violates the following Content Security Policy directive: script-src 'self' 'wasm-unsafe-eval'...` uyarısı giderildi.
+  - OGame'in yerel şablon ve açılır menü öğelerinde (`<a>` etiketlerinde `href="javascript:void(0)"` bulunan linkler) programatik `.click()` çağrısı yapıldığında Manifest V3 CSP kuralı devreye girip inline script çalıştırılmasını engelliyordu.
+  - `triggerFullClick`, `clickDevamButton`, `triggerAllResourcesNative`, `advanceFleetStep` ve `navigateToGalaxy` fonksiyonları `isJsHref` filtresiyle korunarak, `javascript:` bağlantılarına doğrudan native `.click()` yerine sentetik Mouse/Pointer olayları (`pointerdown`, `mousedown`, `pointerup`, `mouseup`, `click`) dispatch edilerek OGame'in DOM event listener'larının CSP ihlaline takılmadan çalışması sağlandı.
+  - Neutralized Chrome Manifest V3 Content Security Policy (CSP) inline script violations when triggering programmatic clicks on OGame template links containing `javascript:void(0)` hrefs by dispatching synthetic mouse events instead of invoking raw `.click()`.
+- **🛡️ Asistan Arayüzlerinde Null/Undefined Güvenlik Kalkanı / Defensive Parameter Guards in Assistant Handlers:**
+  - `executeFleetDispatchStep`, `renderCollectorAssistantBanner`, `renderCourierAssistantBanner`, `executeExpeditionStep` ve `renderExpeditionBanner` fonksiyonlarına parametre koruma kalkanları eklenerek sekme veya sayfa geçişlerindeki olası render hataları önlendi.
+  - Hardened assistant lifecycle and HUD render pipelines against transient null or undefined session states during rapid page navigation.
 
 ### v13.7
 - **🌕 Ay İsimleri Filtresi & Çap/Menü Metinleri Temizliği / Clean Moon Names Without Diameter or Menu Texts:**
