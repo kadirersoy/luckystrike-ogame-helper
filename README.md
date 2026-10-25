@@ -1,4 +1,4 @@
-# ⚡ LuckyStrike OGame Helper (v14.1)
+# ⚡ LuckyStrike OGame Helper (v14.2)
 
 [English](#-english-description) | [Türkçe](#-türkçe-açıklama)
 
@@ -315,7 +315,7 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ## 🚀 Kurulum / Installation
 
 ### Chrome & Microsoft Edge
-1. İndirin / Download: [`luckystrike-ogame-helper-v14.1.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
+1. İndirin / Download: [`luckystrike-ogame-helper-v14.2.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
 2. Tarayıcıda eklentiler sayfasına gidin / Open extensions page:
    - **Chrome:** `chrome://extensions`
    - **Edge:** `edge://extensions`
@@ -325,6 +325,13 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ---
 
 ## 📝 Sürüm Geçmişi / Changelog
+
+### v14.2
+- **🛡️ Toplayıcıda Döteryum Rezerv ve Kargo Döngüsü (Yazıp-Silme) Hatası Düzeltildi / Fixed Deuterium Reserve & Cargo Loop in Collector:**
+  - `bridge.js` içerisindeki `SELECT_ALL_RESOURCES` bloğunda yer alan ve gemi ambarına yüklenen döteryum miktarından gezegen rezervini hatalı bir şekilde düşerek döteryum kutusunu sürekli sıfırlayan (`currentVal - deuReserve`) hatalı mekanizma tamamen kaldırıldı.
+  - Toplayıcı (`Collector`) artık tüm kaynaklar seçili olsa dahi `#allresources` butonuna sentetik tıklamalar yapmak yerine, gezegen rezervini ve ambar kapasitesini önceden net olarak hesaplayan deterministik `fillFleetResources(metLoad, criLoad, deuLoad)` fonksiyonunu doğrudan kullanır. Bu sayede gezegendeki döteryum rezerve eşit veya az olduğunda döteryumun saniyede bir yazılıp silinmesi ve sonsuz kargo doğrulama döngüsüne girilmesi kalıcı olarak engellendi.
+- **✨ HUD Asistan Bannerlarına Detaylı Durum ve Hata Açıklamaları Eklendi / Informative Status Descriptions on HUD Banners:**
+  - Toplayıcı, Postacı ve Maliyet Sepeti asistan bannerlarında herhangi bir bekleme veya onaylanamama durumu oluştuğunda (sunucu hedef kontrolü, görev seçimi, kaynak yükleme doğrulaması, filo slot doluluğu vb.), kullanıcının neden bekletildiğini net olarak açıklayan canlı durum mesajları (`#ls-coll-hud-status`, `#ls-cour-hud-status`, `#ls-cart-hud-status`) eklendi. Detaysız belirsiz uyarılar sonlandırıldı.
 
 ### v14.1
 - **🔄 Keşif Şablonları İçin Arka Planda Otomatik Çekme (Self-Fetch) & Kesin Seçici Desteği / Automatic Background Template Fetching:**

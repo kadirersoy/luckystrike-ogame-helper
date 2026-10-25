@@ -250,30 +250,13 @@
                     syncFleetDispatcherState();
                 }
             } else if (d.type === 'SELECT_ALL_RESOURCES') {
-                var deuReserve = Math.max(0, parseInt(d.deuReserve, 10) || 0);
-                bridgeLog('ACTION', 'BRIDGE', 'Tüm kaynaklar yerel olarak seçiliyor (#allresources), Deu Rezerv: ' + deuReserve);
+                bridgeLog('ACTION', 'BRIDGE', 'Tüm kaynaklar yerel olarak seçiliyor (#allresources)');
                 if (window.fleetDispatcher && typeof window.fleetDispatcher.selectAllResources === 'function') {
                     try { window.fleetDispatcher.selectAllResources(); } catch(e) {}
                 }
                 var allBtn = document.getElementById('allresources') || document.querySelector('a#allresources, .sendall, .allresources, [data-action="allresources"], .ogl-resources-all, .ogl-all-resources');
                 if (allBtn) {
                     realClick(allBtn);
-                }
-                if (deuReserve > 0) {
-                    setTimeout(function() {
-                        var $d = $('#deuterium, input[name="deuterium"]');
-                        if ($d.length) {
-                            var currentVal = parseInt(String($d.val()).replace(/[^0-9]/g, ''), 10) || 0;
-                            var targetVal = Math.max(0, currentVal - deuReserve);
-                            $d.val(targetVal).trigger('input').trigger('change').trigger('keyup').trigger('blur');
-                            if (window.fleetDispatcher) {
-                                try { window.fleetDispatcher.cargoDeuterium = targetVal; } catch(e) {}
-                                if (typeof window.fleetDispatcher.cargoCalculation === 'function') {
-                                    try { window.fleetDispatcher.cargoCalculation(); } catch(e) {}
-                                }
-                            }
-                        }
-                    }, 50);
                 }
             } else if (d.type === 'SELECT_MISSION') {
                 var missionId = parseInt(d.missionId, 10) || 3;

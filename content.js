@@ -2,7 +2,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v14.1 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v14.2 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -231,6 +231,10 @@
             fleet_slots_hud_wait_btn: '⏳ Slot Bekleniyor ({current}/{max})',
             fleet_mission_error_waiting: '⚠️ Görev onaylanamadı, hedef kontrol ediliyor...',
             fleet_mission_retry_btn: '⚠️ Hedefi Tekrar Dene',
+            fleet_hud_wait_target_check: '⏳ Sunucu hedef kontrolü bekleniyor...',
+            fleet_hud_wait_mission: '⚠️ Görev seçimi bekleniyor...',
+            fleet_hud_wait_cargo: '⚠️ Kaynak yüklemesi bekleniyor...',
+            fleet_hud_wait_send_btn: '⚠️ Gönder butonu hazır değil',
             fleet_slot_label: 'Slot:',
 
             // Taşıma Öncelik Modu (Hız / Yakıt)
@@ -563,6 +567,10 @@
             fleet_slots_hud_wait_btn: '⏳ Waiting for Slots ({current}/{max})',
             fleet_mission_error_waiting: '⚠️ Mission not confirmed, checking target...',
             fleet_mission_retry_btn: '⚠️ Retry Target',
+            fleet_hud_wait_target_check: '⏳ Waiting for server target verification...',
+            fleet_hud_wait_mission: '⚠️ Waiting for mission selection...',
+            fleet_hud_wait_cargo: '⚠️ Verifying cargo loading...',
+            fleet_hud_wait_send_btn: '⚠️ Send button not ready',
             fleet_slot_label: 'Slots:',
             cart_hud_title: 'Cost Distribution',
 
@@ -2839,7 +2847,7 @@
     }
 
     let lastAllResCall = 0;
-    function triggerAllResourcesNative(deuReserve = 0) {
+    function triggerAllResourcesNative() {
         const now = Date.now();
         if (now - lastAllResCall < 350) return;
         lastAllResCall = now;
@@ -2850,7 +2858,7 @@
             triggerRealClick(allBtn);
         }
         window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-            detail: { type: 'SELECT_ALL_RESOURCES', deuReserve: deuReserve }
+            detail: { type: 'SELECT_ALL_RESOURCES' }
         }));
     }
 
@@ -2888,6 +2896,7 @@
         if (!sendBtn) return false;
         const isVisible = (sendBtn.offsetWidth > 0 || sendBtn.offsetHeight > 0 || sendBtn.offsetParent !== null);
         if (!isVisible) return false;
+        if (sendBtn.disabled || sendBtn.classList.contains('off') || sendBtn.classList.contains('disabled')) return false;
         if (hasVisibleMissionError()) return false;
         return true;
     }
@@ -3619,6 +3628,10 @@
                 btn.style.cursor = 'pointer';
                 btn.innerText = '🚀 ' + t('coll_hud_send') + ' (Space)';
             }
+            const statusEl = document.getElementById('ls-cart-hud-status');
+            if (statusEl) {
+                statusEl.style.display = 'none';
+            }
         };
 
         const updateCartBannerSlotWaiting = (slots) => {
@@ -3630,9 +3643,14 @@
                 btn.style.cursor = 'not-allowed';
                 btn.innerText = t('fleet_slots_hud_wait_btn').replace('{current}', slots.current).replace('{max}', slots.max);
             }
+            const statusEl = document.getElementById('ls-cart-hud-status');
+            if (statusEl) {
+                statusEl.innerText = t('fleet_slots_hud_waiting').replace('{current}', slots.current).replace('{max}', slots.max);
+                statusEl.style.display = 'block';
+            }
         };
 
-        const updateCartBannerWarning = (slots) => {
+        const updateCartBannerWarning = (slots, reason = '') => {
             const btn = document.getElementById('ls-cart-banner-send-btn');
             if (btn) {
                 btn.disabled = false;
@@ -3640,6 +3658,15 @@
                 btn.style.color = '#fff';
                 btn.style.cursor = 'pointer';
                 btn.innerText = t('fleet_mission_retry_btn', '⚠️ Hedefi Tekrar Dene');
+            }
+            const statusEl = document.getElementById('ls-cart-hud-status');
+            if (statusEl) {
+                if (reason) {
+                    statusEl.innerText = reason;
+                    statusEl.style.display = 'block';
+                } else {
+                    statusEl.style.display = 'none';
+                }
             }
         };
 
@@ -3733,7 +3760,13 @@
 
                 // 5. 6 saniye boyunca hazır olmadıysa uyarı göster ama döngüyü kesme
                 if (totalTicks > 75 && (!isSendFleetReady() || !isCargoLoaded)) {
-                    updateCartBannerWarning(slots);
+                    let reason = '';
+                    if (isTargetCheckPending()) reason = t('fleet_hud_wait_target_check', '⏳ Sunucu hedef kontrolü bekleniyor...');
+                    else if (!isMissionSelected(currentItem.mission || 3)) reason = t('fleet_hud_wait_mission', '⚠️ Görev seçimi bekleniyor...');
+                    else if (!isCargoLoaded) reason = t('fleet_hud_wait_cargo', '⚠️ Kaynak yüklemesi doğrulanıyor...');
+                    else if (!isSendBtnVisible) reason = t('fleet_hud_wait_send_btn', '⚠️ Filo Gönder butonu aktifleşmedi');
+                    else if (hasVisibleMissionError()) reason = t('fleet_mission_error_waiting', '⚠️ Görev onaylanamadı, hedef kontrol ediliyor...');
+                    updateCartBannerWarning(slots, reason);
                 }
             }, 80);
         };
@@ -3922,7 +3955,8 @@
                 '<button id="ls-cart-banner-retry-btn" style="background:#e67e22;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer" title="' + t('coll_hud_retry') + '">🔄 ' + t('coll_hud_retry') + '</button>' +
                 (hasShips ? '<button class="ls-cart-banner-skip-btn" style="background:#34495e;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏭️ ' + t('coll_hud_skip') + '</button>' : '') +
                 '<button id="ls-cart-banner-cancel-btn" style="background:#7f8c8d;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏹️ ' + t('coll_hud_cancel') + '</button>' +
-            '</div>';
+            '</div>' +
+            '<div id="ls-cart-hud-status" style="display:none;font-size:11px;color:#f39c12;margin-top:6px;font-weight:bold"></div>';
 
         let isSending = false;
 
@@ -7351,6 +7385,10 @@
                 btn.style.cursor = 'pointer';
                 btn.innerText = '🚀 ' + t('coll_hud_send') + ' (Space)';
             }
+            const statusEl = document.getElementById('ls-coll-hud-status');
+            if (statusEl) {
+                statusEl.style.display = 'none';
+            }
         };
 
         const updateCollectorBannerSlotWaiting = (slots) => {
@@ -7362,9 +7400,14 @@
                 btn.style.cursor = 'not-allowed';
                 btn.innerText = t('fleet_slots_hud_wait_btn').replace('{current}', slots.current).replace('{max}', slots.max);
             }
+            const statusEl = document.getElementById('ls-coll-hud-status');
+            if (statusEl) {
+                statusEl.innerText = t('fleet_slots_hud_waiting').replace('{current}', slots.current).replace('{max}', slots.max);
+                statusEl.style.display = 'block';
+            }
         };
 
-        const updateCollectorBannerWarning = (slots) => {
+        const updateCollectorBannerWarning = (slots, reason = '') => {
             const btn = document.getElementById('ls-banner-send-btn');
             if (btn) {
                 btn.disabled = false;
@@ -7372,6 +7415,15 @@
                 btn.style.color = '#fff';
                 btn.style.cursor = 'pointer';
                 btn.innerText = t('fleet_mission_retry_btn', '⚠️ Hedefi Tekrar Dene');
+            }
+            const statusEl = document.getElementById('ls-coll-hud-status');
+            if (statusEl) {
+                if (reason) {
+                    statusEl.innerText = reason;
+                    statusEl.style.display = 'block';
+                } else {
+                    statusEl.style.display = 'none';
+                }
             }
         };
 
@@ -7442,11 +7494,7 @@
                 if (!targetChecking && isMissionSelected(missionId)) {
                     if (!isCargoLoaded && Date.now() - lastResourceFillTime > 400) {
                         lastResourceFillTime = Date.now();
-                        if (isAllRes) {
-                            triggerAllResourcesNative(reserve || 0);
-                        } else {
-                            fillFleetResources(metLoad, criLoad, deuLoad);
-                        }
+                        fillFleetResources(metLoad, criLoad, deuLoad);
                         stableReadyTicks = 0;
                     }
                 }
@@ -7467,14 +7515,20 @@
                         lastResourceFillTime = Date.now();
                         fillFleetResources(metLoad, criLoad, deuLoad);
                     }
-                    if (totalTicks > 40 && isSendBtnVisible) {
+                    if (totalTicks > 40 && isSendBtnVisible && isReady) {
                         updateCollectorBannerReady(slots);
                     }
                 }
 
                 // 5. 6 saniye boyunca hazır olmadıysa uyarı göster
                 if (totalTicks > 75 && (!isSendFleetReady() || !isCargoLoaded)) {
-                    updateCollectorBannerWarning(slots);
+                    let reason = '';
+                    if (targetChecking) reason = t('fleet_hud_wait_target_check', '⏳ Sunucu hedef kontrolü bekleniyor...');
+                    else if (!isMissionSelected(missionId)) reason = t('fleet_hud_wait_mission', '⚠️ Görev seçimi bekleniyor (Nakliye/Konuşlandır)...');
+                    else if (!isCargoLoaded) reason = t('fleet_hud_wait_cargo', '⚠️ Kaynak yüklemesi doğrulanıyor...');
+                    else if (!isSendBtnVisible) reason = t('fleet_hud_wait_send_btn', '⚠️ Filo Gönder butonu aktifleşmedi');
+                    else if (hasVisibleMissionError()) reason = t('fleet_mission_error_waiting', '⚠️ Görev onaylanamadı, hedef kontrol ediliyor...');
+                    updateCollectorBannerWarning(slots, reason);
                 }
             }, 80);
         };
@@ -7673,7 +7727,8 @@
                 '<button id="ls-banner-retry-btn" style="background:#e67e22;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer" title="' + t('coll_hud_retry') + '">🔄 ' + t('coll_hud_retry') + '</button>' +
                 (hasShips ? '<button class="ls-banner-skip-btn" style="background:#34495e;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏭️ ' + t('coll_hud_skip') + '</button>' : '') +
                 '<button id="ls-banner-cancel-btn" style="background:#e74c3c;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏹️ ' + t('coll_hud_cancel') + '</button>' +
-            '</div>';
+            '</div>' +
+            '<div id="ls-coll-hud-status" style="display:none;font-size:11px;color:#f39c12;margin-top:6px;font-weight:bold"></div>';
 
         const sendFleet = () => {
             const sendBtnEl = document.getElementById('ls-banner-send-btn');
@@ -7700,10 +7755,6 @@
                 if (sendBtnEl) {
                     sendBtnEl.disabled = true;
                     sendBtnEl.innerText = '⏳ ' + t('cour_hud_cargo', 'Kaynaklar Yükleniyor...');
-                }
-                const isAll = session.resources && session.resources.met && session.resources.cri && session.resources.deu;
-                if (isAll) {
-                    triggerAllResourcesNative(details.reserve || 0);
                 }
                 fillFleetResources(mLoad, cLoad, dLoad);
 
@@ -8651,6 +8702,10 @@
                 btn.style.cursor = 'pointer';
                 btn.innerText = '🚀 ' + t('coll_hud_send') + ' (Space)';
             }
+            const statusEl = document.getElementById('ls-cour-hud-status');
+            if (statusEl) {
+                statusEl.style.display = 'none';
+            }
         };
 
         const updateCourierBannerSlotWaiting = (slots) => {
@@ -8662,9 +8717,14 @@
                 btn.style.cursor = 'not-allowed';
                 btn.innerText = t('fleet_slots_hud_wait_btn').replace('{current}', slots.current).replace('{max}', slots.max);
             }
+            const statusEl = document.getElementById('ls-cour-hud-status');
+            if (statusEl) {
+                statusEl.innerText = t('fleet_slots_hud_waiting').replace('{current}', slots.current).replace('{max}', slots.max);
+                statusEl.style.display = 'block';
+            }
         };
 
-        const updateCourierBannerWarning = (slots) => {
+        const updateCourierBannerWarning = (slots, reason = '') => {
             const btn = document.getElementById('ls-banner-send-btn');
             if (btn) {
                 btn.disabled = false;
@@ -8672,6 +8732,15 @@
                 btn.style.color = '#fff';
                 btn.style.cursor = 'pointer';
                 btn.innerText = t('fleet_mission_retry_btn', '⚠️ Hedefi Tekrar Dene');
+            }
+            const statusEl = document.getElementById('ls-cour-hud-status');
+            if (statusEl) {
+                if (reason) {
+                    statusEl.innerText = reason;
+                    statusEl.style.display = 'block';
+                } else {
+                    statusEl.style.display = 'none';
+                }
             }
         };
 
@@ -8768,7 +8837,13 @@
 
                 // 5. 6 saniye boyunca hazır olmadıysa uyarı göster ama döngüyü kesme
                 if (totalTicks > 75 && (!isSendFleetReady() || !isCargoLoaded)) {
-                    updateCourierBannerWarning(slots);
+                    let reason = '';
+                    if (targetChecking) reason = t('fleet_hud_wait_target_check', '⏳ Sunucu hedef kontrolü bekleniyor...');
+                    else if (!isMissionSelected(missionId)) reason = t('fleet_hud_wait_mission', '⚠️ Görev seçimi bekleniyor (Nakliye/Konuşlandır)...');
+                    else if (!isCargoLoaded) reason = t('fleet_hud_wait_cargo', '⚠️ Kaynak yüklemesi doğrulanıyor...');
+                    else if (!isSendBtnVisible) reason = t('fleet_hud_wait_send_btn', '⚠️ Filo Gönder butonu aktifleşmedi');
+                    else if (hasVisibleMissionError()) reason = t('fleet_mission_error_waiting', '⚠️ Görev onaylanamadı, hedef kontrol ediliyor...');
+                    updateCourierBannerWarning(slots, reason);
                 }
             }, 80);
         };
@@ -8957,7 +9032,8 @@
                 '<button id="ls-banner-retry-btn" style="background:#e67e22;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer" title="' + t('coll_hud_retry') + '">🔄 ' + t('coll_hud_retry') + '</button>' +
                 (hasShips ? '<button class="ls-banner-skip-btn" style="background:#34495e;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏭️ ' + t('coll_hud_skip') + '</button>' : '') +
                 '<button id="ls-banner-cancel-btn" style="background:#e74c3c;color:#fff;border:none;padding:5px 9px;border-radius:4px;font-weight:bold;font-size:11px;cursor:pointer">⏹️ ' + t('coll_hud_cancel') + '</button>' +
-            '</div>';
+            '</div>' +
+            '<div id="ls-cour-hud-status" style="display:none;font-size:11px;color:#f39c12;margin-top:6px;font-weight:bold"></div>';
 
         const sendFleet = () => {
             const sendBtnEl = document.getElementById('ls-banner-send-btn');
@@ -8984,10 +9060,6 @@
                 if (sendBtnEl) {
                     sendBtnEl.disabled = true;
                     sendBtnEl.innerText = '⏳ ' + t('cour_hud_cargo', 'Kaynaklar Yükleniyor...');
-                }
-                const isAll = session.resources && session.resources.met && session.resources.cri && session.resources.deu;
-                if (isAll) {
-                    triggerAllResourcesNative(details.reserve || 0);
                 }
                 fillFleetResources(mLoad, cLoad, dLoad);
 
@@ -11169,7 +11241,7 @@
                         '<div style="display:flex;justify-content:space-between;align-items:center">' +
                             '<div style="display:flex;align-items:center;gap:6px">' +
                                 '<span style="font-size:12px;color:#00bcff;font-weight:bold">⚡ LuckyStrike Helper</span>' +
-                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v14.1</span>' +
+                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v14.2</span>' +
                             '</div>' +
                             '<a href="https://github.com/kadirersoy/luckystrike-ogame-helper" target="_blank" style="font-size:10.5px;color:#00bcff;text-decoration:none;display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,0.05);padding:2px 7px;border-radius:4px;border:1px solid #1a2c3f" title="GitHub Proje Sayfası" data-i18n-title="settings_github_title">' +
                                 '<span>🔗</span> <span data-i18n="settings_github">GitHub</span>' +
@@ -11947,7 +12019,7 @@
             const r3 = Array.from(debugFilterState.row3).join(', ');
 
             let out = '==================================================\n' +
-                      '  LuckyStrike OGame Helper v14.1 - Log Kayıtları\n' +
+                      '  LuckyStrike OGame Helper v14.2 - Log Kayıtları\n' +
                       '  Tarih: ' + nowStr + '\n' +
                       '  URL: ' + window.location.href + '\n' +
                       '  Filtreler: [Akış: ' + r1 + '] [Kapsam: ' + r2 + '] [Seviye: ' + r3 + ']\n' +
@@ -12495,6 +12567,6 @@
     scanAndSaveExpeditionTemplates();
     updateAllAutomationStartButtons();
     setInterval(updateAllAutomationStartButtons, 400);
-    console.log(LS, 'LuckyStrike OGame Helper v14.1 hazır!');
+    console.log(LS, 'LuckyStrike OGame Helper v14.2 hazır!');
 
 })();
