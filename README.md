@@ -1,4 +1,4 @@
-# ⚡ LuckyStrike OGame Helper (v14.0)
+# ⚡ LuckyStrike OGame Helper (v14.1)
 
 [English](#-english-description) | [Türkçe](#-türkçe-açıklama)
 
@@ -315,7 +315,7 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ## 🚀 Kurulum / Installation
 
 ### Chrome & Microsoft Edge
-1. İndirin / Download: [`luckystrike-ogame-helper-v14.0.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
+1. İndirin / Download: [`luckystrike-ogame-helper-v14.1.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
 2. Tarayıcıda eklentiler sayfasına gidin / Open extensions page:
    - **Chrome:** `chrome://extensions`
    - **Edge:** `edge://extensions`
@@ -325,6 +325,14 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ---
 
 ## 📝 Sürüm Geçmişi / Changelog
+
+### v14.1
+- **🔄 Keşif Şablonları İçin Arka Planda Otomatik Çekme (Self-Fetch) & Kesin Seçici Desteği / Automatic Background Template Fetching:**
+  - OGame'in gerçek şablon seçici kimliği olan `#expeditionFleetTemplateSelect` (`select[name="expeditionFleetTemplateSelect"]`) ve ilgili selectmenu yapıları tam olarak entegre edildi.
+  - Kullanıcının şablonları yenilemek için elle "Filo 1 sayfasına geçme" zorunluluğu tamamen ortadan kaldırıldı: Hangi sayfada olunursa olunsun `🔄` butonuna tıklandığında, eklenti arka planda filo sayfasını (`component=fleetdispatch`) çekip (`fetch` & `DOMParser`) keşif şablonlarını otomatik ayrıştırır ve açılır kutuyu günceller.
+- **✨ Şablon Yenileme Butonu Büyütüldü ve Konumu İyileştirildi / Prominent Centered Refresh Button:**
+  - Keşif Şablonu başlığındaki küçük ve anlaşılması zor ikon kaldırıldı.
+  - Sefer Sayısı ile Keşif Şablonu arasına, form girişleriyle tam hizada (`height: 27px; font-size: 13px`) modern ve şık bir `🔄` butonu yerleştirildi.
 
 ### v14.0
 - **🛡️ Keşif Şablon Seçiminde `triggerFullClick` ve DOM Tıklamaları Tamamen Kaldırıldı / Eliminated CSP Triggers:**

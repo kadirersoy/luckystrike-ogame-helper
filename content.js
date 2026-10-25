@@ -2,7 +2,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v14.0 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v14.1 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -9205,7 +9205,8 @@
         return true;
     }
 
-    function scanAndSaveExpeditionTemplates() {
+    function scanAndSaveExpeditionTemplates(rootDoc = document) {
+        if (!rootDoc) rootDoc = document;
         const templates = [];
         const seenNames = new Set();
 
@@ -9219,16 +9220,19 @@
             }
         }
 
-        // 1. Doğrudan select#expeditionfleet veya name="expeditionfleet" öğesini tara
-        const expSelects = Array.from(document.querySelectorAll('select#expeditionfleet, select[name="expeditionfleet"]')).filter(s => !s.closest('#ls-panel'));
+        // 1. OGame resmi Keşif Şablonu <select> öğesini tara (#expeditionFleetTemplateSelect vb.)
+        const expSelects = Array.from(rootDoc.querySelectorAll(
+            'select#expeditionFleetTemplateSelect, select[name="expeditionFleetTemplateSelect"], select#expeditionfleet, select[name="expeditionfleet"], select[id*="expedition" i], select[name*="expedition" i]'
+        )).filter(s => !s.closest('#ls-panel') && !s.id.toLowerCase().includes('standard') && !s.name.toLowerCase().includes('standard'));
+
         for (const sel of expSelects) {
             for (let i = 0; i < sel.options.length; i++) {
-                addTpl(sel.options[i].value || i, sel.options[i].textContent);
+                addTpl(sel.options[i].value || i, sel.options[i].textContent || sel.options[i].text);
             }
         }
 
-        // 2. "Keşif filosu" etiketini içeren satırı bul (Kesinlikle standart filo satırını hariç tut)
-        const allLeafs = Array.from(document.querySelectorAll('#fleet1 *, #fleetdispatchcomponent *, body *')).filter(el => {
+        // 2. Keşif Filosu satırını bul (Standart Filo kesinlikle hariç)
+        const allLeafs = Array.from(rootDoc.querySelectorAll('#fleet1 *, #fleetdispatchcomponent *, body *')).filter(el => {
             if (el.closest('#ls-panel, #menuTable, #links, #header, #siteHeader, #bar, #chatBar')) return false;
             return el.children.length === 0 && (el.textContent || '').trim().length > 0;
         });
@@ -9248,10 +9252,10 @@
         if (expRow) {
             const selects = expRow.querySelectorAll('select');
             for (const sel of selects) {
-                if (sel.id === 'standardfleet' || sel.name === 'standardfleet') continue;
+                if (sel.id.toLowerCase().includes('standard') || sel.name.toLowerCase().includes('standard')) continue;
                 for (let i = 0; i < sel.options.length; i++) {
                     const opt = sel.options[i];
-                    addTpl(opt.value || i, opt.textContent);
+                    addTpl(opt.value || i, opt.textContent || opt.text);
                 }
             }
 
@@ -9263,13 +9267,19 @@
             }
         }
 
-        // 3. jQuery UI selectmenu için sadece #expeditionfleet-menu öğesini tara (Asla #standardfleet-menu tarama!)
-        const expMenu = document.getElementById('expeditionfleet-menu') || document.querySelector('[aria-labelledby="expeditionfleet-button"]');
-        if (expMenu) {
-            const items = expMenu.querySelectorAll('li, a');
-            for (const item of items) {
-                const val = item.getAttribute('data-value') || item.getAttribute('data-id');
-                addTpl(val, item.textContent);
+        // 3. jQuery UI selectmenu açılır kutusu (#expeditionFleetTemplateSelect-menu vb.)
+        const expMenus = Array.from(rootDoc.querySelectorAll(
+            '#expeditionFleetTemplateSelect-menu, #expeditionfleet-menu, [aria-labelledby*="expeditionFleet" i], [aria-labelledby*="expeditionfleet" i], .changeExpeditionFleet'
+        )).filter(m => !m.closest('#ls-panel'));
+
+        for (const expMenu of expMenus) {
+            if (expMenu.tagName === 'A' || expMenu.tagName === 'LI') {
+                addTpl(expMenu.getAttribute('data-value') || expMenu.getAttribute('data-id'), expMenu.textContent);
+            } else {
+                const items = expMenu.querySelectorAll('li, a');
+                for (const item of items) {
+                    addTpl(item.getAttribute('data-value') || item.getAttribute('data-id'), item.textContent);
+                }
             }
         }
 
@@ -9278,11 +9288,38 @@
         }
 
         // MAIN World köprüsünden de tarama iste
-        window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-            detail: { type: 'SCAN_TEMPLATES' }
-        }));
+        if (rootDoc === document) {
+            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                detail: { type: 'SCAN_TEMPLATES' }
+            }));
+        }
 
         return templates;
+    }
+
+    async function fetchAndSaveExpeditionTemplates() {
+        if (window.location.href.includes('component=fleetdispatch')) {
+            const live = scanAndSaveExpeditionTemplates(document);
+            if (live.length > 0) return live;
+        }
+        try {
+            const resp = await fetch('/game/index.php?page=ingame&component=fleetdispatch', {
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const html = await resp.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const found = scanAndSaveExpeditionTemplates(doc);
+            if (found.length > 0) {
+                localStorage.setItem(KEYS.EXPEDITION_TEMPLATES, JSON.stringify(found));
+            }
+            return found;
+        } catch (err) {
+            LS_LOGGER.warn('EXPEDITION', 'Arka planda şablon çekilemedi: ' + err.message);
+            return [];
+        }
     }
 
     function getSavedExpeditionTemplates() {
@@ -9293,7 +9330,7 @@
     }
 
     function findExpeditionDropdownTrigger() {
-        const expMenu = document.getElementById('expeditionfleet-button') || document.querySelector('[aria-labelledby="expeditionfleet-button"]');
+        const expMenu = document.getElementById('expeditionFleetTemplateSelect-button') || document.getElementById('expeditionfleet-button') || document.querySelector('[aria-labelledby*="expedition" i]');
         if (expMenu && expMenu.offsetHeight > 0) return expMenu;
         return null;
     }
@@ -9309,8 +9346,8 @@
             if (m && m.name) targetName = m.name;
         }
 
-        // 1. select#expeditionfleet varsa değerini ata ve change event'i dispatch et
-        const expSel = document.querySelector('select#expeditionfleet, select[name="expeditionfleet"]') ||
+        // 1. select#expeditionFleetTemplateSelect varsa değerini ata ve change event'i dispatch et
+        const expSel = document.querySelector('select#expeditionFleetTemplateSelect, select[name="expeditionFleetTemplateSelect"], select#expeditionfleet, select[name="expeditionfleet"], select[id*="expedition" i]') ||
                        Array.from(document.querySelectorAll('select')).find(s => {
                            const txt = (s.parentElement?.innerText || '').toLowerCase();
                            return (txt.includes('keşif filosu') || txt.includes('kesif filosu')) && !txt.includes('standart');
@@ -9529,13 +9566,30 @@
 
         const refreshBtn = document.getElementById('ls-exp-refresh-tpls');
         if (refreshBtn) {
-            refreshBtn.addEventListener('click', () => {
-                const foundTpls = scanAndSaveExpeditionTemplates();
+            refreshBtn.addEventListener('click', async () => {
+                refreshBtn.disabled = true;
+                refreshBtn.style.opacity = '0.5';
+
+                showCollectorToast('⏳ ' + (currentLang === 'tr' ? 'Keşif şablonları taranıyor...' : 'Scanning expedition templates...'), 2000);
+
+                let foundTpls = scanAndSaveExpeditionTemplates();
+                if (foundTpls.length === 0) {
+                    foundTpls = await fetchAndSaveExpeditionTemplates();
+                }
+
                 renderExpedition();
+                refreshBtn.disabled = false;
+                refreshBtn.style.opacity = '1';
+
                 if (foundTpls.length > 0) {
-                    showCollectorToast(`✅ ${foundTpls.length} şablon bulundu: ` + foundTpls.map(t => t.name).join(', '), 3500);
+                    showCollectorToast(`✅ ${foundTpls.length} ` + (currentLang === 'tr' ? 'keşif şablonu güncellendi: ' : 'templates updated: ') + foundTpls.map(t => t.name).join(', '), 4000);
                 } else {
-                    showCollectorToast('ℹ️ Filo sayfasında kayıtlı şablon bulunamadı. Lütfen Filo 1 sayfasına geçin.', 4000);
+                    const saved = getSavedExpeditionTemplates();
+                    if (saved.length > 0) {
+                        showCollectorToast(`✅ ${saved.length} ` + (currentLang === 'tr' ? 'kayıtlı şablon hazır: ' : 'saved templates ready: ') + saved.map(t => t.name).join(', '), 3500);
+                    } else {
+                        showCollectorToast('ℹ️ ' + (currentLang === 'tr' ? 'Keşif şablonu bulunamadı. Lütfen oyunda bir keşif şablonu oluşturun.' : 'No expedition templates found. Please create one in game.'), 4000);
+                    }
                 }
             });
         }
@@ -11076,17 +11130,19 @@
                     '</div>' +
 
                     '<div class="ls-coll-card">' +
-                        '<div style="display:flex;gap:8px">' +
-                            '<div style="flex:1">' +
+                        '<div style="display:flex;gap:6px;align-items:flex-end">' +
+                            '<div style="flex:1;min-width:0">' +
                                 '<span class="ls-label" data-i18n="exp_count">🔢 Sefer Sayısı</span>' +
-                                '<input type="number" id="ls-exp-count" class="ls-inp" min="1" max="50" style="width:100%;font-weight:bold;color:#00bcff;text-align:center" value="1">' +
+                                '<input type="number" id="ls-exp-count" class="ls-inp" min="1" max="50" style="width:100%;font-weight:bold;color:#00bcff;text-align:center;box-sizing:border-box" value="1">' +
                             '</div>' +
-                            '<div style="flex:2">' +
-                                '<div style="display:flex;justify-content:space-between;align-items:center">' +
-                                    '<span class="ls-label" data-i18n="exp_template">📋 Keşif Şablonu</span>' +
-                                    '<span id="ls-exp-refresh-tpls" style="font-size:10px;color:#00bcff;cursor:pointer" title="Şablonları yenile" data-i18n-title="exp_refresh_tpls_title">🔄</span>' +
-                                '</div>' +
-                                '<select id="ls-exp-template" class="ls-inp" style="width:100%;font-size:11px">' +
+                            '<div style="display:flex;flex-direction:column;align-items:center;padding-bottom:1px">' +
+                                '<button id="ls-exp-refresh-tpls" type="button" class="ls-btn-sm" style="height:27px;padding:0 8px;background:#1a2c3f;border:1px solid #2980b9;color:#00bcff;border-radius:4px;font-size:13px;font-weight:bold;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box" title="Keşif Şablonlarını Otomatik Çek / Yenile" data-i18n-title="exp_refresh_tpls_title">' +
+                                    '🔄' +
+                                '</button>' +
+                            '</div>' +
+                            '<div style="flex:2;min-width:0">' +
+                                '<span class="ls-label" data-i18n="exp_template">📋 Keşif Şablonu</span>' +
+                                '<select id="ls-exp-template" class="ls-inp" style="width:100%;font-size:11px;box-sizing:border-box">' +
                                     '<option value="" data-i18n="exp_loading_tpl">-- Şablon Yükleniyor... --</option>' +
                                 '</select>' +
                             '</div>' +
@@ -11113,7 +11169,7 @@
                         '<div style="display:flex;justify-content:space-between;align-items:center">' +
                             '<div style="display:flex;align-items:center;gap:6px">' +
                                 '<span style="font-size:12px;color:#00bcff;font-weight:bold">⚡ LuckyStrike Helper</span>' +
-                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v14.0</span>' +
+                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v14.1</span>' +
                             '</div>' +
                             '<a href="https://github.com/kadirersoy/luckystrike-ogame-helper" target="_blank" style="font-size:10.5px;color:#00bcff;text-decoration:none;display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,0.05);padding:2px 7px;border-radius:4px;border:1px solid #1a2c3f" title="GitHub Proje Sayfası" data-i18n-title="settings_github_title">' +
                                 '<span>🔗</span> <span data-i18n="settings_github">GitHub</span>' +
@@ -11891,7 +11947,7 @@
             const r3 = Array.from(debugFilterState.row3).join(', ');
 
             let out = '==================================================\n' +
-                      '  LuckyStrike OGame Helper v14.0 - Log Kayıtları\n' +
+                      '  LuckyStrike OGame Helper v14.1 - Log Kayıtları\n' +
                       '  Tarih: ' + nowStr + '\n' +
                       '  URL: ' + window.location.href + '\n' +
                       '  Filtreler: [Akış: ' + r1 + '] [Kapsam: ' + r2 + '] [Seviye: ' + r3 + ']\n' +
@@ -12439,6 +12495,6 @@
     scanAndSaveExpeditionTemplates();
     updateAllAutomationStartButtons();
     setInterval(updateAllAutomationStartButtons, 400);
-    console.log(LS, 'LuckyStrike OGame Helper v14.0 hazır!');
+    console.log(LS, 'LuckyStrike OGame Helper v14.1 hazır!');
 
 })();

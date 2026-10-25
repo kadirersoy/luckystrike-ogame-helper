@@ -103,7 +103,7 @@
         var targetId = d.id;
 
         var found = findExpeditionSelect(targetName);
-        var sel = found ? found.sel : document.querySelector('select#expeditionfleet, select[name="expeditionfleet"]');
+        var sel = found ? found.sel : document.querySelector('select#expeditionFleetTemplateSelect, select#expeditionfleet, select[name="expeditionFleetTemplateSelect"], select[name="expeditionfleet"]');
         var val = '';
         if (found) {
             val = sel.options[found.idx].value;
@@ -113,7 +113,7 @@
         }
 
         // 1) OGame expedition fleet dropdown listesindeki anchor'a tıkla
-        var expMenu = document.getElementById('expeditionfleet-menu') || document.querySelector('[aria-labelledby="expeditionfleet-button"]');
+        var expMenu = document.getElementById('expeditionFleetTemplateSelect-menu') || document.getElementById('expeditionfleet-menu') || document.querySelector('[aria-labelledby*="expedition" i]');
         var anchors = [];
         if (expMenu) {
             anchors = Array.prototype.slice.call(expMenu.querySelectorAll('a, li')).filter(function (a) {
@@ -369,7 +369,7 @@
                 var templates = [];
                 try {
                     // SADECE ve SADECE Keşif filosu select'ini tara (Asla #standardfleet veya genel select'leri tarama!)
-                    var selects = Array.prototype.slice.call(document.querySelectorAll('select#expeditionfleet, select[name="expeditionfleet"]')).filter(function(s) { return !isLsNode(s); });
+                    var selects = Array.prototype.slice.call(document.querySelectorAll('select#expeditionFleetTemplateSelect, select[name="expeditionFleetTemplateSelect"], select#expeditionfleet, select[name="expeditionfleet"]')).filter(function(s) { return !isLsNode(s); });
                     if (selects.length === 0) {
                         var allSel = Array.prototype.slice.call(document.querySelectorAll('select')).filter(function(s) { return !isLsNode(s); });
                         selects = allSel.filter(function(s) {
@@ -400,7 +400,7 @@
                     });
                     if (window.$) {
                         // Sadece expedition fleet menüsünü tara, asla genel menüleri veya standardfleet menüsünü tarama!
-                        $('#expeditionfleet-menu li, [aria-labelledby="expeditionfleet-button"] li, .changeExpeditionFleet').each(function() {
+                        $('#expeditionFleetTemplateSelect-menu li, #expeditionfleet-menu li, [aria-labelledby*="expedition" i] li, .changeExpeditionFleet').each(function() {
                             var txt = $(this).text().trim();
                             var val = $(this).data('value') || $(this).attr('data-id') || $(this).attr('id');
                             var lower = txt.toLowerCase();
