@@ -1,4 +1,4 @@
-# ⚡ LuckyStrike OGame Helper (v13.9)
+# ⚡ LuckyStrike OGame Helper (v14.0)
 
 [English](#-english-description) | [Türkçe](#-türkçe-açıklama)
 
@@ -315,7 +315,7 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ## 🚀 Kurulum / Installation
 
 ### Chrome & Microsoft Edge
-1. İndirin / Download: [`luckystrike-ogame-helper-v13.9.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
+1. İndirin / Download: [`luckystrike-ogame-helper-v14.0.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
 2. Tarayıcıda eklentiler sayfasına gidin / Open extensions page:
    - **Chrome:** `chrome://extensions`
    - **Edge:** `edge://extensions`
@@ -325,6 +325,15 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ---
 
 ## 📝 Sürüm Geçmişi / Changelog
+
+### v14.0
+- **🛡️ Keşif Şablon Seçiminde `triggerFullClick` ve DOM Tıklamaları Tamamen Kaldırıldı / Eliminated CSP Triggers:**
+  - `content.js` içerisindeki `triggerFullClick` mekanizması ve OGame açılır menü öğelerine yapılan tüm manuel sentetik DOM tıklamaları tamamen kaldırıldı.
+  - Keşif şablonunun seçimi ve uygulanması (gemi adetlerinin doldurulması, kargo hesaplaması ve selectmenu güncellemesi) `SELECT_TEMPLATE` olayı ile doğrudan sayfa bağlamındaki (`bridge.js` - MAIN world) yerel `window.fleetDispatcher.standardFleetSelected / expeditionFleetSelected` API'sine devredildi. Bu sayede izole dünyadan `javascript:void(0)` bağlantılarına tıklama riski ve Manifest V3 CSP ihlali kalıcı olarak sıfırlandı.
+- **🚀 Standart Filo Şablonları Keşif Listesinden Ayrıştırıldı / Strict Isolation of Expedition Templates:**
+  - Keşif Şablonu açılır kutusuna Standart Filo şablonlarının (örn: `Pompalamasyon`, `Standart Filo`) sızması engellendi.
+  - Hem `content.js` hem de `bridge.js` üzerindeki tarama algoritmaları yalnızca `#expeditionfleet` ve `#expeditionfleet-menu` öğelerini hedefleyecek şekilde daraltıldı. `#standardfleet` ve genel sayfa menülerinden yapılan kontrolsüz tarama sonlandırıldı.
+  - `isValidTemplateName` filtresine ve başlangıç temizleyicisine `standart`, `standard`, `pompalamasyon` ve `şablon seç` korumaları eklenerek daha önce önbelleğe girmiş yabancı şablonlar kalıcı olarak temizlendi.
 
 ### v13.9
 - **🛡️ Keşif Şablon Seçimi ve Tüm Oyun İçi Tıklamalardan Native `.click()` Kaldırıldı / Completely Eliminated Native `.click()` on Game Elements:**

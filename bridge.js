@@ -112,15 +112,22 @@
             val = targetId;
         }
 
-        // 1) OGame özel dropdown listesindeki anchor'a tıkla
-        var clicked = false;
-        var anchors = Array.prototype.slice.call(document.querySelectorAll('ul a, ul li, .dropdownList a')).filter(function (a) {
-            return !isLsNode(a) && (a.textContent || '').trim().toLowerCase() === targetName;
-        });
+        // 1) OGame expedition fleet dropdown listesindeki anchor'a tıkla
+        var expMenu = document.getElementById('expeditionfleet-menu') || document.querySelector('[aria-labelledby="expeditionfleet-button"]');
+        var anchors = [];
+        if (expMenu) {
+            anchors = Array.prototype.slice.call(expMenu.querySelectorAll('a, li')).filter(function (a) {
+                return !isLsNode(a) && (a.textContent || '').trim().toLowerCase() === targetName;
+            });
+        }
+        if (anchors.length === 0) {
+            anchors = Array.prototype.slice.call(document.querySelectorAll('.changeExpeditionFleet')).filter(function (a) {
+                return !isLsNode(a) && (a.textContent || '').trim().toLowerCase() === targetName;
+            });
+        }
         if (anchors.length > 0) {
             var clickEl = anchors[0].tagName === 'A' ? anchors[0] : (anchors[0].querySelector('a') || anchors[0]);
             realClick(clickEl);
-            clicked = true;
         }
 
         if (sel && val) {
@@ -133,8 +140,19 @@
             }
         }
 
-        if (window.fleetDispatcher && typeof window.fleetDispatcher.standardFleetSelected === 'function') {
-            try { window.fleetDispatcher.standardFleetSelected(val || targetId); } catch(e) {}
+        if (window.fleetDispatcher) {
+            if (typeof window.fleetDispatcher.standardFleetSelected === 'function') {
+                try { window.fleetDispatcher.standardFleetSelected(val || targetId); } catch(e) {}
+            }
+            if (typeof window.fleetDispatcher.expeditionFleetSelected === 'function') {
+                try { window.fleetDispatcher.expeditionFleetSelected(val || targetId); } catch(e) {}
+            }
+            if (typeof window.fleetDispatcher.updateFleet === 'function') {
+                try { window.fleetDispatcher.updateFleet(); } catch(e) {}
+            }
+            if (typeof window.fleetDispatcher.refresh === 'function') {
+                try { window.fleetDispatcher.refresh(); } catch(e) {}
+            }
         }
     }
 
@@ -350,26 +368,47 @@
             } else if (d.type === 'SCAN_TEMPLATES') {
                 var templates = [];
                 try {
-                    var selects = Array.prototype.slice.call(document.querySelectorAll('select#expeditionfleet, select[name="expeditionfleet"], select')).filter(function(s) { return !isLsNode(s); });
+                    // SADECE ve SADECE Keşif filosu select'ini tara (Asla #standardfleet veya genel select'leri tarama!)
+                    var selects = Array.prototype.slice.call(document.querySelectorAll('select#expeditionfleet, select[name="expeditionfleet"]')).filter(function(s) { return !isLsNode(s); });
+                    if (selects.length === 0) {
+                        var allSel = Array.prototype.slice.call(document.querySelectorAll('select')).filter(function(s) { return !isLsNode(s); });
+                        selects = allSel.filter(function(s) {
+                            var p = s.parentElement;
+                            for (var d = 0; p && d < 4; d++, p = p.parentElement) {
+                                var txt = (p.textContent || '').toLowerCase();
+                                if ((txt.indexOf('keşif filosu') !== -1 || txt.indexOf('kesif filosu') !== -1) && txt.indexOf('standart') === -1) {
+                                    return true;
+                                }
+                            }
+                            return false;
+                        });
+                    }
                     selects.forEach(function(sel) {
                         for (var i = 0; i < sel.options.length; i++) {
                             var opt = sel.options[i];
                             var txt = (opt.text || opt.textContent || '').trim();
                             var val = opt.value || i;
-                            if (txt && txt !== '-' && txt !== '0' && txt !== '--' && txt.toLowerCase() !== 'seçiniz' && txt.toLowerCase() !== 'standart filo' && txt.toLowerCase() !== 'keşif filosu') {
-                                if (!templates.some(function(t) { return t.name.toLowerCase() === txt.toLowerCase(); })) {
-                                    templates.push({ id: val, name: txt });
+                            var lower = txt.toLowerCase();
+                            if (txt && txt !== '-' && txt !== '0' && txt !== '--' && lower !== 'seçiniz' && lower !== 'şablon seçin' && lower !== '-- şablon seçin --') {
+                                if (lower.indexOf('standart') === -1 && lower.indexOf('standard') === -1 && lower.indexOf('keşif filosu') === -1 && lower.indexOf('kesif filosu') === -1 && lower.indexOf('pompalamasyon') === -1) {
+                                    if (!templates.some(function(t) { return t.name.toLowerCase() === lower; })) {
+                                        templates.push({ id: val, name: txt });
+                                    }
                                 }
                             }
                         }
                     });
                     if (window.$) {
-                        $('.dropdownList a, ul.ui-selectmenu-menu li, .ui-selectmenu-button').each(function() {
+                        // Sadece expedition fleet menüsünü tara, asla genel menüleri veya standardfleet menüsünü tarama!
+                        $('#expeditionfleet-menu li, [aria-labelledby="expeditionfleet-button"] li, .changeExpeditionFleet').each(function() {
                             var txt = $(this).text().trim();
                             var val = $(this).data('value') || $(this).attr('data-id') || $(this).attr('id');
+                            var lower = txt.toLowerCase();
                             if (txt && txt !== '-' && txt !== '0' && txt.length > 1 && txt.indexOf('(') === -1) {
-                                if (!templates.some(function(t) { return t.name.toLowerCase() === txt.toLowerCase(); })) {
-                                    templates.push({ id: val || txt, name: txt });
+                                if (lower.indexOf('standart') === -1 && lower.indexOf('standard') === -1 && lower.indexOf('keşif filosu') === -1 && lower.indexOf('kesif filosu') === -1 && lower !== 'seçiniz' && lower !== 'şablon seçin' && lower !== '-- şablon seçin --' && lower.indexOf('pompalamasyon') === -1) {
+                                    if (!templates.some(function(t) { return t.name.toLowerCase() === lower; })) {
+                                        templates.push({ id: val || txt, name: txt });
+                                    }
                                 }
                             }
                         });

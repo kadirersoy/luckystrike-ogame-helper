@@ -2,7 +2,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v13.9 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v14.0 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -9185,9 +9185,14 @@
         if (t.includes(':') || t.includes('[') || t.includes(']')) return false; // Koordinat veya etiketler (Görev:, FB_121[1:457:9])
 
         const lower = t.toLowerCase();
+        // Standart filo şablonlarını ve etiketlerini kesinlikle engelle
+        if (lower.includes('standart') || lower.includes('standard')) return false;
+        if (lower.includes('pompalamasyon')) return false;
+        if (lower.includes('şablon seç') || lower.includes('sablon sec')) return false;
+        if (lower.includes('seçiniz') || lower.includes('seciniz')) return false;
+
         const bannedExact = [
             'keşif', 'kesif', 'keşif filosu', 'kesif filosu',
-            'standart filo', 'standard fleet', 'standart', 'standard',
             'sonsuz uzaklar', 'görev', 'hedef', 'oyuncu adı', 'oyuncu',
             'yeni şablon oluştur', 'yeni şablon', 'create new template',
             'actions', 'aksiyonlar', 'isim', 'name', 'api', 'düzenle', 'sil',
@@ -9214,7 +9219,15 @@
             }
         }
 
-        // 1. "Keşif filosu" etiketini ve satırını bul
+        // 1. Doğrudan select#expeditionfleet veya name="expeditionfleet" öğesini tara
+        const expSelects = Array.from(document.querySelectorAll('select#expeditionfleet, select[name="expeditionfleet"]')).filter(s => !s.closest('#ls-panel'));
+        for (const sel of expSelects) {
+            for (let i = 0; i < sel.options.length; i++) {
+                addTpl(sel.options[i].value || i, sel.options[i].textContent);
+            }
+        }
+
+        // 2. "Keşif filosu" etiketini içeren satırı bul (Kesinlikle standart filo satırını hariç tut)
         const allLeafs = Array.from(document.querySelectorAll('#fleet1 *, #fleetdispatchcomponent *, body *')).filter(el => {
             if (el.closest('#ls-panel, #menuTable, #links, #header, #siteHeader, #bar, #chatBar')) return false;
             return el.children.length === 0 && (el.textContent || '').trim().length > 0;
@@ -9223,23 +9236,25 @@
         let expRow = null;
         for (const el of allLeafs) {
             const txt = el.textContent.trim().toLowerCase();
-            if (txt === 'keşif filosu' || txt === 'kesif filosu') {
-                expRow = el.closest('tr, li, div') || el.parentElement;
-                break;
+            if ((txt === 'keşif filosu' || txt === 'kesif filosu') && txt.indexOf('standart') === -1) {
+                const parentRow = el.closest('tr, li, div') || el.parentElement;
+                if (parentRow && (parentRow.textContent || '').toLowerCase().indexOf('standart') === -1) {
+                    expRow = parentRow;
+                    break;
+                }
             }
         }
 
         if (expRow) {
-            // A. expRow içindeki tüm <select> etiketlerinin <option>'larını tara
             const selects = expRow.querySelectorAll('select');
             for (const sel of selects) {
+                if (sel.id === 'standardfleet' || sel.name === 'standardfleet') continue;
                 for (let i = 0; i < sel.options.length; i++) {
                     const opt = sel.options[i];
                     addTpl(opt.value || i, opt.textContent);
                 }
             }
 
-            // B. expRow içindeki dropdown ve data öğelerini tara
             const items = expRow.querySelectorAll('li, a, span, div, [data-value], [data-name]');
             for (const item of items) {
                 if (item.children.length > 0) continue;
@@ -9248,16 +9263,13 @@
             }
         }
 
-        // 2. Yalnızca ilk öğesi '-' olan dropdown menüleri tara
-        const menus = Array.from(document.querySelectorAll('.dropdown, [class*="dropdown"], [class*="selectmenu"], [class*="popup"], .modal')).filter(c => !c.closest('#ls-panel'));
-        for (const m of menus) {
-            const leaves = Array.from(m.querySelectorAll('li, a, span, td, option')).filter(l => l.children.length === 0);
-            const hasDash = leaves.some(l => l.textContent.trim() === '-');
-            if (hasDash) {
-                for (const leaf of leaves) {
-                    const val = leaf.getAttribute('data-value') || leaf.getAttribute('data-id');
-                    addTpl(val, leaf.textContent);
-                }
+        // 3. jQuery UI selectmenu için sadece #expeditionfleet-menu öğesini tara (Asla #standardfleet-menu tarama!)
+        const expMenu = document.getElementById('expeditionfleet-menu') || document.querySelector('[aria-labelledby="expeditionfleet-button"]');
+        if (expMenu) {
+            const items = expMenu.querySelectorAll('li, a');
+            for (const item of items) {
+                const val = item.getAttribute('data-value') || item.getAttribute('data-id');
+                addTpl(val, item.textContent);
             }
         }
 
@@ -9281,48 +9293,31 @@
     }
 
     function findExpeditionDropdownTrigger() {
-        const all = Array.from(document.querySelectorAll('#fleet1 *, #fleetdispatchcomponent *')).filter(el => !el.closest('#ls-panel'));
-        for (const el of all) {
-            if (el.children.length === 0) {
-                const txt = (el.textContent || '').trim().toLowerCase();
-                if (txt === 'keşif filosu' || txt === 'kesif filosu') {
-                    const row = el.closest('tr, li, div') || el.parentElement;
-                    if (row) {
-                        const trigger = Array.from(row.querySelectorAll('.dropdown, [class*="select"], [class*="dropdown"], [class*="combobox"], a, span, div')).find(item => {
-                            if (item.classList.contains('icon') || item.querySelector('.icon')) return false;
-                            const t = (item.textContent || '').trim().toLowerCase();
-                            return t.indexOf('keşif filosu') === -1;
-                        });
-                        if (trigger && trigger.offsetHeight > 0) return trigger;
-                    }
-                    if (el.nextElementSibling && el.nextElementSibling.offsetHeight > 0) return el.nextElementSibling;
-                }
-            }
-        }
+        const expMenu = document.getElementById('expeditionfleet-button') || document.querySelector('[aria-labelledby="expeditionfleet-button"]');
+        if (expMenu && expMenu.offsetHeight > 0) return expMenu;
         return null;
     }
 
     function findAndSelectExpeditionTemplate(targetIdOrIndex, targetName) {
         const idNum = parseInt(targetIdOrIndex, 10) || 1;
         const nameLower = (targetName || '').trim().toLowerCase();
-        let success = false;
 
-        // Seçim tamamen MAIN world (bridge.js) tarafında yapılır:
-        // gerçek <select> option metninden bulunur, OGame dropdown anchor'ı tıklanır ve doğrulanır.
+        // Şablon adını doğrula
         if (!nameLower) {
             const savedTpls = JSON.parse(localStorage.getItem(KEYS.EXPEDITION_TEMPLATES) || '[]');
             const m = savedTpls.find(t => String(t.id) === String(targetIdOrIndex)) || savedTpls[idNum - 1];
             if (m && m.name) targetName = m.name;
         }
 
+        // 1. select#expeditionfleet varsa değerini ata ve change event'i dispatch et
         const expSel = document.querySelector('select#expeditionfleet, select[name="expeditionfleet"]') ||
                        Array.from(document.querySelectorAll('select')).find(s => {
                            const txt = (s.parentElement?.innerText || '').toLowerCase();
-                           return txt.includes('keşif filosu') || txt.includes('kesif filosu');
+                           return (txt.includes('keşif filosu') || txt.includes('kesif filosu')) && !txt.includes('standart');
                        });
         if (expSel) {
             for (let i = 0; i < expSel.options.length; i++) {
-                const optText = (expSel.options[i].text || '').trim().toLowerCase();
+                const optText = (expSel.options[i].text || expSel.options[i].textContent || '').trim().toLowerCase();
                 if (optText === (targetName || '').trim().toLowerCase() || expSel.options[i].value === String(idNum)) {
                     expSel.selectedIndex = i;
                     expSel.value = expSel.options[i].value;
@@ -9333,116 +9328,13 @@
             }
         }
 
-        const triggerFullClick = (el) => {
-            if (!el) return;
-            const opts = { bubbles: true, cancelable: true, view: window };
-            try { el.dispatchEvent(new PointerEvent('pointerdown', opts)); } catch(e) {}
-            try { el.dispatchEvent(new MouseEvent('mousedown', opts)); } catch(e) {}
-            try { el.dispatchEvent(new PointerEvent('pointerup', opts)); } catch(e) {}
-            try { el.dispatchEvent(new MouseEvent('mouseup', opts)); } catch(e) {}
-            try { el.dispatchEvent(new MouseEvent('click', opts)); } catch(e) {}
-
-            const parent = el.closest('li, a, [data-value]') || el.parentElement;
-            if (parent && parent !== el && !isLuckyElement(parent)) {
-                try { parent.dispatchEvent(new PointerEvent('pointerdown', opts)); } catch(e) {}
-                try { parent.dispatchEvent(new MouseEvent('mousedown', opts)); } catch(e) {}
-                try { parent.dispatchEvent(new PointerEvent('pointerup', opts)); } catch(e) {}
-                try { parent.dispatchEvent(new MouseEvent('mouseup', opts)); } catch(e) {}
-                try { parent.dispatchEvent(new MouseEvent('click', opts)); } catch(e) {}
-            }
-        };
-
-        // 1. Sayfada halihazırda açık olan menüde hedef şablonu ara
-        if (nameLower) {
-            const openOptions = Array.from(document.querySelectorAll('.dropdown *, [class*="dropdown"] *, [class*="select"] *, #fleet1 *')).filter(el => {
-                if (isLuckyElement(el)) return false;
-                return el.children.length === 0 && el.textContent.trim().toLowerCase() === nameLower;
-            });
-            if (openOptions.length > 0) {
-                triggerFullClick(openOptions[0]);
-                success = true;
-            }
-        }
-
-        // 2. "Keşif filosu" alanını bul
-        const allLeafs = Array.from(document.querySelectorAll('#fleet1 *, #fleetdispatchcomponent *, body *')).filter(el => !isLuckyElement(el));
-        let expRow = null;
-
-        for (const el of allLeafs) {
-            if (el.children.length === 0) {
-                const txt = el.textContent.trim().toLowerCase();
-                if (txt === 'keşif filosu' || txt === 'kesif filosu') {
-                    expRow = el.closest('tr, li, div') || el.parentElement;
-                    break;
-                }
-            }
-        }
-
-        if (expRow) {
-            // A. Select varsa doğrudan güncelle
-            const sel = expRow.querySelector('select');
-            if (sel) {
-                let foundIndex = -1;
-                for (let i = 0; i < sel.options.length; i++) {
-                    const optText = (sel.options[i].textContent || '').trim().toLowerCase();
-                    if ((nameLower && optText === nameLower) || (!nameLower && i === idNum)) {
-                        foundIndex = i;
-                        break;
-                    }
-                }
-                if (foundIndex !== -1) {
-                    sel.selectedIndex = foundIndex;
-                    sel.value = sel.options[foundIndex].value;
-                } else if (sel.options && sel.options.length > idNum) {
-                    sel.selectedIndex = idNum;
-                    sel.value = sel.options[idNum].value;
-                }
-                sel.dispatchEvent(new Event('input', { bubbles: true }));
-                sel.dispatchEvent(new Event('change', { bubbles: true }));
-                success = true;
-            }
-
-            // B. Custom dropdown tetikleyicisini aç
-            const trigger = Array.from(expRow.querySelectorAll('.dropdown, [class*="select"], [class*="dropdown"], [class*="combobox"], a, span, div')).find(el => {
-                if (isLuckyElement(el) || el.classList.contains('icon') || el.querySelector('.icon')) return false;
-                const t = (el.textContent || '').trim().toLowerCase();
-                return t.indexOf('keşif filosu') === -1;
-            });
-
-            if (trigger && trigger.offsetHeight > 0) {
-                triggerFullClick(trigger);
-
-                // Menü seçeneklerini bul ve hedef şablonu tıkla
-                setTimeout(() => {
-                    const menuItems = Array.from(document.querySelectorAll('.dropdown *, [class*="dropdown"] *, #fleet1 *')).filter(el => {
-                        if (isLuckyElement(el)) return false;
-                        if (el.children.length > 0) return false;
-                        const t = (el.textContent || '').trim();
-                        return isValidTemplateName(t);
-                    });
-
-                    let targetEl = null;
-                    if (nameLower) {
-                        targetEl = menuItems.find(el => el.textContent.trim().toLowerCase() === nameLower);
-                    }
-                    if (!targetEl && menuItems.length >= idNum) {
-                        targetEl = menuItems[idNum - 1];
-                    }
-
-                    if (targetEl) {
-                        triggerFullClick(targetEl);
-                        success = true;
-                    }
-                }, 80);
-            }
-        }
-
-        // 3. MAIN World (bridge.js) üzerinden tetikle
+        // 2. MAIN World (bridge.js) üzerinden resmi OGame fonksiyonunu tetikle
+        // (Tüm DOM etkileşimleri ve fleetDispatcher çağrıları main world'de güvenle yapılır, content.js'de asla .click yapılmaz!)
         window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
             detail: { type: 'SELECT_TEMPLATE', id: idNum, name: targetName }
         }));
 
-        return success;
+        return true;
     }
 
     function applyExpeditionTemplate(templateId, templateName) {
@@ -11221,7 +11113,7 @@
                         '<div style="display:flex;justify-content:space-between;align-items:center">' +
                             '<div style="display:flex;align-items:center;gap:6px">' +
                                 '<span style="font-size:12px;color:#00bcff;font-weight:bold">⚡ LuckyStrike Helper</span>' +
-                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v13.9</span>' +
+                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v14.0</span>' +
                             '</div>' +
                             '<a href="https://github.com/kadirersoy/luckystrike-ogame-helper" target="_blank" style="font-size:10.5px;color:#00bcff;text-decoration:none;display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,0.05);padding:2px 7px;border-radius:4px;border:1px solid #1a2c3f" title="GitHub Proje Sayfası" data-i18n-title="settings_github_title">' +
                                 '<span>🔗</span> <span data-i18n="settings_github">GitHub</span>' +
@@ -11999,7 +11891,7 @@
             const r3 = Array.from(debugFilterState.row3).join(', ');
 
             let out = '==================================================\n' +
-                      '  LuckyStrike OGame Helper v13.9 - Log Kayıtları\n' +
+                      '  LuckyStrike OGame Helper v14.0 - Log Kayıtları\n' +
                       '  Tarih: ' + nowStr + '\n' +
                       '  URL: ' + window.location.href + '\n' +
                       '  Filtreler: [Akış: ' + r1 + '] [Kapsam: ' + r2 + '] [Seviye: ' + r3 + ']\n' +
@@ -12547,6 +12439,6 @@
     scanAndSaveExpeditionTemplates();
     updateAllAutomationStartButtons();
     setInterval(updateAllAutomationStartButtons, 400);
-    console.log(LS, 'LuckyStrike OGame Helper v13.9 hazır!');
+    console.log(LS, 'LuckyStrike OGame Helper v14.0 hazır!');
 
 })();
