@@ -298,6 +298,17 @@
                 var now = Date.now();
                 if (now - lastFleetSubmitTime < 1500) {
                     bridgeLog('WARN', 'BRIDGE', 'SUBMIT_FLEET2 engellendi (çift gönderim koruması).');
+                    try {
+                        window.dispatchEvent(new CustomEvent('LS_SEND_FLEET_COMPLETE', {
+                            detail: {
+                                status: 429,
+                                success: false,
+                                error: 'Double submit prevented',
+                                responseText: '',
+                                nextUrl: null
+                            }
+                        }));
+                    } catch (e) {}
                     return;
                 }
                 lastFleetSubmitTime = now;
@@ -473,6 +484,11 @@
                 }
             });
 
+            // DOM hazır olduğunda ve AJAX tamamlandığında filo durumunu senkronize et
+            $(function() {
+                syncFleetDispatcherState();
+            });
+
             var targetCheckTimer = null;
 
             // sendFleet yönlendirme kancası: OGame'in native redirectUrl'sini sonraki hedefe bağla
@@ -640,6 +656,7 @@
                         if (isTrace) bridgeLog('INFO', 'TRACE', '📥 [SUNUCU YANITI (' + xhr.status + ')] ' + cleanUrl, snippet);
                     }
                 }
+                syncFleetDispatcherState();
             });
             $(document).ajaxError(function(event, xhr, settings, thrownError) {
                 var isTrace = !!window.LS_TRACE_ENABLED;

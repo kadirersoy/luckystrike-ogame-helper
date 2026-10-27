@@ -2,7 +2,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v14.4 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v14.5 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -403,7 +403,23 @@
             fleet_send_failed: 'Filo gönderilemedi: {reason}',
             fleet_hud_sending: 'Filo gönderiliyor...',
             exp_toast_all_sent: 'Tebrikler! Tüm keşif filoları başarıyla gönderildi.',
-            cart_toast_all_sent: 'Sepetteki tüm seçili gezegenlere nakliye başarıyla tamamlandı!'
+            cart_toast_all_sent: 'Sepetteki tüm seçili gezegenlere nakliye başarıyla tamamlandı!',
+            coll_prompt_moon_coord: 'Toplama hedefi olacak Ay koordinatını girin (Örn: 1:20:5):',
+            coll_prompt_planet_coord: 'Toplama hedefi olacak Gezegen koordinatını girin (Örn: 1:20:5):',
+            coll_manual_moon: 'Manuel Ay',
+            coll_manual_planet: 'Manuel Gezegen',
+            fleet_error_mission_rejected: 'Sunucu görevi onaylamadı',
+            fleet_error_btn_disabled: 'Gönder butonu pasif (slot dolu veya sunucu reddetti)',
+            cart_toast_distribution_finished: 'Maliyet dağıtımı tamamlandı.',
+            cart_toast_distribution_stopped: 'Maliyet dağıtımı durduruldu.',
+            coll_toast_assistant_finished: 'Toplama asistanı tamamlandı.',
+            coll_toast_canceled: 'Toplama işlemi iptal edildi.',
+            cour_toast_applied: 'Tutarlar tüm seçili hedeflere uygulandı.',
+            cour_toast_all_sent: 'Tebrikler! Tüm dağıtım filoları başarıyla gönderildi.',
+            cour_toast_assistant_finished: 'Postacı asistanı tamamlandı.',
+            cour_toast_canceled: 'Dağıtım işlemi iptal edildi.',
+            exp_toast_assistant_finished: 'Keşif asistanı tamamlandı.',
+            cart_toast_origin_updated: '📍 Merkez güncellendi: '
         },
         en: {
             // Tabs
@@ -755,7 +771,23 @@
             fleet_send_failed: 'Fleet dispatch failed: {reason}',
             fleet_hud_sending: 'Sending fleet...',
             exp_toast_all_sent: 'Congratulations! All expedition fleets have been dispatched successfully.',
-            cart_toast_all_sent: 'Transport to all selected planets in cart successfully completed!'
+            cart_toast_all_sent: 'Transport to all selected planets in cart successfully completed!',
+            coll_prompt_moon_coord: 'Enter Moon coordinate as collection target (e.g. 1:20:5):',
+            coll_prompt_planet_coord: 'Enter Planet coordinate as collection target (e.g. 1:20:5):',
+            coll_manual_moon: 'Manual Moon',
+            coll_manual_planet: 'Manual Planet',
+            fleet_error_mission_rejected: 'Server rejected mission',
+            fleet_error_btn_disabled: 'Send button disabled (slots full or server rejected)',
+            cart_toast_distribution_finished: 'Cost distribution completed.',
+            cart_toast_distribution_stopped: 'Cost distribution stopped.',
+            coll_toast_assistant_finished: 'Collector assistant completed.',
+            coll_toast_canceled: 'Collection canceled.',
+            cour_toast_applied: 'Amounts applied to all selected targets.',
+            cour_toast_all_sent: 'Congratulations! All distribution fleets sent successfully.',
+            cour_toast_assistant_finished: 'Courier assistant completed.',
+            cour_toast_canceled: 'Distribution canceled.',
+            exp_toast_assistant_finished: 'Expedition assistant completed.',
+            cart_toast_origin_updated: '📍 Origin updated: '
         }
     };
 
@@ -2343,7 +2375,7 @@
         }
         saveCart();
         renderCart();
-        showCollectorToast(`✓ ${pName || metaCoords} mevcut kaynakları sepetten düşüldü.`);
+        showCollectorToast(currentLang === 'tr' ? `✓ ${pName || metaCoords} mevcut kaynakları sepetten düşüldü.` : `✓ ${pName || metaCoords} available resources deducted from cart.`);
     }
 
     function removeCartItem(idx) {
@@ -2363,7 +2395,7 @@
         saveCartPlanetPrefs(pPrefs);
         saveCart();
         renderCart();
-        showCollectorToast('Gezegen sepeti kaldırıldı.');
+        showCollectorToast(currentLang === 'tr' ? 'Gezegen sepeti kaldırıldı.' : 'Planet cart removed.');
     }
 
     function copyTextSafe(text, onSuccess, onError) {
@@ -2617,7 +2649,7 @@
         if (max <= 0) {
             const slotsEl = document.getElementById('slots') || document.querySelector('.fleetStatus, #fleetdispatchcomponent #slots');
             const textToSearch = slotsEl ? slotsEl.textContent : (document.body ? document.body.innerText : '');
-            const m = textToSearch.match(/(?:Filolar|Fleets|Flotten|Flottes|Flotte|Flotas)\s*:\s*(\d+)\s*\/\s*(\d+)/i) ||
+            const m = textToSearch.match(/(?:Filolar|Fleets|Flotten|Flottes|Flotte|Flotas|Floty)\s*:?\s*(\d+)\s*\/\s*(\d+)/i) ||
                       (slotsEl ? slotsEl.textContent.match(/(\d+)\s*\/\s*(\d+)/) : null);
             if (m) {
                 current = parseInt(m[1], 10);
@@ -2671,10 +2703,20 @@
         if (max <= 0) {
             const slotsEl = document.getElementById('slots') || document.querySelector('.fleetStatus, #fleetdispatchcomponent #slots');
             const textToSearch = slotsEl ? slotsEl.textContent : (document.body ? document.body.innerText : '');
-            const m = textToSearch.match(/(?:Keşif(?:ler)?|Expeditions?|Expeditionen|Expéditions)\s*:\s*(\d+)\s*\/\s*(\d+)/i);
+            const m = textToSearch.match(/(?:Keşif(?:ler)?|Expeditions?|Expedicion(?:es)?|Expeditionen|Expéditions?|Ekspedycje|Spedizioni)\s*:?\s*(\d+)\s*\/\s*(\d+)/i);
             if (m) {
                 current = parseInt(m[1], 10);
                 max = parseInt(m[2], 10);
+            } else if (slotsEl) {
+                // Yapısal Fallback: OGame #slots alanında 2. sayı çifti her zaman keşif slotlarıdır
+                const allPairs = (slotsEl.textContent || '').match(/(\d+)\s*\/\s*(\d+)/g);
+                if (allPairs && allPairs.length >= 2) {
+                    const expPair = allPairs[1].match(/(\d+)\s*\/\s*(\d+)/);
+                    if (expPair) {
+                        current = parseInt(expPair[1], 10);
+                        max = parseInt(expPair[2], 10);
+                    }
+                }
             }
         }
 
@@ -3567,7 +3609,7 @@
 
         if (session.currentIndex >= session.queue.length) {
             sessionStorage.removeItem(KEYS.CART_QUEUE);
-            showCollectorToast('🎉 Sepetteki tüm seçili gezegenlere nakliye başarıyla tamamlandı!', 6000);
+            showCollectorToast('🎉 ' + t('cart_toast_all_sent', 'Sepetteki tüm seçili gezegenlere nakliye başarıyla tamamlandı!'), 6000);
             return false;
         }
 
@@ -4054,6 +4096,10 @@
             }
 
             if (isSendBtnVisible) {
+                if (!isSendFleetReady()) {
+                    showCollectorToast(t('fleet_hud_wait_send_btn', '⚠️ Gönder butonu hazır değil veya slotlar dolu!'), 3500);
+                    return;
+                }
                 dispatchSendCartFleet();
             } else {
                 clickDevamButton();
@@ -4187,12 +4233,14 @@
             fallbackTimer = setTimeout(() => {
                 if (!sendCompleted) {
                     if (hasVisibleMissionError()) {
-                        onSendFailed('Sunucu görevi onaylamadı');
+                        onSendFailed(t('fleet_error_mission_rejected', 'Sunucu görevi onaylamadı'));
+                    } else if (!isSendFleetReady()) {
+                        onSendFailed(t('fleet_error_btn_disabled', 'Gönder butonu pasif (slot dolu veya sunucu reddetti)'));
                     } else {
                         onSendSuccess();
                     }
                 }
-            }, 2000);
+            }, 3500);
         };
 
         const retryDispatch = () => {
@@ -4248,7 +4296,7 @@
                 } else {
                     sessionStorage.removeItem(KEYS.CART_QUEUE);
                     if (banner) banner.remove();
-                    showCollectorToast('Maliyet dağıtımı tamamlandı.', 4000);
+                    showCollectorToast(t('cart_toast_distribution_finished', 'Maliyet dağıtımı tamamlandı.'), 4000);
                 }
             }, 500);
         };
@@ -4294,7 +4342,7 @@
 
         document.getElementById('ls-cart-stop-btn')?.addEventListener('click', () => {
             closeBanner();
-            showCollectorToast('⏹️ Maliyet dağıtımı durduruldu.');
+            showCollectorToast('⏹️ ' + t('cart_toast_distribution_stopped', 'Maliyet dağıtımı durduruldu.'));
         });
 
         document.getElementById('ls-cart-proceed-btn')?.addEventListener('click', () => {
@@ -4449,7 +4497,7 @@
                     };
                     saveCartOrigin(cartOrigin);
                     renderCartOrigin();
-                    showCollectorToast('📍 Merkez güncellendi: ' + (cur.type === 3 ? '🌕 ' : '🪐 ') + cur.name);
+                    showCollectorToast(t('cart_toast_origin_updated', '📍 Merkez güncellendi: ') + (cur.type === 3 ? '🌕 ' : '🪐 ') + cur.name);
                 }
             });
         }
@@ -4462,12 +4510,15 @@
                 ddEl.classList.toggle('show', !isShown);
             });
 
-            document.addEventListener('click', (e) => {
-                if (ddEl && !ddEl.contains(e.target) && !originBtn.contains(e.target)) {
-                    ddEl.style.display = 'none';
-                    ddEl.classList.remove('show');
-                }
-            });
+            if (!ddEl.dataset.hasOutsideClick) {
+                ddEl.dataset.hasOutsideClick = 'true';
+                document.addEventListener('click', (e) => {
+                    if (ddEl && !ddEl.contains(e.target) && !originBtn.contains(e.target)) {
+                        ddEl.style.display = 'none';
+                        ddEl.classList.remove('show');
+                    }
+                });
+            }
 
             ddEl.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -7052,7 +7103,7 @@
                     collectorSettings.targetName = cur.name;
                     saveCollectorSettings();
                     renderCollector();
-                    showCollectorToast('📍 Merkez güncellendi: ' + (cur.type === 3 ? '🌕 ' : '🪐 ') + cur.name);
+                    showCollectorToast(t('cart_toast_origin_updated', '📍 Merkez güncellendi: ') + (cur.type === 3 ? '🌕 ' : '🪐 ') + cur.name);
                 }
             });
         }
@@ -7064,11 +7115,14 @@
                 ddEl.style.display = isShown ? 'none' : 'block';
             });
 
-            document.addEventListener('click', (e) => {
-                if (ddEl && !ddEl.contains(e.target) && !targetBtn.contains(e.target)) {
-                    ddEl.style.display = 'none';
-                }
-            });
+            if (!ddEl.dataset.hasOutsideClick) {
+                ddEl.dataset.hasOutsideClick = 'true';
+                document.addEventListener('click', (e) => {
+                    if (ddEl && !ddEl.contains(e.target) && !targetBtn.contains(e.target)) {
+                        ddEl.style.display = 'none';
+                    }
+                });
+            }
 
             ddEl.addEventListener('click', (e) => {
                 const item = e.target.closest('.ls-coll-dd-item');
@@ -7076,8 +7130,11 @@
 
                 if (item.getAttribute('data-manual') === '1') {
                     const mType = parseInt(item.getAttribute('data-type'), 10) || 1;
-                    const typeLabel = mType === 3 ? 'Manuel Ay' : 'Manuel Gezegen';
-                    const entered = prompt(`${typeLabel} koordinatı girin (örn: 1:234:8):`, collectorSettings.targetCoord || '1:1:1');
+                    const typeLabel = (mType === 3) ? t('coll_manual_moon', 'Manuel Ay') : t('coll_manual_planet', 'Manuel Gezegen');
+                    const promptMsg = (mType === 3)
+                        ? t('coll_prompt_moon_coord', 'Toplama hedefi olacak Ay koordinatını girin (Örn: 1:20:5):')
+                        : t('coll_prompt_planet_coord', 'Toplama hedefi olacak Gezegen koordinatını girin (Örn: 1:20:5):');
+                    const entered = prompt(promptMsg, collectorSettings.targetCoord || '1:1:1');
                     if (entered && /^\d+:\d+:\d+$/.test(entered.trim())) {
                         collectorSettings.manualTarget = true;
                         collectorSettings.targetId = 'manual';
@@ -7899,6 +7956,10 @@
             }
 
             if (isSendBtnVisible) {
+                if (!isSendFleetReady()) {
+                    showCollectorToast(t('fleet_hud_wait_send_btn', '⚠️ Gönder butonu hazır değil veya slotlar dolu!'), 3500);
+                    return;
+                }
                 dispatchSendFleetButton();
             } else {
                 clickDevamButton();
@@ -8030,12 +8091,14 @@
             fallbackTimer = setTimeout(() => {
                 if (!sendCompleted) {
                     if (hasVisibleMissionError()) {
-                        onSendFailed('Sunucu görevi onaylamadı');
+                        onSendFailed(t('fleet_error_mission_rejected', 'Sunucu görevi onaylamadı'));
+                    } else if (!isSendFleetReady()) {
+                        onSendFailed(t('fleet_error_btn_disabled', 'Gönder butonu pasif (slot dolu veya sunucu reddetti)'));
                     } else {
                         onSendSuccess();
                     }
                 }
-            }, 2000);
+            }, 3500);
         };
 
         const proceedToNext = () => {
@@ -8067,7 +8130,7 @@
                 } else {
                     sessionStorage.removeItem(KEYS.COLLECTOR_RUN);
                     if (banner) banner.remove();
-                    showCollectorToast('🎉 Toplama asistanı tamamlandı.', 5000);
+                    showCollectorToast('🎉 ' + t('coll_toast_assistant_finished', 'Toplama asistanı tamamlandı.'), 5000);
                 }
             }, 400);
         };
@@ -8079,7 +8142,7 @@
             LS_LOGGER.warn('COLLECTOR', 'Toplama işlemi iptal edildi.');
             sessionStorage.removeItem(KEYS.COLLECTOR_RUN);
             if (banner) banner.remove();
-            showCollectorToast('Toplama işlemi iptal edildi.', 3000);
+            showCollectorToast(t('coll_toast_canceled', 'Toplama işlemi iptal edildi.'), 3000);
             updateAllAutomationStartButtons();
         };
 
@@ -8421,12 +8484,15 @@
                 ddEl.classList.toggle('show', !isShown);
             });
 
-            document.addEventListener('click', (e) => {
-                if (ddEl && !ddEl.contains(e.target) && !originBtn.contains(e.target)) {
-                    ddEl.style.display = 'none';
-                    ddEl.classList.remove('show');
-                }
-            });
+            if (!ddEl.dataset.hasOutsideClick) {
+                ddEl.dataset.hasOutsideClick = 'true';
+                document.addEventListener('click', (e) => {
+                    if (ddEl && !ddEl.contains(e.target) && !originBtn.contains(e.target)) {
+                        ddEl.style.display = 'none';
+                        ddEl.classList.remove('show');
+                    }
+                });
+            }
 
             ddEl.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -8557,7 +8623,7 @@
                 if (dInp) courierSettings.syncAmount.deu = parseOgNum(dInp.value);
                 saveCourierSettings();
                 applyCourierSyncToTargets();
-                showCollectorToast('⚡ Tutarlar tüm seçili hedeflere uygulandı.');
+                showCollectorToast('⚡ ' + t('cour_toast_applied', 'Tutarlar tüm seçili hedeflere uygulandı.'));
             });
         }
 
@@ -8753,6 +8819,7 @@
             priorityMode: courierSettings.priorityMode || 'speed',
             selectedShips: { ...courierSettings.selectedShips, priorityMode: courierSettings.priorityMode || 'speed' },
             currentIndex: 0,
+            startedAt: Date.now(),
             queue: queue
         };
 
@@ -8779,6 +8846,11 @@
         }
 
         if (!session || !session.queue || session.currentIndex >= session.queue.length) {
+            sessionStorage.removeItem(KEYS.COURIER_RUN);
+            return;
+        }
+
+        if (session.startedAt && (Date.now() - session.startedAt > 15 * 60 * 1000)) {
             sessionStorage.removeItem(KEYS.COURIER_RUN);
             return;
         }
@@ -9275,6 +9347,10 @@
             }
 
             if (isSendBtnVisible) {
+                if (!isSendFleetReady()) {
+                    showCollectorToast(t('fleet_hud_wait_send_btn', '⚠️ Gönder butonu hazır değil veya slotlar dolu!'), 3500);
+                    return;
+                }
                 dispatchSendFleetButton();
             } else {
                 clickDevamButton();
@@ -9354,7 +9430,7 @@
                 } else {
                     sessionStorage.removeItem(KEYS.COURIER_RUN);
                     if (banner) banner.remove();
-                    showCollectorToast('🎉 Tebrikler! Tüm dağıtım filoları başarıyla gönderildi.', 6000);
+                    showCollectorToast('🎉 ' + t('cour_toast_all_sent', 'Tebrikler! Tüm dağıtım filoları başarıyla gönderildi.'), 6000);
                 }
             };
 
@@ -9405,12 +9481,14 @@
             fallbackTimer = setTimeout(() => {
                 if (!sendCompleted) {
                     if (hasVisibleMissionError()) {
-                        onSendFailed('Sunucu görevi onaylamadı');
+                        onSendFailed(t('fleet_error_mission_rejected', 'Sunucu görevi onaylamadı'));
+                    } else if (!isSendFleetReady()) {
+                        onSendFailed(t('fleet_error_btn_disabled', 'Gönder butonu pasif (slot dolu veya sunucu reddetti)'));
                     } else {
                         onSendSuccess();
                     }
                 }
-            }, 2000);
+            }, 3500);
         };
 
         const proceedToNext = () => {
@@ -9441,7 +9519,7 @@
                 } else {
                     sessionStorage.removeItem(KEYS.COURIER_RUN);
                     if (banner) banner.remove();
-                    showCollectorToast('🎉 Postacı asistanı tamamlandı.', 5000);
+                    showCollectorToast('🎉 ' + t('cour_toast_assistant_finished', 'Postacı asistanı tamamlandı.'), 5000);
                 }
             }, 400);
         };
@@ -9453,7 +9531,7 @@
             LS_LOGGER.warn('COURIER', 'Dağıtım işlemi iptal edildi.');
             sessionStorage.removeItem(KEYS.COURIER_RUN);
             if (banner) banner.remove();
-            showCollectorToast('Dağıtım işlemi iptal edildi.', 3000);
+            showCollectorToast(t('cour_toast_canceled', 'Dağıtım işlemi iptal edildi.'), 3000);
             updateAllAutomationStartButtons();
         };
 
@@ -10082,7 +10160,7 @@
 
         if (session.currentIndex >= session.queue.length) {
             sessionStorage.removeItem(KEYS.EXPEDITION_RUN);
-            showCollectorToast('🎉 Tebrikler! Tüm keşif filoları başarıyla gönderildi.', 6000);
+            showCollectorToast('🎉 ' + t('exp_toast_all_sent', 'Tebrikler! Tüm keşif filoları başarıyla gönderildi.'), 6000);
             return;
         }
 
@@ -10425,6 +10503,11 @@
             const isSendBtnVisible = sb && (sb.offsetWidth > 0 || sb.offsetHeight > 0 || sb.offsetParent !== null);
 
             if (isSendBtnVisible) {
+                if (!isSendFleetReady()) {
+                    showCollectorToast(t('fleet_hud_wait_send_btn', '⚠️ Gönder butonu hazır değil veya slotlar dolu!'), 3500);
+                    return;
+                }
+
                 if (document.activeElement && document.activeElement.blur) {
                     document.activeElement.blur();
                 }
@@ -10576,12 +10659,14 @@
             fallbackTimer = setTimeout(() => {
                 if (!sendCompleted) {
                     if (hasVisibleMissionError()) {
-                        onSendFailed('Sunucu görevi onaylamadı');
+                        onSendFailed(t('fleet_error_mission_rejected', 'Sunucu görevi onaylamadı'));
+                    } else if (!isSendFleetReady()) {
+                        onSendFailed(t('fleet_error_btn_disabled', 'Gönder butonu pasif (slot dolu veya sunucu reddetti)'));
                     } else {
                         onSendSuccess();
                     }
                 }
-            }, 2000);
+            }, 3500);
         };
 
         const skipCurrentStep = () => {
@@ -10605,7 +10690,7 @@
                 } else {
                     sessionStorage.removeItem(KEYS.EXPEDITION_RUN);
                     if (banner) banner.remove();
-                    showCollectorToast('🎉 Keşif asistanı tamamlandı.', 5000);
+                    showCollectorToast('🎉 ' + t('exp_toast_assistant_finished', 'Keşif asistanı tamamlandı.'), 5000);
                 }
             }, 400);
         };
@@ -11649,7 +11734,7 @@
                         '<div style="display:flex;justify-content:space-between;align-items:center">' +
                             '<div style="display:flex;align-items:center;gap:6px">' +
                                 '<span style="font-size:12px;color:#00bcff;font-weight:bold">⚡ LuckyStrike Helper</span>' +
-                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v14.4</span>' +
+                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v14.5</span>' +
                             '</div>' +
                             '<a href="https://github.com/kadirersoy/luckystrike-ogame-helper" target="_blank" style="font-size:10.5px;color:#00bcff;text-decoration:none;display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,0.05);padding:2px 7px;border-radius:4px;border:1px solid #1a2c3f" title="GitHub Proje Sayfası" data-i18n-title="settings_github_title">' +
                                 '<span>🔗</span> <span data-i18n="settings_github">GitHub</span>' +
@@ -12427,7 +12512,7 @@
             const r3 = Array.from(debugFilterState.row3).join(', ');
 
             let out = '==================================================\n' +
-                      '  LuckyStrike OGame Helper v14.4 - Log Kayıtları\n' +
+                      '  LuckyStrike OGame Helper v14.5 - Log Kayıtları\n' +
                       '  Tarih: ' + nowStr + '\n' +
                       '  URL: ' + window.location.href + '\n' +
                       '  Filtreler: [Akış: ' + r1 + '] [Kapsam: ' + r2 + '] [Seviye: ' + r3 + ']\n' +
@@ -12975,6 +13060,6 @@
     scanAndSaveExpeditionTemplates();
     updateAllAutomationStartButtons();
     setInterval(updateAllAutomationStartButtons, 400);
-    console.log(LS, 'LuckyStrike OGame Helper v14.4 hazır!');
+    console.log(LS, 'LuckyStrike OGame Helper v14.5 hazır!');
 
 })();

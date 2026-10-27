@@ -1,4 +1,4 @@
-﻿# ⚡ LuckyStrike OGame Helper (v14.4)
+# ⚡ LuckyStrike OGame Helper (v14.4)
 
 [English](#-english-description) | [Türkçe](#-türkçe-açıklama)
 
@@ -325,6 +325,24 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ---
 
 ## 📝 Sürüm Geçmişi / Changelog
+
+### v14.5
+- **ğŸ›¡ï¸ Pasif GÃ¶nder Butonu (.off / .disabled) KorumasÄ± / Disabled Send Fleet Guard:**
+  - KeÅŸif, ToplayÄ±cÄ±, PostacÄ± ve Maliyet Sepeti asistanlarÄ±nda gÃ¶nderim Ã¶ncesi #sendFleet butonunun durumu isSendFleetReady() ile doÄŸrulanÄ±r. Filo veya keÅŸif slot limiti aÅŸÄ±ldÄ±ÄŸÄ±nda oyun butonunun .off / disabled olmasÄ± durumunda butonun hazÄ±r zannedilip gereksiz gÃ¶nderim tetiklenmesi ve asistanÄ±n donup kalmasÄ± kesin olarak engellendi.
+- **ğŸ§­ KeÅŸif Slot Tespiti & YapÄ±sal Fallback GÃ¼Ã§lendirmesi / Robust Expedition Slot Detection:**
+  - getExpeditionSlotsInfo ve getFleetSlotsInfo regex'leri esnek (:?) hale getirildi ve Ã§oklu dil (Ä°spanyolca, Ä°talyanca, LehÃ§e vb.) desteÄŸi eklendi.
+  - Metin analizi yetersiz kalsa bile #slots DOM elemanÄ± altÄ±ndaki slot Ã§iftlerini doÄŸrudan ayrÄ±ÅŸtÄ±ran yapÄ±sal fallback eklendi.
+  - OGame AJAX ve DOM hazÄ±r olma anlarÄ±nda ($(document).ready ve jaxComplete) slot verisinin anÄ±nda senkronize edilmesi saÄŸlandÄ± (sunucuya sÄ±fÄ±r aÄŸ yÃ¼kÃ¼, %100 pasif okuma).
+- **â±ï¸ Fallback Zaman AÅŸÄ±mÄ± ve GÃ¼venli Durum DoÄŸrulamasÄ± / Safe Fallback Timeout Inspection:**
+  - Fallback sÃ¼resi gerÃ§ek sunucu gecikmelerine tolerans saÄŸlayacak ÅŸekilde 3500ms'ye Ã§Ä±karÄ±ldÄ±. YanÄ±t geciktiÄŸinde asistan kÃ¶rÃ¼ kÃ¶rÃ¼ne baÅŸarÄ± varsaymak yerine butonun aktifliÄŸini denetler; buton pasif ise gÃ¼venli hata durumuna geÃ§er.
+- **âš¡ Ã‡ift GÃ¶nderim KorumasÄ± Bildirimi / Double Submit Event Feedback:**
+  - ridge.js Ã§ift tÄ±klama korumasÄ±nÄ± tetiklediÄŸinde content.js'e LS_SEND_FLEET_COMPLETE hatasÄ± ileterek asistanÄ±n askÄ±da kalmasÄ±nÄ± engeller.
+- **ğŸ§  AÃ§Ä±lÄ±r MenÃ¼ Dinleyici SÄ±zÄ±ntÄ±sÄ± TemizliÄŸi / Dropdown Outside-Click Memory Leak Fix:**
+  - ToplayÄ±cÄ±, PostacÄ± ve Maliyet Sepeti panellerinde aÃ§Ä±lÄ±r menÃ¼ dÄ±ÅŸ tÄ±klama dinleyicileri tekilleÅŸtirilerek (hasOutsideClick) gereksiz bellek birikimi Ã¶nlendi.
+- **ğŸ“¬ PostacÄ± AsistanÄ± 15 Dakika Zaman AÅŸÄ±mÄ± GÃ¼vencesi / Courier 15-Minute Session Expiry:**
+  - PostacÄ± asistanÄ±na diÄŸer asistanlardaki gibi 15 dakikalÄ±k oturum zaman aÅŸÄ±mÄ± korumasÄ± eklenerek eski oturumlarÄ±n istenmeyen anlarda Ã§alÄ±ÅŸmasÄ± engellendi.
+- **ğŸŒ Eksiksiz Dil BÃ¼tÃ¼nlÃ¼ÄŸÃ¼ & i18n DÃ¼zeltmeleri / Full i18n Symmetry:**
+  - Manuel koordinat istemleri, asistan tamamlanma ve durdurulma bildirimleri I18N.tr ve I18N.en sÃ¶zlÃ¼klerine eklenerek Ã§ift dilli uyumluluk %100 saÄŸlandÄ±.
 
 ### v14.4
 - **🚨 Sunucu Hata Yönetimi & Güvenli Yönlendirme / Server Error Handling & Safe Dispatch Redirect:**
