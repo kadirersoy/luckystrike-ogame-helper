@@ -215,6 +215,7 @@ Write-Host "`nRunning Post-Release Consistency Audit..."
 & powershell.exe -ExecutionPolicy Bypass -File "$PSScriptRoot\verify_release.ps1" -TargetTag $tag
 
 Write-Host "`n>>> RELEASE COMPLETED SUCCESSFULLY! <<<"
-Write-Host "1. Release URL: https://github.com/$repo/releases/tag/$tag"
-Write-Host "2. Asset URL:   https://github.com/$repo/releases/download/$tag/$zipName"
-Write-Host "3. Local ZIP:   $zipPath"
+Write-Host "1. Release URL:         https://github.com/$repo/releases/tag/$tag"
+Write-Host "2. Asset Download URL:  https://github.com/$repo/releases/download/$tag/$zipName"
+Write-Host "3. Edge Partner Center: https://partner.microsoft.com/en-us/dashboard/microsoftedge/e7589bd9-862f-4579-9dee-44bfcb520e9b/packages/dashboard"
+Write-Host "4. Local ZIP:           $zipPath"
