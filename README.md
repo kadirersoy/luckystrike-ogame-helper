@@ -1,4 +1,4 @@
-# ⚡ LuckyStrike OGame Helper (v14.4)
+# ⚡ LuckyStrike OGame Helper (v14.5)
 
 [English](#-english-description) | [Türkçe](#-türkçe-açıklama)
 
@@ -6,14 +6,15 @@
 
 ## 🇹🇷 Türkçe Açıklama
 
-**LuckyStrike OGame Helper**, OGame oyuncuları için günlük imparatorluk yönetimini, hammadde planlamasını, filo nakliye hesaplamalarını ve bilgi takibini kolaylaştırmak üzere tasarlanmış, **Gameforge oyun kurallarına tam uyumlu** bir kullanıcı arayüzü asistanıdır (**Chrome / Edge Extension - Manifest V3**).
+**LuckyStrike OGame Helper**, OGame oyuncuları için günlük filo ve hammadde hesaplamalarını, maliyet planlamasını, kargo gereksinimlerini ve evren takibini kolaylaştırmak üzere tasarlanmış, **Gameforge oyun kurallarına tam uyumlu** bir kullanıcı arayüzü ve hesaplama asistanıdır (**Chrome / Edge Extension - Manifest V3**).
 
-### 🛡️ Gameforge & OGame Oyun Kurallarına Uyumluluk
+### 🛡️ Oyun Kurallarına Tam Uyum & Hesaplama Asistanı Felsefesi
 LuckyStrike OGame Helper, **Gameforge Kullanım Şartları ve Oyun Kuralları (Kural 5: Otomasyon ve Bot Politikası)** titizlikle gözetilerek geliştirilmiştir:
-- **Sadece Oyuncu Başındayken ve Pasif Çalışır:** Eklenti kendi kendine sunucuya arka planda otomatik istek atmaz. Bilgi takibi ve güncellemeler, yalnızca **oyuncu bilgisayar başındayken**, sayfalar arasında gezinirken veya tarayıcı sekmesi güncellendiğinde ekrana gelen verileri okur.
-- **Otomasyon / Bot İçermez:** Filoları arka planda gizlice göndermez, bina veya araştırma emri vermez. Kaynak doldurma ve filo hazırlama gibi kolaylaştırıcı işlemler yalnızca **oyuncunun bizzat butona tıklamasıyla** form alanlarına yazılır; son onay, gönderme (`Space` veya butona tıklama) ve karar kontrolü tamamen oyuncuya aittir.
-- **Resmi Gameforge API Altyapısı:** Evren analizi ve oyuncu arama modülleri, Gameforge'un eklenti ve araç geliştiricileri için kamuya açık olarak sağladığı resmi XML API altyapısını (`/api/universe.xml`, `/api/players.xml`) 24 saatlik istemci önbelleği ve spam koruma kilidiyle kullanır.
-- **İstemci Taraflı ve Gizlilik Odaklı:** Hiçbir kullanıcı verisi, şifresi veya oyun bilgisi harici sunuculara aktarılmaz; tüm tercihler yalnızca yerel tarayıcı belleğinizde saklanır.
+- **Tamamen Oyuncu Kontrollü (Sıfır Tam Otomasyon):** Eklenti kendi kendine, arka planda veya oyuncu bilgisayar başında yokken hiçbir işlem yapmaz. Filoları arka planda bağımsız göndermez, bina veya araştırma emri vermez. Her işlem bizzat oyuncunun gözü önünde, şeffaf şekilde ve oyuncunun tetiklemesiyle gerçekleşir.
+- **Hesaplayıcı ve Ergonomi Yardımcısı (Calculator & QoL):** Tıpkı popüler simülasyon ve keşif hesaplama araçları gibi çalışır. Asıl görevi; gereken kargo kapasitelerini, hammadde açıklarını ve hedef koordinatları matematiksel olarak hesaplayıp ilgili form alanlarına hazır getirmektir. Oyuncunun normalde onlarca farklı menüye girerek tek tek yapacağı hesaplamaları pratikleştirir; her filo gönderimi oyuncunun bizzat `Space` (Boşluk) tuşuna basmasıyla veya butona tıklamasıyla insan hızında ve tek tek onaylanır.
+- **Pasif Ekran Okuma:** Eklenti sunucuya yapay istek yükü bindirmez. Yalnızca oyuncu sayfalar arasında gezinirken veya tarayıcı sekmesi güncellendiğinde ekrandaki mevcut verileri pasif olarak okur.
+- **Resmi Gameforge API Altyapısı:** Evren analizi ve oyuncu arama modülleri, Gameforge'un eklenti ve araç geliştiricileri için kamuya açık olarak sağladığı resmi XML API altyapısını (`/api/universe.xml`, `/api/players.xml`) 24 saatlik istemci önbelleği ve istek kilidiyle kullanır.
+- **İstemci Taraflı ve Gizlilik Odaklı:** Hiçbir kullanıcı şifresi, hesap detayı veya oyun verisi harici sunuculara aktarılmaz; tüm hesaplamalar ve kullanıcı tercihleri yalnızca yerel tarayıcı belleğinizde tutulur.
 
 ---
 
@@ -160,14 +161,15 @@ LuckyStrike, filo hazırlığı gerektiren tüm ana modüllerde (**Maliyet Sepet
 
 ## 🇬🇧 English Description
 
-**LuckyStrike OGame Helper** is an advanced browser assistant (**Chrome / Edge Extension - Manifest V3**) designed for OGame players to assist with daily empire management, resource planning, cargo calculation, and information tracking while strictly complying with **Gameforge Fair-Play Rules**.
+**LuckyStrike OGame Helper** is a browser assistant (**Chrome / Edge Extension - Manifest V3**) designed for OGame players to assist with daily calculations, resource planning, cargo capacity estimation, and universe tracking while strictly complying with **Gameforge Fair-Play Rules**.
 
-### 🛡️ Gameforge & OGame Rules Compliance
+### 🛡️ Fair-Play Rules Compliance & Calculation Philosophy
 LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Terms & Conditions (Rule 5: Automation & Bot Policy)**:
-- **Active Player Only & Passive Reading:** The extension never sends automated background requests. It only reads screen data when the player is actively playing, navigating pages, or when browser tabs update.
-- **Strictly Non-Automated:** No automated background fleet dispatches, building orders, or bot cycles. Autofill helpers populate inputs upon **explicit player click**; the final command, confirmation, and launch decisions (`Space` key or button click) always remain entirely in the player's hands.
-- **Official Gameforge Public APIs:** Galaxy and player analysis modules utilize official public XML APIs (`/api/universe.xml`, `/api/players.xml`) provided for tool developers, equipped with a 24-hour client cache and cooldown lock.
-- **Client-Side & Privacy-First:** No personal data, passwords, or game credentials are ever collected or transmitted. All preferences remain strictly in your local browser storage.
+- **100% Player-Driven (Zero Full Automation):** The extension never operates independently, in the background, or without the player present. It does not dispatch fleets autonomously, nor does it queue buildings or research orders. Every single action is fully transparent and initiated by the player on screen.
+- **Calculator & Quality of Life (QoL) Assistant:** Operates on the same principle as community-approved simulation calculators and expedition planners. Its core purpose is calculating required cargo capacities, resource deficits, and destination coordinates, then pre-filling standard form inputs. Instead of manually cross-referencing numbers across multiple menus, the player dispatches each fleet individually at normal human pace by pressing the `Space` key (or clicking the button).
+- **Passive On-Screen Reading:** Generates zero unnecessary server load. It strictly inspects existing DOM elements when the player actively navigates pages or when game events naturally update.
+- **Official Gameforge Public APIs:** Galaxy and player analysis modules leverage official public XML endpoints (`/api/universe.xml`, `/api/players.xml`) provided for community tool developers, complete with 24-hour client caching and request throttling.
+- **Client-Side & Privacy-First:** No personal credentials, passwords, or game data are ever transmitted to third-party servers. All calculations and settings remain strictly within your local browser storage.
 
 ---
 
@@ -324,328 +326,9 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 
 ---
 
-## 📝 Sürüm Geçmişi / Changelog
+## 📜 Sürüm Notları / Release Notes
 
-### v14.5
-- **🛡️ Pasif Gönder Butonu (`.off` / `.disabled`) Koruması / Disabled Send Fleet Guard:**
-  - Keşif, Toplayıcı, Postacı ve Maliyet Sepeti asistanlarında gönderim öncesi `#sendFleet` butonunun durumu `isSendFleetReady()` ile doğrulanır. Filo veya keşif slot limiti aşıldığında oyun butonunun `.off` / `disabled` olması durumunda butonun hazır zannedilip gereksiz gönderim tetiklenmesi ve asistanın donup kalması kesin olarak engellendi.
-- **🧭 Keşif Slot Tespiti & Yapısal Fallback Güçlendirmesi / Robust Expedition Slot Detection:**
-  - `getExpeditionSlotsInfo` ve `getFleetSlotsInfo` regex'leri esnek (`:?`) hale getirildi ve çoklu dil (İspanyolca, İtalyanca, Lehçe vb.) desteği eklendi.
-  - Metin analizi yetersiz kalsa bile `#slots` DOM elemanı altındaki slot çiftlerini doğrudan ayrıştıran yapısal fallback eklendi.
-  - OGame AJAX ve DOM hazır olma anlarında (`$(document).ready` ve `ajaxComplete`) slot verisinin anında senkronize edilmesi sağlandı (sunucuya sıfır ağ yükü, %100 pasif okuma).
-- **⏱️ Fallback Zaman Aşımı ve Güvenli Durum Doğrulaması / Safe Fallback Timeout Inspection:**
-  - Fallback süresi gerçek sunucu gecikmelerine tolerans sağlayacak şekilde 3500ms'ye çıkarıldı. Yanıt geciktiğinde asistan körü körüne başarı varsaymak yerine butonun aktifliğini denetler; buton pasif ise güvenli hata durumuna geçer.
-- **⚡ Çift Gönderim Koruması Bildirimi / Double Submit Event Feedback:**
-  - `bridge.js` çift tıklama korumasını tetiklediğinde `content.js`'e `LS_SEND_FLEET_COMPLETE` hatası ileterek asistanın askıda kalmasını engeller.
-- **🧠 Açılır Menü Dinleyici Sızıntısı Temizliği / Dropdown Outside-Click Memory Leak Fix:**
-  - Toplayıcı, Postacı ve Maliyet Sepeti panellerinde açılır menü dış tıklama dinleyicileri tekilleştirilerek (`hasOutsideClick`) gereksiz bellek birikimi önlendi.
-- **📬 Postacı Asistanı 15 Dakika Zaman Aşımı Güvencesi / Courier 15-Minute Session Expiry:**
-  - Postacı asistanına diğer asistanlardaki gibi 15 dakikalık oturum zaman aşımı koruması eklenerek eski oturumların istenmeyen anlarda çalışması engellendi.
-- **🌐 Eksiksiz Dil Bütünlüğü & i18n Düzeltmeleri / Full i18n Symmetry:**
-  - Manuel koordinat istemleri, asistan tamamlanma ve durdurulma bildirimleri `I18N.tr` ve `I18N.en` sözlüklerine eklenerek çift dilli uyumluluk %100 sağlandı.
+Detaylı sürüm geçmişi, tüm yenilikler ve hata düzeltmeleri her versiyon için iki dilde (🇹🇷 Türkçe ve 🇬🇧 English) doğrudan GitHub Releases sayfasında yayınlanmaktadır:
+👉 **[GitHub Releases — Sürüm Notları / Release Notes](https://github.com/kadirersoy/luckystrike-ogame-helper/releases)**
 
-### v14.4
-- **🚨 Sunucu Hata Yönetimi & Güvenli Yönlendirme / Server Error Handling & Safe Dispatch Redirect:**
-  - sendFleet isteğine OGame sunucusundan gelen yanıtlar JSON formatında tam olarak denetlenir. Sunucu hatası oluştuğunda (success: false veya errors), asistanların sonraki gezegene veya sisteme kontrolsüzce yönlenmesi kesin olarak engellendi.
-  - Hata oluştuğunda kuyruk indeksi korunur, gönderilmeyen gezegen/hedef işaretli kalır ve HUD bannerında gerçek hata detayı kırmızı renkle gösterilir (Tekrar Dene / Atla / İptal butonları sunulur).
-- **💡 Uçuş Yakıtı (Deu) Ön Kontrolü / Pre-Flight Fuel Sufficiency Guard:**
-  - Filo 2. adımında (leet2) gemilerin tüketeceği döteryum motor yakıtı canlı olarak hesaplanır ve gezegendeki mevcut döteryumla kıyaslanır.
-  - Gezegendeki döteryum filonun uçuş yakıtına dahi yetmiyorsa Gönder butonu kilitlenerek kullanıcıya ⚠️ Uçuş Yakıtı Yetersiz (Gereken Deu: X) uyarısı gösterilir; sunucudan ret cevabı alınması önlenir.
-- **🐛 Çoklu Dil Görev Hata Tespiti / Multi-Language Mission Error Detection:**
-  - hasVisibleMissionError() fonksiyonu dilden bağımsız hale getirildi. Türkçe dışındaki (İngilizce, Almanca vb.) sunucularda görev bildirim hatalarının algılanamayıp takılmaya yol açması engellendi.
-- **⌨️ Space Tuşu Giriş Alanı Koruması / Unified Input Guard for Space Key:**
-  - Toplayıcı ve Postacı HUD'larında kullanıcı form kutularına (INPUT, TEXTAREA, SELECT) değer yazarken Space tuşuna basması durumunda kazara filo fırlatılması engellendi; davranış tüm asistanlarda standardize edildi.
-- **🧹 Kod Tabanı İyileştirmeleri & Eksik Çeviriler / Code Cleanup & i18n Completeness:**
-  - Kullanılmayan ölü kod dvanceFleetStep temizlendi.
-  - Toplayıcı ve Postacı HUD'larında yer alan hardcoded bildirim metinleri I18N sözlüğüne entegre edildi.
-
-### v14.3
-- **🧭 Keşif Asistanında Slot Takibi, Canlı Bekleme Durumu ve Başlangıç Uyarısı / Expedition Slot Awareness & Live Waiting Status:**
-  - Keşif asistanında (`Expedition`), keşif slotları dolduğunda (`expSlots.isFull`) asistanın belirsiz bir şekilde `⏳ Hazırlanıyor...` durumunda donup kalması sorunu düzeltildi.
-  - Keşif asistanı butonu artık slotlar dolduğunda doğrudan kırmızıya dönerek net bir şekilde `⏳ Keşif Slotu Bekleniyor (X/Y)` gösterir ve altında filoların dönüşünü beklediğini açıklayan durum mesajı (`#ls-exp-hud-status`) sunar.
-  - Keşif HUD başlığına canlı keşif slot bilgisi (`🧭 Slot: X/Y`) eklendi.
-  - Başlatma öncesinde (`Sefer Sayısı`), boş keşif slotundan daha fazla sefer girildiğinde kullanıcıyı bilgilendiren ve onay alan koruyucu uyarı eklendi.
-  - OGame köprü katmanında (`bridge.js`) ve DOM tarayıcısında keşif slotlarının okunması (`maxExpeditionFleets`, tekil/çoğul regex) güçlendirildi.
-
-### v14.2
-- **🛡️ Toplayıcıda Döteryum Rezerv ve Kargo Döngüsü (Yazıp-Silme) Hatası Düzeltildi / Fixed Deuterium Reserve & Cargo Loop in Collector:**
-  - `bridge.js` içerisindeki `SELECT_ALL_RESOURCES` bloğunda yer alan ve gemi ambarına yüklenen döteryum miktarından gezegen rezervini hatalı bir şekilde düşerek döteryum kutusunu sürekli sıfırlayan (`currentVal - deuReserve`) hatalı mekanizma tamamen kaldırıldı.
-  - Toplayıcı (`Collector`) artık tüm kaynaklar seçili olsa dahi `#allresources` butonuna sentetik tıklamalar yapmak yerine, gezegen rezervini ve ambar kapasitesini önceden net olarak hesaplayan deterministik `fillFleetResources(metLoad, criLoad, deuLoad)` fonksiyonunu doğrudan kullanır. Bu sayede gezegendeki döteryum rezerve eşit veya az olduğunda döteryumun saniyede bir yazılıp silinmesi ve sonsuz kargo doğrulama döngüsüne girilmesi kalıcı olarak engellendi.
-- **✨ HUD Asistan Bannerlarına Detaylı Durum ve Hata Açıklamaları Eklendi / Informative Status Descriptions on HUD Banners:**
-  - Toplayıcı, Postacı ve Maliyet Sepeti asistan bannerlarında herhangi bir bekleme veya onaylanamama durumu oluştuğunda (sunucu hedef kontrolü, görev seçimi, kaynak yükleme doğrulaması, filo slot doluluğu vb.), kullanıcının neden bekletildiğini net olarak açıklayan canlı durum mesajları (`#ls-coll-hud-status`, `#ls-cour-hud-status`, `#ls-cart-hud-status`) eklendi. Detaysız belirsiz uyarılar sonlandırıldı.
-
-### v14.1
-- **🔄 Keşif Şablonları İçin Arka Planda Otomatik Çekme (Self-Fetch) & Kesin Seçici Desteği / Automatic Background Template Fetching:**
-  - OGame'in gerçek şablon seçici kimliği olan `#expeditionFleetTemplateSelect` (`select[name="expeditionFleetTemplateSelect"]`) ve ilgili selectmenu yapıları tam olarak entegre edildi.
-  - Kullanıcının şablonları yenilemek için elle "Filo 1 sayfasına geçme" zorunluluğu tamamen ortadan kaldırıldı: Hangi sayfada olunursa olunsun `🔄` butonuna tıklandığında, eklenti arka planda filo sayfasını (`component=fleetdispatch`) çekip (`fetch` & `DOMParser`) keşif şablonlarını otomatik ayrıştırır ve açılır kutuyu günceller.
-- **✨ Şablon Yenileme Butonu Büyütüldü ve Konumu İyileştirildi / Prominent Centered Refresh Button:**
-  - Keşif Şablonu başlığındaki küçük ve anlaşılması zor ikon kaldırıldı.
-  - Sefer Sayısı ile Keşif Şablonu arasına, form girişleriyle tam hizada (`height: 27px; font-size: 13px`) modern ve şık bir `🔄` butonu yerleştirildi.
-
-### v14.0
-- **🛡️ Keşif Şablon Seçiminde `triggerFullClick` ve DOM Tıklamaları Tamamen Kaldırıldı / Eliminated CSP Triggers:**
-  - `content.js` içerisindeki `triggerFullClick` mekanizması ve OGame açılır menü öğelerine yapılan tüm manuel sentetik DOM tıklamaları tamamen kaldırıldı.
-  - Keşif şablonunun seçimi ve uygulanması (gemi adetlerinin doldurulması, kargo hesaplaması ve selectmenu güncellemesi) `SELECT_TEMPLATE` olayı ile doğrudan sayfa bağlamındaki (`bridge.js` - MAIN world) yerel `window.fleetDispatcher.standardFleetSelected / expeditionFleetSelected` API'sine devredildi. Bu sayede izole dünyadan `javascript:void(0)` bağlantılarına tıklama riski ve Manifest V3 CSP ihlali kalıcı olarak sıfırlandı.
-- **🚀 Standart Filo Şablonları Keşif Listesinden Ayrıştırıldı / Strict Isolation of Expedition Templates:**
-  - Keşif Şablonu açılır kutusuna Standart Filo şablonlarının (örn: `Pompalamasyon`, `Standart Filo`) sızması engellendi.
-  - Hem `content.js` hem de `bridge.js` üzerindeki tarama algoritmaları yalnızca `#expeditionfleet` ve `#expeditionfleet-menu` öğelerini hedefleyecek şekilde daraltıldı. `#standardfleet` ve genel sayfa menülerinden yapılan kontrolsüz tarama sonlandırıldı.
-  - `isValidTemplateName` filtresine ve başlangıç temizleyicisine `standart`, `standard`, `pompalamasyon` ve `şablon seç` korumaları eklenerek daha önce önbelleğe girmiş yabancı şablonlar kalıcı olarak temizlendi.
-
-### v13.9
-- **🛡️ Keşif Şablon Seçimi ve Tüm Oyun İçi Tıklamalardan Native `.click()` Kaldırıldı / Completely Eliminated Native `.click()` on Game Elements:**
-  - `triggerFullClick` fonksiyonunda yer alan yerel `.click()` çağrıları tamamen kaldırıldı. Keşif şablonu (1xKeşif vb.) seçilirken dropdown ve option etiketleri içindeki `<span>` ve `<li>` gibi alt düğümlere yapılan tıklamaların OGame'in `javascript:void(0)` bağlantılarına sıçrayarak Chrome Manifest V3 CSP ihlaline yol açması kalıcı olarak engellendi.
-  - `clickDevamButton`, `triggerAllResourcesNative`, `advanceFleetStep` ve `navigateToGalaxy` fonksiyonları tamamen sentetik `PointerEvent` ve `MouseEvent` (`pointerdown`, `mousedown`, `pointerup`, `mouseup`, `click`) modellerine geçirilerek native `.click()` kaynaklı tüm tarayıcı navigasyon ve inline script tetiklemeleri sıfırlandı.
-  - Purged all native `.click()` calls across `content.js` interaction helpers, transitioning strictly to synthetic pointer/mouse event dispatching and permanently eliminating CSP inline script violations during expedition template selection.
-
-### v13.8
-- **🛡️ Chrome Manifest V3 CSP İhlali ve `javascript:void(0)` Tıklama Hatası Giderildi / Fixed CSP Violation on `javascript:` Links:**
-  - `chrome://extensions` hata panelinde raporlanan `Running the JavaScript URL violates the following Content Security Policy directive: script-src 'self' 'wasm-unsafe-eval'...` uyarısı giderildi.
-  - OGame'in yerel şablon ve açılır menü öğelerinde (`<a>` etiketlerinde `href="javascript:void(0)"` bulunan linkler) programatik `.click()` çağrısı yapıldığında Manifest V3 CSP kuralı devreye girip inline script çalıştırılmasını engelliyordu.
-  - `triggerFullClick`, `clickDevamButton`, `triggerAllResourcesNative`, `advanceFleetStep` ve `navigateToGalaxy` fonksiyonları `isJsHref` filtresiyle korunarak, `javascript:` bağlantılarına doğrudan native `.click()` yerine sentetik Mouse/Pointer olayları (`pointerdown`, `mousedown`, `pointerup`, `mouseup`, `click`) dispatch edilerek OGame'in DOM event listener'larının CSP ihlaline takılmadan çalışması sağlandı.
-  - Neutralized Chrome Manifest V3 Content Security Policy (CSP) inline script violations when triggering programmatic clicks on OGame template links containing `javascript:void(0)` hrefs by dispatching synthetic mouse events instead of invoking raw `.click()`.
-- **🛡️ Asistan Arayüzlerinde Null/Undefined Güvenlik Kalkanı / Defensive Parameter Guards in Assistant Handlers:**
-  - `executeFleetDispatchStep`, `renderCollectorAssistantBanner`, `renderCourierAssistantBanner`, `executeExpeditionStep` ve `renderExpeditionBanner` fonksiyonlarına parametre koruma kalkanları eklenerek sekme veya sayfa geçişlerindeki olası render hataları önlendi.
-  - Hardened assistant lifecycle and HUD render pipelines against transient null or undefined session states during rapid page navigation.
-- **🧹 Ayarlar Sekmesi Sadeleştirildi & İşlevsiz Güncelleme Butonu Kaldırıldı / Clean Settings Header (Removed Redundant Update Button):**
-  - Paketlenmemiş (unpacked) eklentiler tarayıcı içinden dosya sistemini güncelleyemediği için Ayarlar sekmesindeki gereksiz "Güncelleme Kontrolü" butonu ve durum satırı kaldırıldı.
-  - Üst kart sadece eklenti başlığı, `v13.8` versiyon rozeti ve GitHub bağlantısı kalacak şekilde sadeleştirildi.
-  - Removed the non-functional in-page update check button and status text from the Settings tab, leaving only the version badge and project link.
-
-### v13.7
-- **🌕 Ay İsimleri Filtresi & Çap/Menü Metinleri Temizliği / Clean Moon Names Without Diameter or Menu Texts:**
-  - Ay isimleri taranırken OGame tooltip ve başlıklarında yer alan çap (`8.717km`, `ø 8.717km`), alan sayısı (`(38/39)`) ve hızlı menü metinleri (`Sıçrama Geçidi`, `Genel Bakış`, `Kaynaklar`, `Tesisler`, `Savunma`, `Filo`, `Galaksi`) filtrelendi.
-  - Açılır menülerde (combobox) ve Asistan HUD başlıklarında yalnızca ayın gerçek adı (örn: `520`, `FB_520`) gösterilecek şekilde `cleanMoonName` sterilizasyonu sağlandı ve eski kirlenmiş önbellek değerleri otomatik temizlendi.
-  - Purged diameter metrics, field capacities, and sub-menu links from moon name tooltips, displaying only the authentic custom moon identifier across all assistants.
-- **🚀 Keşif Asistanı (Expedition) Gönder Butonu Kilitlenmesi & Space Sorunu Çözüldü / Fixed Expedition Send Button Block & Space Trigger:**
-  - Keşif Asistanı'nda filo gönder butonu sayfada görünür ve hazır durumdayken, sunucu görev senkronizasyon gecikmelerinin filo gönderimini engellemesi ve kullanıcıyı kısır `prepareStep2` döngüsüne sokması engellendi.
-  - Kullanıcı `Space` tuşuna bastığında veya `🚀 Keşif Gönder` butonuna tıkladığında ekranda gönder butonu mevcutsa doğrudan `dispatchSendExpeditionFleet` çalıştırılarak filo yola çıkarılır.
-  - `isMissionSelected(missionId)` kontrolüne `bridge.js` üzerinden `window.fleetDispatcher.mission` (`document.body.dataset.lsSelectedMission`) ve OGame'in `li#button`, `.on`, `.selected`, `.active` sınıfları entegre edildi.
-  - `prepareStep2` içerisindeki görev tıklamaları 1200ms zaman aşımı kısıtlamasına alınarak sunucuya gereksiz tıklama flood'u gitmesi engellendi.
-  - Allowed direct expedition dispatch when the fleet send button is visible on Step 2, synchronized authoritative mission state via `bridge.js`, and throttled mission clicks to prevent target inquiry lockouts.
-
-### v13.6
-- **🌕 Ayların Kendi Gerçek İsimleri Algılanıp Tanımlandı / Real Moon Names Parsing & Persistent Caching:**
-  - Eskiden aylar doğrudan bağlı oldukları ana gezegenin adını devralıp `GezegenAdı ( Ay )` şeklinde listeleniyordu (örn: `FB_521 ( Ay )`).
-  - OGame DOM yapısındaki `a.moonlink` tooltip başlıkları (`title`, `data-tooltip-title`, `<b>FB_520</b>`) ve `meta[name="ogame-planet-name"]` meta etiketleri taranarak ayın kendi özel ismi (örn: `FB_520`) tespit edildi ve `LS_KNOWN_MOON_NAMES` kalıcı önbelleğine alındı.
-  - Toplayıcı (Collector), Maliyet Sepeti (Cart), Kurye (Courier) ve Asistan HUD başlıklarındaki tüm ay gösterimleri ayın kendi gerçek ismiyle güncellendi.
-  - Extracted authentic moon names from OGame's DOM tooltip attributes and server meta tags, persistently caching them in `LS_KNOWN_MOON_NAMES` across all dispatch and collection interfaces.
-- **🛡️ Toplayıcı (Collector) `LOCA_ERROR_INQUIRY_NOT_WORKED_TRYAGAIN` & Görev 3 Flood Koruması / Fixed Collector Inquiry Rate-Limit & Mission 3 Spam:**
-  - `content.js` içerisindeki `setFleetTargetCoords` fonksiyonundan çift DOM tıklamaları kaldırıldı; hedef seçimi ve tip ataması yalnızca `bridge.js` üzerinden tekil ve kontrollü olarak tetiklenecek şekilde optimize edildi.
-  - `setFleetMission` fonksiyonuna `isMissionSelected(missionId)`, `isTargetCheckPending()` ve `!isMissionClickable(missionId)` kilitleri eklendi. Görev zaten seçiliyse veya sunucuda `checkTarget` devam ediyorsa saniyede 40 kez Nakliye görevine tıklama döngüsü tamamen sonlandırıldı.
-  - `isMissionClickable` kontrolü OGame'in `li.off` ve `li.disabled` sınıflarını denetleyecek şekilde güçlendirildi; sunucu doğrulaması tamamlanmadan butona tıklanması engellendi.
-  - Eliminated redundant target clicks between `content.js` and `bridge.js`, added pre-conditions to `setFleetMission` preventing rapid 40 clicks/sec spam, and respected parent `li.off` disabled flags during active `checkTarget` inquiries.
-
-### v13.5
-- **🧭 Keşif Asistanı (Expedition) `LOCA_ERROR_INQUIRY_NOT_WORKED_TRYAGAIN` Hatası Giderildi / Fixed Expedition Target Check Spam:**
-  - `bridge.js` içerisindeki yapay çift sistem girdisi (`tempS` yazıp 40ms sonra asıl sistemi yazma) tamamen kaldırıldı. Bu durum GameForge sunucularına 40ms arayla iki `checkTarget` sorgusu gönderip `LOCA_ERROR_INQUIRY_NOT_WORKED_TRYAGAIN` hatasına sebep oluyordu.
-  - Hedef Gezegen/16. slot seçim kontrolü `.planet_selected` ve `.selected` sınıflarını tanıyacak şekilde tekilleştirildi; gereksiz tıklama tekrarları önlendi.
-  - Eliminated the artificial `tempS` double-input delay in `bridge.js` that triggered concurrent `checkTarget` AJAX inquiries and caused GameForge error 60000.
-- **🚀 Keşifler Arasında Doğrudan Geçiş & Çift Yenilenme / Ara Sekme Sorunu Çözüldü / Seamless Expedition Next-System Transition:**
-  - Keşif filosu gönderilirken `SUBMIT_FLEET2` aksiyonuna sıradaki sistemin URL'si (`nextUrl`) entegre edildi.
-  - OGame'in `sendFleet` yanıtındaki `redirectUrl` doğrudan sıradaki keşif koordinatına yönlendirilir; böylece eski sistemin yeniden yüklenmesi ve "arada bir sekme fazladan gelip orayı tekrar geçmesi" sorunu tamamen ortadan kalktı.
-  - Connected `nextUrl` to `SUBMIT_FLEET2` in Expedition Assistant, enabling OGame's native redirect to jump directly to the next system without redundant intermediate reloads.
-- **🛡️ Keşif Görevi (Mission 15) ve Slot Senkronizasyonu Güçlendirildi / Robust Mission 15 & Expedition Slots Guard:**
-  - `prepareStep2` döngüsünde Görev 15 zaten seçiliyse veya sunucuda `checkTarget` isteği askıdaysa gereksiz tıklama ve flood engellendi; `isMissionSelected(15)` ve `isTargetCheckPending()` ile tam senkronizasyon sağlandı.
-  - `getExpeditionSlotsInfo()` eklenerek keşif slotlarının dolu olup olmadığı hem panelden başlatırken hem de HUD üzerinden filo gönderirken kontrol altına alındı.
-  - Throttled mission selection with `isMissionSelected(15)` and `isTargetCheckPending()`, and introduced `getExpeditionSlotsInfo()` to respect maximum expedition capacity.
-
-### v13.4
-- **🛡️ `LOCA_ERROR_INQUIRY_NOT_WORKED_TRYAGAIN` & Hedef Sorgu Kilitlenmesi Giderildi / Target Query Rate-Limit Fix:**
-  - OGame'in yerel hedef seçim sınıfları (`.moon_selected`, `.planet_selected`, `.debris_selected`) tam uyumlu hale getirildi.
-  - Hedef koordinat ve Ay/Gezegen türü ataması tekil ve kontrollü yapıya kavuşturuldu; aynı anda 8 DOM elementine birden tıklama döngüsü ve 80ms aralıklı flood çağrıları kaldırıldı.
-  - `checkTarget` isteği sunucuda askıdayken (`lsTargetCheckPending`) yeni sorguların gitmesini engelleyen eşzamanlı istek kilidi eklendi.
-  - Resolved GameForge server rate-limiting and localization query errors by introducing deterministic single-element target clicking, proper CSS class recognition, and an active inquiry mutex.
-- **🚀 Akıcı Doğrudan Gezegen Geçişi & Çift Sayfa Yüklenmesinin Önlenmesi / Direct Planet Transition:**
-  - Filo gönderildikten sonra OGame'in native scripti tarafından eski/mevcut gezegenin yeniden yüklenmesi (`redirectUrl`) `$.ajaxPrefilter` kancasıyla doğrudan sıradaki hedef gezegenin adresine bağlandı.
-  - "Arada bir sekme fazladan geliyor ve orayı tekrar geçip çalışıyor" şeklindeki ara sayfa yüklenme ve çift yönlendirme davranışı tamamen ortadan kaldırıldı; filolar gezegenler arasında doğrudan ve kesintisiz akar.
-  - Intercepted OGame's native post-dispatch redirect to transition straight into the next queue target URL, eliminating intermediate reloads on the previous planet.
-
-### v13.3
-- **🛡️ Saf OGame Deterministik & Olay Tabanlı (Event-Driven) Filo Mimarisi / Pure OGame Event-Driven Architecture:**
-  - **Milisaniyelik Yapay Beklemelere Son:** Tüm filo hazırlık ve sekme geçişlerindeki yapay gecikmeler tamamen kaldırıldı. Kodlar doğrudan OGame'in DOM durumlarına (`.on`, `.selected`) ve sunucu yaşam döngüsüne bağlandı.
-  - **Zero Blind Delays:** Removed artificial timeout delays across fleet dispatch and step transitions. Automation is now directly synchronized with OGame's reactive DOM state flags and server lifecycle.
-- **🛰️ Sunucu `checkTarget` AJAX Kancası & Asenkron Senkronizasyon / `checkTarget` Server Hook:**
-  - Koordinat veya hedef türü (Ay/Gezegen) seçildiğinde OGame'in sunucuya attığı `checkTarget` AJAX yanıtı `bridge.js` üzerinden anlık olarak dinlenir. Sunucu yanıtı dönmeden görev seçimi veya kaynak doldurma yapılmaz; böylece *"Bu görevi başlatamazsın"* hatası ve yarış durumları (race condition) tamamen engellendi.
-  - Synchronized mission and resource operations with OGame's native `checkTarget` asynchronous response. Eliminates premature mission submission and "You cannot start this mission" errors.
-- **💎 Maden Toplayıcı'da Saf OGame `<a id="allresources">` Entegrasyonu / Native Resource Loading:**
-  - Maden Toplayıcı modülünde kutulara elle ham veri enjekte etmek yerine saf OGame'in yerel "Tüm Kaynaklar" (`#allresources`) butonu entegre edildi. Varsa döteryum rezervi tek tıkla korunarak tüm kargo kapasitesi hatasız ve yerel sayı formatıyla (`.checkThousandSeparator`) doldurulur.
-  - Integrated native OGame `#allresources` button for Collector deliveries, properly respecting deuterium reserves and native thousand-separator formatting.
-- **🛸 Filo Hareketi Slot Limiti Takibi & Koruması / Fleet Slot Awareness & Waiting Mode:**
-  - Maliyet Sepeti, Maden Toplayıcı ve Postacı modüllerinde filo slotu limitleri canlı olarak takip edilir. Slotlar tükendiğinde (`27/27` vb.) operasyon kilitlenmeden akıllı bekleme moduna geçer ve HUD üzerinde anlık slot rozeti (`🛸 Slot: X/Y`) görüntülenir.
-  - Live tracking of fleet slot capacities across all dispatch modules. Automatically pauses queue execution when slots are exhausted instead of failing.
-
-### v13.2
-- **⚡ Zamansız Başlık Tasarımı (Timeless Header):**
-  - Panel üst başlığındaki sabit versiyon rozeti kaldırıldı (`⚡ LuckyStrike Helper`). Böylece her versiyon geçişinde ekran görüntüleri eskimeden geçerliliğini koruyor.
-- **⚙️ Ayarlar Sekmesinde Sürüm & GitHub Kartı (About & Updates):**
-  - Ayarlar sekmesinin en üstüne şık ve modern "Sürüm & Güncelleme" kartı eklendi.
-  - Aktif sürüm numarası (`v13.2`) ve doğrudan GitHub proje sayfası bağlantısı (`🔗 GitHub`) entegre edildi.
-- **🔄 Otomatik Güncelleme Kontrolü (Check for Updates):**
-  - Ayarlar sekmesine tek tıkla çalışan `🔄 Güncelleme Kontrolü` butonu eklendi.
-  - Doğrudan GitHub Releases API'sini sorgulayarak yeni sürüm olup olmadığını anında denetler; yeni sürüm varsa doğrudan indirme bağlantısını ekrana getirir.
-- **📸 GitHub-Fix Görsel Kuralına Zorunlu Ön Değerlendirme:**
-  - Salt versiyon numarası artışları için ekran görüntülerinin gereksiz yere tekrar render edilmesi kalıcı olarak yasaklandı; sadece arayüzde tasarımsal bir değişiklik olduğunda ve yalnızca ilgili sekme için render kuralı getirildi.
-
-### v13.1
-- **⛽ Yakıt ve ⚡ Hız Öncelik Sıralaması İnce Ayarı (Mathematical Fleet Optimization):**
-  - **Yakıt Önceliği (Fuel Mode) Kusursuzlaştırıldı:**
-    1. Full BN *(En az yakıt tüketen)*
-    2. BN + KN *(Eldeki tüm BN'leri tüketir, kalan açığı minimum KN ile tamamlar)*
-    3. Full KN *(Yalnızca BN hiç yoksa devreye girer)*
-    4. BN + KN + Rehber *(BN ve KN yetmiyorsa; kalan açığı minimum Rehber ile kapatır)*
-    5. BN + Rehber *(KN hiç yoksa; BN + kalan Rehber)*
-    6. KN + Rehber *(BN hiç yoksa; KN + kalan Rehber)*
-    7. Full Rehber *(Yalnızca BN ve KN hiç yoksa son çare)*
-  - **Hız Önceliği (Speed Mode) Kusursuzlaştırıldı:**
-    1. Full Rehber *(Hiperuzay hızı)*
-    2. Full KN *(İmpuls hızı)*
-    3. KN + Rehber *(Tüm KN'leri doldurur, kalanı Rehber ile tamamlar)*
-    4. Full BN *(BN hızında)*
-    5. BN + KN *(BN hızında; BN'leri doldurur, kalanı KN ile tamamlar)*
-    6. BN + KN + Rehber *(BN hızında; KN'leri sonuna kadar harcar, kalan açığa minimum Rehber koyar)*
-    7. BN + Rehber *(KN hiç yoksa)*
-  - Gereksiz yere obur Rehber gemisine yakıt ödenmesi engellendi; tasarruflu gemiler her iki modda da önceliklendirildi.
-
-### v13.0
-- **⚡ Hız / ⛽ Yakıt Öncelik Anahtarı (Smart Fleet Speed/Fuel Priority Switch):**
-  - Maliyet Sepeti, Maden Toplayıcı ve Postacı sekmelerindeki Nakliye / Konuşlandır butonlarının yanına dinamik Hız ve Yakıt odaklı öncelik değiştirme butonu (`⚡ Hız` / `⛽ Yakıt`) eklendi.
-  - Her sekme kendi mod tercihini tarayıcı oturumunda ve yerel depolamasında bağımsız olarak saklar.
-  - **Hız Önceliği:** 1- Full Rehber > 2- Full KN > 3- KN + Rehber > 4- Full BN > 5- BN + KN > 6- BN + Rehber > 7- BN + KN + Rehber (Hızlı kargo filoları öncelikli doldurulur).
-  - **Yakıt Önceliği:** 1- Full BN > 2- Full KN > 3- BN + KN > 4- Full Rehber > 5- BN + Rehber > 6- KN + Rehber > 7- BN + KN + Rehber (En az yakıt yakan ağır kargolar öncelikli tutulur).
-  - Yetersiz kapasite veya eksik gemi kombinasyonlarında kademeli tamamlama algoritması ve 0 gemili kombinasyon koruması optimize edildi.
-- **📍 "Merkez" (Hub) Terminoloji Sadeleştirmesi:**
-  - Maliyet, Toplama ve Postacı sekmelerindeki "Dağıtım üssü", "Toplama hedefi" ve parantez içi kafa karıştırıcı ibareler sadeleştirilerek ortak **"📍 Merkez" (TR) / "📍 Hub" (ENG)** standardına dönüştürüldü.
-  - Bildirim ve sistem işlem logları ("Merkeze geçiliyor") terminolojiye tam uyumlu hale getirildi.
-- **⚙️ Ayarlar Sekmesinde Tek Dil Temizliği:**
-  - Ayarlar sekmesindeki tüm `/ Language`, `/ Skin`, `/ Opacity`, `(Focus)` gibi çift dilli slaşlı ifadeler kaldırıldı; eklenti aktif dilinde (Türkçe veya İngilizce) temiz ve sade bir görünüm sunuyor.
-- **🌐 Çift Dil ve Tema Uyumluluk Güvencesi (Rule 8):**
-  - Tüm yeni butonlar, durum rozetleri ve başlıklar hem Türkçe hem İngilizce dil seçeneklerinde ve hem Uzay Karanlığı hem Fenerbahçe skinlerinde piksel taşması olmaksızın test edildi ve doğrulandı.
-
-### v12.3
-- **🔭 Harabe Avcısı (16. Slot Sonsuz Uzaklar / Expedition) Tam Düzeltmesi:**
-  - 16. slot harabelerinin listeden kendi kendine silinmesine yol açan gizli başlangıç filtresi (1M sınırı ve kristal şartı) kökten kaldırıldı.
-  - OGame'in gezegen adı hücresindeki `title="Sonsuz Uzaklıklar"` niteliği ile enkaz hücresi arasındaki seçici çakışması giderildi; yalnızca `.cellDebris` izole edilerek güvenli çok katmanlı okuma sağlandı.
-  - OGame'in kullandığı tüm tooltip varyasyonları (`#debrisExpedition`, `#expeditionDebris`, `#debris16`) ve DOM öznitelikleri eksiksiz desteklendi.
-  - Tablo koordinat doğrulama (`getRenderedGalaxyCoords`) ve hücre doluluk teyidine dayalı **Güvenli Temizlik (Safe Deletion)** eklendi; enkaz ikonu ekranda olduğu sürece harabe listeden asla silinmez.
-- **⚡ Hızlı Galaksi Geçişlerinde Kesintisiz Tarama (Bridge Entegrasyonu):**
-  - `bridge.js` üzerinden OGame'in jQuery `ajaxComplete` döngüsü `LS_GALAXY_AJAX_COMPLETE` olayı ile `content.js`'e bağlandı.
-  - Ok tuşlarına hızlıca basıldığında zamanlayıcıların birbirini iptal etmesi engellendi; kademeli kuyruk yapısıyla hiçbir sistem atlanmadan taranıyor.
-- **🛡️ Chrome Eklenti Hata Temizliği (Zero Extension Errors):**
-  - `forceRefreshAllUniverseData()` fonksiyonundaki yakalanmayan `throw err;` istisnası ve `console.error` çağrıları temizlendi.
-  - `ensureAudioContext()` Web Audio API Autoplay kurallarına uygun hale getirildi; Chrome Extensions panelinde kırmızı hata uyarıları tamamen sıfırlandı.
-
-### v12.2
-- **📬 Postacı Asistanı Ekranda Takılma Düzeltmesi:**
-  - OGame filo gönderim adımında (Step 2) OGame'in hedef koordinatları ve Ay seçimini varsayılana sıfırlaması sonucu ortaya çıkan *"Bu görevi başlatamazsın"* hatası ve buton pasifliği kökten çözüldü.
-  - `bridge.js` üzerinden `fleetDispatcher` dahili hedef özellikleri (`targetGalaxy`, `targetSystem`, `targetPosition`, `targetPlanetType`) doğrudan eşitlendi.
-  - Step 2 hazırlık döngüsüne kesintisiz koordinat & Ay doğrulaması eklendi; OGame koordinatları sıfırlamaya çalışsa dahi doğru hedef anında geri yükleniyor.
-  - Çıkış üssü Ay olduğunda hedef koordinat URL'sine yanlışlıkla basılan `type` parametresi düzeltilerek hedefin kendi gerçek tipi (`&type=${item.type}`) sağlandı.
-  - Pasif buton kontrolü ve *"Tekrarla (🔄)"* butonunda temiz sayfa yenilemesi entegre edildi.
-- **📏 Postacı Maden ve Kargo Özeti Düzeni:**
-  - Dağıtım listesinin altındaki toplam maden tutarları ile kargo ihtiyacı yazısının birbirine yapışması engellendi; alan şık ve ferah 2 satırlı düzen ve kesikli ayırıcı çizgi ile ayrıldı.
-
-### v12.1
-- **📐 CSS Ölçekleme ve Dar Panel Sözdizimi Düzeltmesi:**
-  - Panelin minimum boyuta (350px ve 310px) küçültüldüğünde tüm buton, başlık, kart ve girdi kutularının eksiksiz ölçeklenmesini engelleyen geçersiz CSS seçici sözdizimi temizlendi.
-- **🟡🔵 Fenerbahçe Skin İyileştirmeleri:**
-  - Dar ekranda büyük işlem butonlarının iki satıra taşmasını engelleyen dinamik emoji optimizasyonu eklendi.
-  - Galaksi Tarayıcısı sonuç satırları ve Oyuncu Arama sonuç kartları Fenerbahçe temasına uygun lacivert/sarı renk şemasına dahil edildi.
-  - Arama sonuçlarındaki yönlendirme butonları temaya uygun futbol topu (`⚽`) simgesiyle güncellendi.
-- **🔍 Oyuncu/Gezegen Arama Geliştirmesi:**
-  - 50 sonuç sınırına ulaşıldığında kullanıcıya net bir şekilde `50+ sonuç bulundu (İlk 50 listeleniyor)` bilgisi gösterilmesi sağlandı.
-
-### v12.0
-- **🟡🔵 Yeni Görünüm / Skin - Fenerbahçe (Koyu & Kanarya):**
-  - Ayarlar sekmesine yeni `🟡🔵 Fenerbahçe (Koyu & Kanarya)` teması eklendi.
-  - Gece mavisi & lacivert zemin, sarı kanarya vurguları, kale ağı desenli dağıt butonları, futbol topu zıplama ikonları (`⚽`), stadyum (`🏟️`) ve kanarya (`🦅`) detaylarıyla zenginleştirilmiş koyu temalı yeni skin.
-  - Varsayılan `🌌 Uzay Karanlığı (Dark)` teması bozulmadan korundu.
-- **🛡️ Evren & Oyuncu Tarayıcısı Hata Düzeltmeleri:**
-  - 60 saniyelik güncelleme beklemesinde (cooldown) sayfa yenilendiğinde önbelleğin boş (`null`) dönmesi ve koordinat/oyuncu verilerini okurken oluşan istisnalar giderildi.
-  - Önbellek durum göstergelerindeki koordinat ve oyuncu sayısı kontrolleri `null-safe` hale getirildi.
-  - Arama modülünde adı boş gelen oyuncu ve gezegen kayıtları için küçük harfe çevirme (`toLowerCase`) hata koruması sağlandı.
-
-### v11.2
-- **🏗️ Maliyet Sepetine Ek Maliyet Desteği:**
-  - Gönderim yapılacak her bir gezegen sepetine otomatik eklenecek sabit maden tutarları (Metal, Kristal, Deu) tanımlama özelliği eklendi.
-- **☑️ Sepet Kolay Seçim Çubuğu:**
-  - Sepetteki gezegenleri tek hamlede yönetmek için `☑️ Tümünü Seç` ve `◻️ Seçimi Temizle` butonları eklendi.
-- **📐 Ölçekleme & Panel Hover İyileştirmeleri:**
-  - Panel boyutu küçültüldüğünde butonların taşmasını ve yatay kaydırma çubuğunun oluşmasını engelleyen dinamik ölçekleme yapıldı.
-- **📬 Postacı & Alarm Hizalamaları:**
-  - Postacı sekmesindeki maden kutucukları ve ikon hizalamaları düzeltildi, minimum panel boyutu optimize edildi.
-
-### v11.1
-- **📬 Postacı Asistanı İyileştirmeleri & Dağıtım Üssü Seçimi:**
-  - Dağıtım üssü kutusuna tıklandığında açılan açılır liste (combobox) optimize edildi; imparatorluktaki herhangi bir Gezegen veya Ay tek tıkla çıkış noktası olarak atanabilir.
-  - Filo gönderme ekranındaki gemi adet kontrolü ve otomatik form doldurma kararlılığı artırıldı.
-- **⏱️ Sekmeler İçin 3 Saniye Gecikmeli Kullanım Rehberi (Hover Tooltips):**
-  - Paneldeki 9 sekmenin üzerine fare ile 3 saniye gelindiğinde, sekmenin işlevini ve kullanımını özetleyen bilgilendirme kutusu (tooltip) eklendi (TR / ENG).
-- **🌐 Dil ve Arayüz Düzenlemeleri:**
-  - Dil seçeneği kısaltması `ENG` olarak sadeleştirildi; işletim sistemi yazı tipi uyumluluğu artırıldı.
-  - Harabe takipçisindeki galaksiye yönlendirme butonu arayüzü tekil roket simgesiyle netleştirildi.
-
-### v11.0
-- **📬 Yeni Modül: Postacı Asistanı (Resource Courier):**
-  - Maden Toplayıcı'nın (Collector) tam simetrik tersi olarak çalışan, tek bir çıkış üssünden (Dağıtım Üssü) imparatorluk genelindeki tüm hedef gezegen ve aylara maden sevkiyatı yapan yepyeni asistan sekmesi eklendi.
-  - **Genel Dağıtım Senkronizasyonu (Global Fill):** Metal, Kristal ve Deuterium için genel tutar kutuları ve `⚡ Eşitle` butonu entegre edildi. Belirlenen tutarlar tek hamlede tüm seçili kolonilere aktarılabilir.
-  - **Hedefe Özel Bağımsız Girişler:** Her gezegen ve ay için ayrı ayrı Metal, Kristal, Deuterium girdi alanları sunuldu (`1m`, `500k`, `2.5m` gibi sayı kısaltmaları desteklenir).
-  - **Çıkış Üssü Koruma Rozeti:** Dağıtım üssü olarak seçilen merkez otomatik algılanarak `📍 Dağıtım Merkezi` rozetiyle işaretlenir, onay kutusu kilitlenir ve yanlışlıkla kendine gönderim yapılması engellenir.
-  - **Canlı Stok & Kapasite Doğrulaması:** Dağıtım üssündeki canlı hammadde miktarları ve seçilen kargo gemilerinin (Büyük Nakliye, Küçük Nakliye, Rehber) toplam kapasitesi kontrol edilerek özet çubuğunda yeterlilik durumu raporlanır.
-  - **Yüzen Bilgi Paneli & Otomatik Uncheck:** Gönderimi tamamlanan hedefler otomatik olarak listeden düşürülür (uncheck edilir); `Space` tuşu desteğiyle kesintisiz, sıra sıra konforlu filo dağıtımı sağlanır.
-
-### v10.6
-- **🔄 Birleşik Evren & Oyuncu Önbellek Senkronizasyonu (Unified Universe & Player Cache):**
-  - **Arama (Player Finder) Sekmesine Akıllı Önbellek & Güncelleme Butonu:** Oyuncu ve gezegen arama modülü, her aramada sunucuya gitmek yerine 24 saatlik akıllı yerel önbellek üzerinden çalışacak şekilde optimize edildi.
-  - **Tek Hamlede Çift Veri İndirme:** Hem Tarayıcı hem de Arama sekmesindeki `🔄 Güncelle` butonları birleştirildi. Herhangi birinden güncellendiğinde `universe.xml` ve `players.xml` tek seferde paralel olarak indirilip kaydedilir; sunucuya mükerrer istek gönderilmesi önlenir.
-  - **Senkronize 60 Saniye Kilidi (Shared Cooldown):** Güncelleme tetiklendiğinde iki sekmedeki güncelleme butonları da aynı anda kilitlenir ve 60 saniyelik geri sayım sayacı (`⏳ 59s` ... `⏳ 1s`) iki sekmede de ortak çalışır.
-  - **Gelişmiş Önbellek Durum Bilgisi:** Arama ve Tarayıcı sekmelerinde son güncelleme zamanı ile toplam kayıtlı gezegen ve oyuncu sayıları anlık olarak görüntülenir.
-- **👁️ Ayarlanabilir Panel Saydamlığı (Opacity Slider):**
-  - Ayarlar sekmesine %20 ile %100 arasında 5'lik adımlarla çalışan saydamlık kaydırıcısı eklendi. Panel yarı saydam yapılarak arkasında kalan oyun ekranının rahatça okunabilmesi sağlandı.
-- **🎯 Fare Focus Özelliği (Hover to Focus - %100 Görünürlük):**
-  - Saydamlık ayarının yanına eklenen "Fare Üzerindeyken %100 Yap" seçeneğiyle, panel saydam olsa bile fare üzerine geldiğinde akıcı bir geçişle tam görünür (%100) olur; fare çekildiğinde eski saydamlık seviyesine geri döner.
-
-### v10.5
-- **🌌 Galaxy Scanner Akıllı Önbellek (Cache) & Sıfır Sunucu Yükü:**
-  - `universe.xml` dosyasının her taramada tekrar indirilmesi engellendi; 24 saat geçerli istemci taraflı önbellek mimarisi entegre edildi. Taramalar artık sunucuya 0 ağ isteği atarak ~50 ms içinde yerel hafızadan anında sonuç verir.
-  - **İkili Buton Mimarisi:** `🔍 Taramayı Başlat` (Önbellekten hızlı tarama) ve `🔄 Güncelle` (Sunucudan zorla taze veri çekme).
-  - **60 Saniye Güvenlik Kilidi (Cooldown):** `🔄 Güncelle` butonuna 60 saniyelik geri sayım sayacı (`⏳ 59s` ... `⏳ 1s`) ve kilit mekanizması eklendi; Gameforge API'sinin yanlışlıkla spamlanması teknik olarak engellendi.
-- **🛡️ Ses Motoru (AudioContext) & Autoplay Koruma Güvencesi:**
-  - Chrome Autoplay politikası nedeniyle `AudioContext.resume()` çağrılarında oluşan konsol promise reddi hataları koruma altına alındı.
-- **📋 Güvenli Pano Kopyalama (Clipboard Safe Fallback):**
-  - Tarayıcı pencere odağı kaybolduğunda ortaya çıkan `Document is not focused` hatalarına karşı görünmez textarea geri çekilme mekanizması (`copyTextSafe`) eklendi.
-
-### v10.4
-- **🧭 Keşif Asistanı Sadeleştirmesi & Doğal Şablon Desteği:**
-  - OGame filo şablonlarının kayıtlı hız ve keşif süresi ayarlarını doğal (native) olarak koruması sağlandı.
-  - Step 2 hazırlık ve kontrol akışı optimize edilerek bekleme süresi minimuma indirildi.
-
-### v10.2
-- **🎛️ 3 Satırlı Gelişmiş Multi-Filtre (AND Mantığı):**
-  - **1. Satır (Akış):** `Tümü`, `🐞 Debug Logs`, `🎯 Trace Logs`
-  - **2. Satır (Kapsam):** `Tümü`, `📤 Giden İstekler`, `📥 Gelen Yanıtlar` (AJAX istekleri ile gelen yanıtlar bağımsız olarak filtrelenebilir).
-  - **3. Satır (Seviye):** `Tümü`, `ℹ️ Info`, `⚠️ Warning`, `❌ Error`
-- **💾 Logları Çıkar (.txt Dışa Aktarma):** Ekranda filtrelenmiş logları doğrudan `LuckyStrike_logs_YYYY-MM-DD_HH-mm-ss.txt` olarak masaüstüne kaydeden dosya kaydetme diyaloğu eklendi.
-- **🧹 Filtreye Duyarlı Kopyalama ve Temizleme:**
-  - `📋 Logları Kopyala`: Yalnızca seçili filtrelere uyan logları panoya kopyalar.
-  - `🗑️ Logları Temizle`: Filtrelenen logları seçici olarak temizler.
-
-### v10.1
-- **🎯 Trace Logs (Kullanıcı Eylem & Oyun Yanıt Takibi):** Kullanıcının nereye geçtiğini, neye tıkladığını (gemi, buton, menü, gezegen), basılan tuşları (Space, Enter), form değişikliklerini ve OGame'den dönen tüm bildirim ve sunucu yanıtlarını anbean kaydeden kullanıcı akış takipçisi eklendi.
-- **🐞 Debug Logs & Trace Logs Ayrımı:**
-  - Sadece **Debug Logs** açıkken: Yalnızca uyarı ve hata kayıtları listelenir (sessiz mod).
-  - Sadece **Trace Logs** açıkken: Yalnızca kullanıcının bastığı tuşlar, tıkladığı öğeler, sayfa geçişleri ve oyun yanıtları listelenir.
-  - **İkisi de açıkken:** Tüm sistem logları ve kullanıcı akışı birleşik olarak gösterilir.
-
-### v10.0
-- **🐞 Canlı Debug & Hata Teşhis Sekmesi (Debug Tab):** Tüm sekmelerdeki eylemleri anbean kaydeden gelişmiş teşhis modülü eklendi.
-- **💾 Sayfalar Arası Oturum Hafızası (`sessionStorage`):** Gezegenler veya sistemler arası geçişlerde sayfa yenilense bile oturum boyunca geçmiş adımlar korunur.
-
-### v9.0
-- **🧭 Keşif Asistanı (Expedition Assistant):** Spiral rota algoritması (+1, -1, +2, -2...) ile 16. slotlara rota dağıtımı, filo şablonlarını otomatik algılama ve uygulama, yüzen HUD banner'ı ve `Space` tuşu ile adım adım filo gönderimi.
-
-### v8.0
-- **📦 Maden Toplayıcı Asistanı (Resource Collector):** Tüm imparatorluk kolonilerinden tek bir hedef noktaya maden toplama, rezerv koruma, BN / KN / Rehber gemi dağılımı ve `Space` tuşu entegrasyonu.
-
-### v7.1
-- **🛡️ Oyun Kurallarına Tam Uyum:** Arka plan istekleri olmaksızın yalnızca oyuncunun aktif sayfa yenileme anlarında çalışan pasif mimari.
-- **🌐 Çift Dil (TR/ENG) Desteği:** Türkçe ve İngilizce tam arayüz entegrasyonu.
+For full release history, feature highlights, and bilingual changelogs (🇹🇷 Turkish & 🇬🇧 English), please visit the GitHub Releases page linked above.

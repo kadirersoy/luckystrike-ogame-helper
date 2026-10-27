@@ -5974,8 +5974,8 @@
         }
     }
 
-    // Pasif Etkinlik Dinleyicisi (Sıfır Sunucu İsteği, Sıfır Ban Riski):
-    // OGame'in kendi yaptığı eventList veya mini-etkinlik çağrılarının yanıtlarını havada yakalar
+    // Pasif Etkinlik Dinleyicisi (Ek Sunucu Yükü Olmaksızın Yerel Olay Okuma):
+    // OGame'in kendi yaptığı eventList veya mini-etkinlik çağrılarının yanıtlarını yakalar
     function parseThreatsFromHTML(html) {
         if (!alarmSettings.attackEnabled && !alarmSettings.espionageEnabled) return;
         try {
@@ -12439,7 +12439,7 @@
         setupExpeditionEvents();
         renderExpedition();
 
-        // 100% Pasif Tehdit İzleme (Sıfır Sunucu Yükü, Sıfır Ban Riski)
+        // Pasif Tehdit İzleme (Ek Sunucu İsteği Olmaksızın Doğrudan DOM Değişiklikleri Dinlenir)
         // OGame'in kendi DOM değişiklikleri ve kendi dahili eventList AJAX çağrıları dinlenir
         const attEl = document.getElementById('attack_alert');
         if (attEl) {

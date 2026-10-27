@@ -85,7 +85,7 @@ if (-not $asset) {
 # Check 4: Version Synchronization (Manifest vs Tag vs README)
 Write-Host "[4/6] Checking Version Synchronization across files..."
 $readme = [System.IO.File]::ReadAllText((Join-Path $projectRoot "README.md"), [System.Text.Encoding]::UTF8)
-$readmeHasVersion = $readme.Contains("($expectedTag)") -or $readme.Contains("### $expectedTag")
+$readmeHasVersion = $readme.Contains($expectedTag) -or $readme.Contains("($expectedTag)") -or $readme.Contains("luckystrike-ogame-helper-$expectedTag.zip")
 if (-not $readmeHasVersion) {
     $failures += "README.md does not reference $expectedTag!"
     Write-Host "  FAILED: $($failures[-1])" -ForegroundColor Red

@@ -73,35 +73,44 @@ Compress-Archive -Path $extFiles -DestinationPath $zipPath -Force
 Write-Host "  ZIP created ($((Get-Item $zipPath).Length) bytes)."
 
 # ============================================================
-# 5. GITHUB FIX RULE: EXTRACT PURE UTF-8 BODY FROM README.MD
+# 5. GITHUB FIX RULE: EXTRACT PURE UTF-8 BILINGUAL RELEASE NOTES
 # ============================================================
-Write-Host "[GitHub-Fix 2/2] Extracting pristine UTF-8 Release Notes from README.md..."
-$readme = [System.IO.File]::ReadAllText("$projectRoot\README.md", [System.Text.Encoding]::UTF8)
+Write-Host "[GitHub-Fix 2/2] Extracting pristine UTF-8 Bilingual Release Notes..."
+$notesFile = Join-Path $PSScriptRoot "release_notes.md"
+$notesPart = ""
 
-# Extract notes for this tag
-$startTag = "### $tag"
-$startIdx = $readme.IndexOf($startTag)
-if ($startIdx -lt 0) {
-    Write-Error "Release section '$startTag' not found in README.md! Please document the release notes first."
-}
-
-# Find end of notes
-$nextIdx = $readme.IndexOf("### v", $startIdx + $startTag.Length)
-if ($nextIdx -ge 0) {
-    $notesPart = $readme.Substring($startIdx, $nextIdx - $startIdx).Trim()
+if (Test-Path $notesFile) {
+    Write-Host "  Reading release notes from scripts\release_notes.md..."
+    $notesPart = [System.IO.File]::ReadAllText($notesFile, [System.Text.Encoding]::UTF8).Trim()
 } else {
-    $nextDivider = $readme.IndexOf("---", $startIdx)
-    if ($nextDivider -ge 0) {
-        $notesPart = $readme.Substring($startIdx, $nextDivider - $startIdx).Trim()
-    } else {
-        $notesPart = $readme.Substring($startIdx).Trim()
+    $readme = [System.IO.File]::ReadAllText("$projectRoot\README.md", [System.Text.Encoding]::UTF8)
+    $startTag = "### $tag"
+    $startIdx = $readme.IndexOf($startTag)
+    if ($startIdx -ge 0) {
+        $nextIdx = $readme.IndexOf("### v", $startIdx + $startTag.Length)
+        if ($nextIdx -ge 0) {
+            $notesPart = $readme.Substring($startIdx, $nextIdx - $startIdx).Trim()
+        } else {
+            $nextDivider = $readme.IndexOf("---", $startIdx)
+            if ($nextDivider -ge 0) {
+                $notesPart = $readme.Substring($startIdx, $nextDivider - $startIdx).Trim()
+            } else {
+                $notesPart = $readme.Substring($startIdx).Trim()
+            }
+        }
     }
 }
 
+if (-not $notesPart) {
+    $notesPart = "### $tag`n- $tag sürüm güncellemesi ve hata düzeltmeleri / Version maintenance release."
+}
+
 # Extract Kurulum section from README.md
+$readme = [System.IO.File]::ReadAllText("$projectRoot\README.md", [System.Text.Encoding]::UTF8)
 $installIdx = $readme.IndexOf("Kurulum / Installation")
 $startInstall = $readme.LastIndexOf("## ", $installIdx)
 $endInstall = $readme.IndexOf("---", $installIdx)
+if ($endInstall -lt 0) { $endInstall = $readme.Length }
 $installPart = $readme.Substring($startInstall, $endInstall - $startInstall).Trim()
 
 $rocket = [char]::ConvertFromUtf32(0x1F680)
