@@ -1,4 +1,4 @@
-# ⚡ LuckyStrike OGame Helper (v14.3)
+﻿# ⚡ LuckyStrike OGame Helper (v14.4)
 
 [English](#-english-description) | [Türkçe](#-türkçe-açıklama)
 
@@ -315,7 +315,7 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ## 🚀 Kurulum / Installation
 
 ### Chrome & Microsoft Edge
-1. İndirin / Download: [`luckystrike-ogame-helper-v14.3.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
+1. İndirin / Download: [`luckystrike-ogame-helper-v14.4.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
 2. Tarayıcıda eklentiler sayfasına gidin / Open extensions page:
    - **Chrome:** `chrome://extensions`
    - **Edge:** `edge://extensions`
@@ -325,6 +325,21 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ---
 
 ## 📝 Sürüm Geçmişi / Changelog
+
+### v14.4
+- **🚨 Sunucu Hata Yönetimi & Güvenli Yönlendirme / Server Error Handling & Safe Dispatch Redirect:**
+  - sendFleet isteğine OGame sunucusundan gelen yanıtlar JSON formatında tam olarak denetlenir. Sunucu hatası oluştuğunda (success: false veya errors), asistanların sonraki gezegene veya sisteme kontrolsüzce yönlenmesi kesin olarak engellendi.
+  - Hata oluştuğunda kuyruk indeksi korunur, gönderilmeyen gezegen/hedef işaretli kalır ve HUD bannerında gerçek hata detayı kırmızı renkle gösterilir (Tekrar Dene / Atla / İptal butonları sunulur).
+- **💡 Uçuş Yakıtı (Deu) Ön Kontrolü / Pre-Flight Fuel Sufficiency Guard:**
+  - Filo 2. adımında (leet2) gemilerin tüketeceği döteryum motor yakıtı canlı olarak hesaplanır ve gezegendeki mevcut döteryumla kıyaslanır.
+  - Gezegendeki döteryum filonun uçuş yakıtına dahi yetmiyorsa Gönder butonu kilitlenerek kullanıcıya ⚠️ Uçuş Yakıtı Yetersiz (Gereken Deu: X) uyarısı gösterilir; sunucudan ret cevabı alınması önlenir.
+- **🐛 Çoklu Dil Görev Hata Tespiti / Multi-Language Mission Error Detection:**
+  - hasVisibleMissionError() fonksiyonu dilden bağımsız hale getirildi. Türkçe dışındaki (İngilizce, Almanca vb.) sunucularda görev bildirim hatalarının algılanamayıp takılmaya yol açması engellendi.
+- **⌨️ Space Tuşu Giriş Alanı Koruması / Unified Input Guard for Space Key:**
+  - Toplayıcı ve Postacı HUD'larında kullanıcı form kutularına (INPUT, TEXTAREA, SELECT) değer yazarken Space tuşuna basması durumunda kazara filo fırlatılması engellendi; davranış tüm asistanlarda standardize edildi.
+- **🧹 Kod Tabanı İyileştirmeleri & Eksik Çeviriler / Code Cleanup & i18n Completeness:**
+  - Kullanılmayan ölü kod dvanceFleetStep temizlendi.
+  - Toplayıcı ve Postacı HUD'larında yer alan hardcoded bildirim metinleri I18N sözlüğüne entegre edildi.
 
 ### v14.3
 - **🧭 Keşif Asistanında Slot Takibi, Canlı Bekleme Durumu ve Başlangıç Uyarısı / Expedition Slot Awareness & Live Waiting Status:**
