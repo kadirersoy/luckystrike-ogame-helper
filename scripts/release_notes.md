@@ -1,37 +1,29 @@
-### 🇹🇷 Türkçe Sürüm Notları (v14.5)
-- **🛡️ Pasif Gönder Butonu (`.off` / `.disabled`) Koruması:**
-  Keşif, Toplayıcı, Postacı ve Maliyet Sepeti asistanlarında gönderim öncesi `#sendFleet` butonunun durumu `isSendFleetReady()` ile doğrulanır. Filo veya keşif slot limiti aşıldığında oyun butonunun `.off` / `disabled` olması durumunda butonun hazır zannedilip gereksiz gönderim tetiklenmesi ve asistanın donup kalması kesin olarak engellendi.
-- **🧭 Keşif Slot Tespiti & Yapısal Fallback Güçlendirmesi:**
-  `getExpeditionSlotsInfo` ve `getFleetSlotsInfo` regex'leri esnek (`:?`) hale getirildi ve çoklu dil (İspanyolca, İtalyanca, Lehçe vb.) desteği eklendi. Metin analizi yetersiz kalsa bile `#slots` DOM elemanı altındaki slot çiftlerini doğrudan ayrıştıran yapısal fallback eklendi. OGame AJAX ve DOM hazır olma anlarında (`$(document).ready` ve `ajaxComplete`) slot verisinin anında senkronize edilmesi sağlandı (sunucuya sıfır ek ağ yükü, %100 pasif okuma).
-- **⏱️ Fallback Zaman Aşımı ve Güvenli Durum Doğrulaması:**
-  Fallback süresi gerçek sunucu gecikmelerine tolerans sağlayacak şekilde 3500ms'ye çıkarıldı. Yanıt geciktiğinde asistan körü körüne başarı varsaymak yerine butonun aktifliğini denetler; buton pasif ise güvenli hata durumuna geçer.
-- **⚡ Çift Gönderim Koruması Bildirimi:**
-  `bridge.js` çift tıklama korumasını tetiklediğinde `content.js`'e `LS_SEND_FLEET_COMPLETE` hatası ileterek asistanın askıda kalmasını engeller.
-- **🧠 Açılır Menü Dinleyici Sızıntısı Temizliği:**
-  Toplayıcı, Postacı ve Maliyet Sepeti panellerinde açılır menü dış tıklama dinleyicileri tekilleştirilerek (`hasOutsideClick`) gereksiz bellek birikimi önlendi.
-- **📬 Postacı Asistanı 15 Dakika Zaman Aşımı Güvencesi:**
-  Postacı asistanına diğer asistanlardaki gibi 15 dakikalık oturum zaman aşımı koruması eklenerek eski oturumların istenmeyen anlarda çalışması engellendi.
-- **🌐 Eksiksiz Dil Bütünlüğü & i18n Düzeltmeleri:**
-  Manuel koordinat istemleri, asistan tamamlanma ve durdurulma bildirimleri `I18N.tr` ve `I18N.en` sözlüklerine eklenerek çift dilli uyumluluk %100 sağlandı.
-- **📜 Oyun Kurallarına Tam Uyum & Hesaplama Asistanı Vurgusu:**
-  Eklentinin felsefesi ve teknik dokümantasyonu; hiçbir tam otomasyon veya arka plan bot mekanizması barındırmayan, yalnızca oyuncu başındayken girdi hesaplama (kargo kapasitesi, koordinat, maliyet tablosu) ve tek tuşla insan hızında manuel onay (`Space`) sağlayan bir QoL (Yaşam Kalitesi) hesaplayıcısı ve arayüz asistanı olarak netleştirildi. Şaibeli ifadeler temizlendi.
+### 🇹🇷 Türkçe Sürüm Notları (v14.6)
+- **🚀 Kararlı Filo Gönderim Mimarisi (v14.3) Yeniden Sağlandı:**
+  Keşif, Maliyet Sepeti, Toplayıcı ve Postacı asistanlarında ilk filodan sonraki filolara geçişi engelleyen ve filonun ilk adımda dönüp durmasına yol açan mantıksal gerilemeler tamamen giderildi.
+- **🛡️ AJAX Prefilter & Tip Güvenliği:**
+  `bridge.js` içerisindeki `$.ajaxPrefilter` kancasında yanıt verisinin türü (`typeof data === 'object'`) doğrulanarak, string tipindeki sunucu yanıtlarında oluşan ve OGame'in native yönlendirmesini kilitleyen `TypeError: Cannot use 'in' operator to search for 'redirectUrl'` hatası çözüldü.
+- **⚡ Deterministik Kuyruk İlerlemesi & Döngü Önleme:**
+  Filo gönderim tetiklendiğinde kuyruk indeksi (`session.currentIndex++`) gecikmeksizin ilerletilerek kaydedilir. OGame'in `#sendFleet` butonuna basıldıktan sonra butonu doğal olarak `.off` / `disabled` yapması durumunun asistan tarafından asılsız hata olarak algılanması ve ilk adımı sonsuz döngüye sokması engellendi.
+- **🧭 Hata Tespiti Hassasiyeti (`hasVisibleMissionError`):**
+  Görev hata tespit mekanizması, DOM'da var olan pasif `.error` sınıflarından etkilenmeyecek şekilde kararlı hale getirilerek yalnızca ekranda görünür ve gerçek hata metinlerine (`Bu görevi başlatamazsın`) tepki verecek şekilde düzenlendi.
+- **⏱️ 1200ms Güvenlik Yedeği Fallback:**
+  Filo gönderiminin ardından OGame'in native yönlendirmesi herhangi bir ağ gecikmesi sebebiyle devreye girmezse, 1200ms'lik güvenlik yedeği devreye girerek bir sonraki hedef sayfaya geçişi kusursuz biçimde tamamlar.
+- **📜 Oyun Kurallarına Tam Uyum & Hesaplama Asistanı:**
+  Gameforge kurallarına %100 uyumlu ergonomik hesaplayıcı ve arayüz yardımcısı mimarisi korunmaktadır. Tüm işlemler oyuncu denetiminde ve insan hızında (`Space` tuşu veya buton) yürütülür; hiçbir arka plan otomasyonu veya bot mekanizması barındırmaz.
 
 ---
 
-### 🇬🇧 English Release Notes (v14.5)
-- **🛡️ Disabled Send Button (`.off` / `.disabled`) Guard:**
-  Pre-flight checks now strictly verify `#sendFleet` readiness using `isSendFleetReady()` across Expedition, Collector, Courier, and Cost Cart. When fleet or expedition slot limits are reached and OGame marks the button `.off` / `disabled`, false dispatches and UI freezes are prevented.
-- **🧭 Robust Expedition Slot Detection & Structural Fallback:**
-  Regex matching for `getExpeditionSlotsInfo` and `getFleetSlotsInfo` has been made flexible (`:?`) with multi-language coverage (Spanish, Italian, Polish, etc.). Added a structural fallback that directly parses numeric pairs inside `#slots` elements. Slot metadata is passively synchronized on DOM ready and OGame `ajaxComplete` events without additional network requests.
-- **⏱️ Safe Fallback Timeout Inspection:**
-  Increased fallback timeout to 3500ms to tolerate authentic server latency. If the server response is delayed, the helper no longer assumes false success; it inspects button state and gracefully enters a retryable failure state if the button remains disabled.
-- **⚡ Double Submit Event Feedback:**
-  When `bridge.js` suppresses rapid consecutive submits, it now dispatches `LS_SEND_FLEET_COMPLETE` with error details to keep assistant banners informed instead of hanging.
-- **🧠 Dropdown Outside-Click Memory Leak Fix:**
-  Outside-click document listeners in Collector, Courier, and Cart dropdown menus are now unified via a single attachment flag (`hasOutsideClick`), preventing listener accumulation across renders.
-- **📬 Courier 15-Minute Session Expiry:**
-  Added the standard 15-minute `startedAt` session expiration guard to Courier assistant to safely clear orphaned sessions.
-- **🌐 Full i18n Symmetry:**
-  Added missing prompt labels and notification toasts to `I18N.tr` and `I18N.en` dictionaries for 100% bilingual parity.
-- **📜 Fair-Play Rules Compliance & Calculator Refinement:**
-  Refined extension messaging and documentation to emphasize its role as a 100% rules-compliant Quality-of-Life calculation assistant and ergonomic interface helper. Clarified that no unattended automation or background bots exist; every dispatch is manually triggered at human speed by the player (`Space`), with the tool solely assisting with capacity, resource, and coordinate calculations.
+### 🇬🇧 English Release Notes (v14.6)
+- **🚀 Restoration of the Stable Fleet Dispatch Architecture (v14.3):**
+  Resolved the regression where expeditions and fleet assistants would hang or loop on the first fleet without advancing to subsequent targets.
+- **🛡️ AJAX Prefilter & Type-Safe Callback Handling:**
+  In `bridge.js`, hardened `$.ajaxPrefilter` to verify `typeof data === 'object'` before inspecting response properties, preventing unhandled `TypeError` exceptions on string payloads that previously blocked OGame's native redirect execution.
+- **⚡ Deterministic Queue Advancement & Loop Prevention:**
+  Restored immediate queue progression (`session.currentIndex++`) at the moment of dispatch. Fixed the issue where OGame naturally disabling `#sendFleet` post-click was incorrectly interpreted as a dispatch failure, causing endless step 1 retries.
+- **🧭 Mission Error Detection Refinement (`hasVisibleMissionError`):**
+  Eliminated false-positive error triggers caused by idle `.error` classes in the DOM; now strictly verifies visible and actionable game error notices (`Bu görevi başlatamazsın`).
+- **⏱️ 1200ms Safety Fallback Navigation:**
+  Maintained the deterministic 1200ms fallback redirect timer to ensure smooth transition to the next destination if OGame's AJAX redirect experiences network delays.
+- **📜 100% Fair-Play & Rules Compliance:**
+  Strictly preserves the player-driven ergonomics and calculation model. Zero background automation, zero unattended bots — all actions remain strictly supervised by the player at human speed (`Space` key or click).

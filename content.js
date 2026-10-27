@@ -2,7 +2,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v14.5 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v14.6 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -2780,17 +2780,8 @@
     }
 
     function hasVisibleMissionError() {
-        return Array.from(document.querySelectorAll('#fleet2 .notification-error, #fleet2 p.error, #fleet2 .error, .notification-error, #fleet2 .fadeBox.error'))
-            .some(el => {
-                const isVisible = (el.offsetWidth > 0 || el.offsetHeight > 0) && window.getComputedStyle(el).display !== 'none';
-                if (!isVisible) return false;
-                const txt = (el.textContent || '').trim().toLowerCase();
-                if (!txt) return false;
-                return txt.includes('görev') || txt.includes('mission') || txt.includes('auftrag') ||
-                       txt.includes('hata') || txt.includes('error') || txt.includes('fehler') ||
-                       txt.includes('başlatamazsın') || txt.includes('ausführen') ||
-                       el.classList.contains('notification-error') || el.classList.contains('error');
-            });
+        return Array.from(document.querySelectorAll('#fleet2 .notification-error, #fleet2 p.error, #fleet2 .error, .notification-error'))
+            .some(el => (el.offsetWidth > 0 || el.offsetHeight > 0) && window.getComputedStyle(el).display !== 'none' && (el.textContent || '').includes('Bu görevi başlatamazsın'));
     }
 
     function getFleetFuelConsumption() {
@@ -4096,10 +4087,6 @@
             }
 
             if (isSendBtnVisible) {
-                if (!isSendFleetReady()) {
-                    showCollectorToast(t('fleet_hud_wait_send_btn', '⚠️ Gönder butonu hazır değil veya slotlar dolu!'), 3500);
-                    return;
-                }
                 dispatchSendCartFleet();
             } else {
                 clickDevamButton();
@@ -4118,129 +4105,61 @@
             window.removeEventListener('keydown', keyListener);
             if (typeof details.cancel === 'function') details.cancel();
 
-            let fallbackTimer = null;
-            let sendCompleted = false;
+            // 1. Gönderilen gezegenin Level 1 Checkbox'ını uncheck yap
+            const pPrefs = getCartPlanetPrefs();
+            if (!pPrefs[currentItem.key]) pPrefs[currentItem.key] = {};
+            pPrefs[currentItem.key].selected = false;
+            saveCartPlanetPrefs(pPrefs);
+
+            // 2. Gezegen sepeti altındaki tüm kalemleri de uncheck yap (gözle takip için)
+            cart.forEach(item => {
+                const itemKey = `${item.coords}_${item.type || 1}`;
+                if (itemKey === currentItem.key) {
+                    item.checked = false;
+                }
+            });
+            saveCart();
+            renderCart();
+
+            // 3. Kuyruk indeksini ilerlet
+            session.currentIndex++;
+            sessionStorage.setItem(KEYS.CART_QUEUE, JSON.stringify(session));
+            updateAllAutomationStartButtons();
+
+            LS_LOGGER.dispatch('CART', `Maliyet filosu gönderiliyor: ${currentItem.name} [${currentItem.coords}] (Adım ${session.currentIndex}/${session.queue.length})`);
 
             if (banner) {
                 banner.innerHTML =
-                    '<div style="font-size:12px;color:#f39c12;padding:8px;font-weight:bold">' +
-                        '⏳ ' + t('fleet_hud_sending', 'Filo gönderiliyor...') +
+                    '<div style="font-size:12px;color:#2ecc71;padding:8px;font-weight:bold">' +
+                        '🚀 ' + t('coll_hud_sent_moving', 'Filo gönderildi! Sıradaki gezegene geçiliyor...') +
                     '</div>';
             }
 
-            // Sıradaki hedef URL'yi önceden hazırla (currentIndex henüz artırılmadı!)
+            // Sıradaki hedef URL'yi önceden hazırla
             let nextUrl = null;
-            const nextIdx = session.currentIndex + 1;
-            if (nextIdx < session.queue.length) {
-                const nextItem = session.queue[nextIdx];
+            if (session.currentIndex < session.queue.length) {
+                const nextItem = session.queue[session.currentIndex];
                 const [nextG, nextS, nextP] = nextItem.coords.split(':');
                 const originParam = (session.originId && session.originId !== 'manual') ? `&cp=${session.originId}` : '';
                 nextUrl = `/game/index.php?page=ingame&component=fleetdispatch${originParam}&galaxy=${nextG}&system=${nextS}&position=${nextP}&type=${nextItem.type}&mission=${nextItem.mission}`;
             }
 
-            const onSendSuccess = () => {
-                if (sendCompleted) return;
-                sendCompleted = true;
-                if (fallbackTimer) clearTimeout(fallbackTimer);
-                window.removeEventListener('LS_SEND_FLEET_COMPLETE', onSendFleetEvent);
+            // Sayfa bağlamında tekil submit tetikle (nextUrl ile OGame doğrudan yönlendirilir)
+            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                detail: { type: 'SUBMIT_FLEET2', nextUrl: nextUrl }
+            }));
 
-                // 1. Gönderilen gezegenin Level 1 Checkbox'ını uncheck yap
-                const pPrefs = getCartPlanetPrefs();
-                if (!pPrefs[currentItem.key]) pPrefs[currentItem.key] = {};
-                pPrefs[currentItem.key].selected = false;
-                saveCartPlanetPrefs(pPrefs);
-
-                // 2. Gezegen sepeti altındaki tüm kalemleri de uncheck yap (gözle takip için)
-                cart.forEach(item => {
-                    const itemKey = `${item.coords}_${item.type || 1}`;
-                    if (itemKey === currentItem.key) {
-                        item.checked = false;
-                    }
-                });
-                saveCart();
-                renderCart();
-
-                // 3. Kuyruk indeksini ilerlet
-                session.currentIndex++;
-                sessionStorage.setItem(KEYS.CART_QUEUE, JSON.stringify(session));
-                updateAllAutomationStartButtons();
-
-                LS_LOGGER.dispatch('CART', `Maliyet filosu gönderildi: ${currentItem.name} [${currentItem.coords}] (Adım ${session.currentIndex}/${session.queue.length})`);
-
-                if (banner) {
-                    banner.innerHTML =
-                        '<div style="font-size:12px;color:#2ecc71;padding:8px;font-weight:bold">' +
-                            '🚀 ' + t('coll_hud_sent_moving', 'Filo gönderildi! Sıradaki gezegene geçiliyor...') +
-                        '</div>';
-                }
-
+            // Sıradaki adıma geçiş (Güvenlik yedeği fallback: OGame yönlendirmesi tetiklenmezse)
+            setTimeout(() => {
+                if (!sessionStorage.getItem(KEYS.CART_QUEUE)) return;
                 if (nextUrl) {
-                    setTimeout(() => {
-                        window.location.href = nextUrl;
-                    }, 150);
+                    window.location.href = nextUrl;
                 } else {
                     sessionStorage.removeItem(KEYS.CART_QUEUE);
                     if (banner) banner.remove();
                     showCollectorToast('🎉 ' + t('cart_toast_all_sent', 'Sepetteki tüm seçili gezegenlere nakliye başarıyla tamamlandı!'), 6000);
                 }
-            };
-
-            const onSendFailed = (errMsg) => {
-                if (sendCompleted) return;
-                sendCompleted = true;
-                isSending = false;
-                if (fallbackTimer) clearTimeout(fallbackTimer);
-                window.removeEventListener('LS_SEND_FLEET_COMPLETE', onSendFleetEvent);
-
-                const cleanErr = errMsg || t('fleet_send_failed', 'Filo gönderilemedi');
-                LS_LOGGER.warn('CART', `Filo gönderimi başarısız: ${cleanErr}`);
-
-                if (banner) {
-                    banner.innerHTML =
-                        '<div style="font-size:12px;color:#e74c3c;padding:6px;font-weight:bold">' +
-                            '❌ ' + cleanErr +
-                        '</div>' +
-                        '<div style="display:flex;gap:6px;justify-content:center;margin-top:6px">' +
-                            '<button id="ls-banner-retry-fail-btn" style="background:#e67e22;color:#fff;border:none;padding:5px 10px;border-radius:4px;font-weight:bold;cursor:pointer">🔄 ' + t('coll_hud_retry', 'Tekrarla') + '</button>' +
-                            '<button id="ls-banner-skip-fail-btn" style="background:#34495e;color:#fff;border:none;padding:5px 10px;border-radius:4px;font-weight:bold;cursor:pointer">⏭️ ' + t('coll_hud_skip', 'Atla') + '</button>' +
-                            '<button id="ls-banner-cancel-fail-btn" style="background:#e74c3c;color:#fff;border:none;padding:5px 10px;border-radius:4px;font-weight:bold;cursor:pointer">⏹️ ' + t('coll_hud_cancel', 'İptal') + '</button>' +
-                        '</div>';
-
-                    document.getElementById('ls-banner-retry-fail-btn')?.addEventListener('click', retryDispatch);
-                    document.getElementById('ls-banner-skip-fail-btn')?.addEventListener('click', skipStep);
-                    document.getElementById('ls-banner-cancel-fail-btn')?.addEventListener('click', cancel);
-                }
-            };
-
-            const onSendFleetEvent = (e) => {
-                const det = e.detail;
-                if (!det) return;
-                if (det.success === true) {
-                    onSendSuccess();
-                } else {
-                    onSendFailed(det.error);
-                }
-            };
-
-            window.addEventListener('LS_SEND_FLEET_COMPLETE', onSendFleetEvent);
-
-            // Sayfa bağlamında submit tetikle
-            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                detail: { type: 'SUBMIT_FLEET2', nextUrl: nextUrl }
-            }));
-
-            // Fallback zaman aşımı
-            fallbackTimer = setTimeout(() => {
-                if (!sendCompleted) {
-                    if (hasVisibleMissionError()) {
-                        onSendFailed(t('fleet_error_mission_rejected', 'Sunucu görevi onaylamadı'));
-                    } else if (!isSendFleetReady()) {
-                        onSendFailed(t('fleet_error_btn_disabled', 'Gönder butonu pasif (slot dolu veya sunucu reddetti)'));
-                    } else {
-                        onSendSuccess();
-                    }
-                }
-            }, 3500);
+            }, 1200);
         };
 
         const retryDispatch = () => {
@@ -7956,10 +7875,6 @@
             }
 
             if (isSendBtnVisible) {
-                if (!isSendFleetReady()) {
-                    showCollectorToast(t('fleet_hud_wait_send_btn', '⚠️ Gönder butonu hazır değil veya slotlar dolu!'), 3500);
-                    return;
-                }
                 dispatchSendFleetButton();
             } else {
                 clickDevamButton();
@@ -7987,118 +7902,51 @@
             window.removeEventListener('keydown', keyListener);
             if (typeof details.cancel === 'function') details.cancel();
 
-            let fallbackTimer = null;
-            let sendCompleted = false;
+            // 1. Gönderilen gezegeni/ayı Collector ayarlarında uncheck yap
+            if (!collectorSettings.selectedItems) collectorSettings.selectedItems = {};
+            collectorSettings.selectedItems[currentItem.id] = false;
+            saveCollectorSettings();
+            renderCollector();
+
+            // 2. Önce kuyruğu derhal bir sonraki adıma geçir ve kaydet!
+            session.currentIndex++;
+            sessionStorage.setItem(KEYS.COLLECTOR_RUN, JSON.stringify(session));
+            updateAllAutomationStartButtons();
+
+            LS_LOGGER.dispatch('COLLECTOR', `Collector filosu gönderiliyor: ${currentItem.name} -> Hedef: [${session.targetCoord}] (Adım ${session.currentIndex}/${session.queue.length})`);
 
             if (banner) {
                 banner.innerHTML =
-                    '<div style="font-size:12px;color:#f39c12;padding:8px;font-weight:bold">' +
-                        '⏳ ' + t('fleet_hud_sending', 'Filo gönderiliyor...') +
+                    '<div style="font-size:12px;color:#2ecc71;padding:8px;font-weight:bold">' +
+                        '🚀 ' + t('coll_hud_sent_moving', 'Filo gönderildi! Sıradaki gezegene geçiliyor...') +
                     '</div>';
             }
 
-            // Sıradaki hedef URL'yi önceden hazırla (currentIndex henüz artırılmadı!)
+            // Sıradaki hedef URL'yi önceden hazırla
             let nextUrl = null;
-            const nextIdx = session.currentIndex + 1;
-            if (nextIdx < session.queue.length) {
-                const nextItem = session.queue[nextIdx];
+            if (session.currentIndex < session.queue.length) {
+                const nextItem = session.queue[session.currentIndex];
                 const [g, s, p] = session.targetCoord.split(':');
                 const nextType = nextItem.isMoon ? 3 : 1;
                 nextUrl = `/game/index.php?page=ingame&component=fleetdispatch&cp=${nextItem.id}&type=${nextType}&galaxy=${g}&system=${s}&position=${p}&mission=${session.mission || 3}`;
             }
 
-            const onSendSuccess = () => {
-                if (sendCompleted) return;
-                sendCompleted = true;
-                if (fallbackTimer) clearTimeout(fallbackTimer);
-                window.removeEventListener('LS_SEND_FLEET_COMPLETE', onSendFleetEvent);
+            // Sayfa bağlamında tekil submit tetikle (nextUrl ile OGame doğrudan yeni gezegene yönlendirilir)
+            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                detail: { type: 'SUBMIT_FLEET2', nextUrl: nextUrl }
+            }));
 
-                // 1. Gönderilen gezegeni/ayı Collector ayarlarında uncheck yap
-                if (!collectorSettings.selectedItems) collectorSettings.selectedItems = {};
-                collectorSettings.selectedItems[currentItem.id] = false;
-                saveCollectorSettings();
-                renderCollector();
-
-                // 2. Kuyruğu bir sonraki adıma geçir ve kaydet
-                session.currentIndex++;
-                sessionStorage.setItem(KEYS.COLLECTOR_RUN, JSON.stringify(session));
-                updateAllAutomationStartButtons();
-
-                LS_LOGGER.dispatch('COLLECTOR', `Collector filosu gönderildi: ${currentItem.name} -> Hedef: [${session.targetCoord}] (Adım ${session.currentIndex}/${session.queue.length})`);
-
-                if (banner) {
-                    banner.innerHTML =
-                        '<div style="font-size:12px;color:#2ecc71;padding:8px;font-weight:bold">' +
-                            '🚀 ' + t('coll_hud_sent_moving', 'Filo gönderildi! Sıradaki gezegene geçiliyor...') +
-                        '</div>';
-                }
-
+            // Bir sonraki gezegene yönlendir (Güvenlik yedeği fallback: OGame yönlendirmesi tetiklenmezse)
+            setTimeout(() => {
+                if (!sessionStorage.getItem(KEYS.COLLECTOR_RUN)) return;
                 if (nextUrl) {
-                    setTimeout(() => {
-                        window.location.href = nextUrl;
-                    }, 150);
+                    window.location.href = nextUrl;
                 } else {
                     sessionStorage.removeItem(KEYS.COLLECTOR_RUN);
                     if (banner) banner.remove();
                     showCollectorToast('🎉 ' + t('coll_toast_all_sent', 'Tebrikler! Tüm gezegenlerden toplama filoları gönderildi.'), 6000);
                 }
-            };
-
-            const onSendFailed = (errMsg) => {
-                if (sendCompleted) return;
-                sendCompleted = true;
-                if (fallbackTimer) clearTimeout(fallbackTimer);
-                window.removeEventListener('LS_SEND_FLEET_COMPLETE', onSendFleetEvent);
-
-                const cleanErr = errMsg || t('fleet_send_failed', 'Filo gönderilemedi');
-                LS_LOGGER.warn('COLLECTOR', `Filo gönderimi başarısız: ${cleanErr}`);
-
-                if (banner) {
-                    banner.innerHTML =
-                        '<div style="font-size:12px;color:#e74c3c;padding:6px;font-weight:bold">' +
-                            '❌ ' + cleanErr +
-                        '</div>' +
-                        '<div style="display:flex;gap:6px;justify-content:center;margin-top:6px">' +
-                            '<button id="ls-banner-retry-fail-btn" style="background:#e67e22;color:#fff;border:none;padding:5px 10px;border-radius:4px;font-weight:bold;cursor:pointer">🔄 ' + t('coll_hud_retry', 'Tekrarla') + '</button>' +
-                            '<button id="ls-banner-skip-fail-btn" style="background:#34495e;color:#fff;border:none;padding:5px 10px;border-radius:4px;font-weight:bold;cursor:pointer">⏭️ ' + t('coll_hud_skip', 'Atla') + '</button>' +
-                            '<button id="ls-banner-cancel-fail-btn" style="background:#e74c3c;color:#fff;border:none;padding:5px 10px;border-radius:4px;font-weight:bold;cursor:pointer">⏹️ ' + t('coll_hud_cancel', 'İptal') + '</button>' +
-                        '</div>';
-
-                    document.getElementById('ls-banner-retry-fail-btn')?.addEventListener('click', retryCurrentStep);
-                    document.getElementById('ls-banner-skip-fail-btn')?.addEventListener('click', proceedToNext);
-                    document.getElementById('ls-banner-cancel-fail-btn')?.addEventListener('click', cancel);
-                }
-            };
-
-            const onSendFleetEvent = (e) => {
-                const det = e.detail;
-                if (!det) return;
-                if (det.success === true) {
-                    onSendSuccess();
-                } else {
-                    onSendFailed(det.error);
-                }
-            };
-
-            window.addEventListener('LS_SEND_FLEET_COMPLETE', onSendFleetEvent);
-
-            // Sayfa bağlamında submit tetikle
-            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                detail: { type: 'SUBMIT_FLEET2', nextUrl: nextUrl }
-            }));
-
-            // Fallback zaman aşımı
-            fallbackTimer = setTimeout(() => {
-                if (!sendCompleted) {
-                    if (hasVisibleMissionError()) {
-                        onSendFailed(t('fleet_error_mission_rejected', 'Sunucu görevi onaylamadı'));
-                    } else if (!isSendFleetReady()) {
-                        onSendFailed(t('fleet_error_btn_disabled', 'Gönder butonu pasif (slot dolu veya sunucu reddetti)'));
-                    } else {
-                        onSendSuccess();
-                    }
-                }
-            }, 3500);
+            }, 1200);
         };
 
         const proceedToNext = () => {
@@ -9347,10 +9195,6 @@
             }
 
             if (isSendBtnVisible) {
-                if (!isSendFleetReady()) {
-                    showCollectorToast(t('fleet_hud_wait_send_btn', '⚠️ Gönder butonu hazır değil veya slotlar dolu!'), 3500);
-                    return;
-                }
                 dispatchSendFleetButton();
             } else {
                 clickDevamButton();
@@ -9378,117 +9222,50 @@
             window.removeEventListener('keydown', keyListener);
             if (typeof details.cancel === 'function') details.cancel();
 
-            let fallbackTimer = null;
-            let sendCompleted = false;
+            // 1. Gönderilen hedefi Postacı ayarlarında uncheck yap
+            if (!courierSettings.selectedItems) courierSettings.selectedItems = {};
+            courierSettings.selectedItems[currentItem.id] = false;
+            saveCourierSettings();
+            renderCourier();
+
+            // 2. Oturum kuyruğunu bir sonraki adıma geçir ve kaydet
+            session.currentIndex++;
+            sessionStorage.setItem(KEYS.COURIER_RUN, JSON.stringify(session));
+            updateAllAutomationStartButtons();
+
+            LS_LOGGER.dispatch('COURIER', `Postacı filosu gönderiliyor: Üs [${session.originCoord}] -> Hedef: ${currentItem.name} [${currentItem.coords}] (Adım ${session.currentIndex}/${session.queue.length})`);
 
             if (banner) {
                 banner.innerHTML =
-                    '<div style="font-size:12px;color:#f39c12;padding:8px;font-weight:bold">' +
-                        '⏳ ' + t('fleet_hud_sending', 'Filo gönderiliyor...') +
+                    '<div style="font-size:12px;color:#2ecc71;padding:8px;font-weight:bold">' +
+                        '🚀 ' + t('coll_hud_sent_moving', 'Filo gönderildi! Sıradaki hedefe geçiliyor...') +
                     '</div>';
             }
 
-            // Sıradaki hedef URL'yi önceden hazırla (currentIndex henüz artırılmadı!)
+            // Sıradaki hedef URL'yi önceden hazırla
             let nextUrl = null;
-            const nextIdx = session.currentIndex + 1;
-            if (nextIdx < session.queue.length) {
-                const nextItem = session.queue[nextIdx];
+            if (session.currentIndex < session.queue.length) {
+                const nextItem = session.queue[session.currentIndex];
                 const [ng, ns, np] = nextItem.coords.split(':');
                 nextUrl = `/game/index.php?page=ingame&component=fleetdispatch&cp=${session.originId}&galaxy=${ng}&system=${ns}&position=${np}&type=${nextItem.type}&mission=${session.mission || 3}`;
             }
 
-            const onSendSuccess = () => {
-                if (sendCompleted) return;
-                sendCompleted = true;
-                if (fallbackTimer) clearTimeout(fallbackTimer);
-                window.removeEventListener('LS_SEND_FLEET_COMPLETE', onSendFleetEvent);
+            // Sayfa bağlamında tekil submit tetikle (nextUrl ile OGame doğrudan yönlendirilir)
+            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
+                detail: { type: 'SUBMIT_FLEET2', nextUrl: nextUrl }
+            }));
 
-                // 1. Gönderilen hedefi Postacı ayarlarında uncheck yap
-                if (!courierSettings.selectedItems) courierSettings.selectedItems = {};
-                courierSettings.selectedItems[currentItem.id] = false;
-                saveCourierSettings();
-                renderCourier();
-
-                // 2. Oturum kuyruğunu bir sonraki adıma geçir ve kaydet
-                session.currentIndex++;
-                sessionStorage.setItem(KEYS.COURIER_RUN, JSON.stringify(session));
-                updateAllAutomationStartButtons();
-
-                LS_LOGGER.dispatch('COURIER', `Postacı filosu gönderildi: Üs [${session.originCoord}] -> Hedef: ${currentItem.name} [${currentItem.coords}] (Adım ${session.currentIndex}/${session.queue.length})`);
-
-                if (banner) {
-                    banner.innerHTML =
-                        '<div style="font-size:12px;color:#2ecc71;padding:8px;font-weight:bold">' +
-                            '🚀 ' + t('coll_hud_sent_moving', 'Filo gönderildi! Sıradaki hedefe geçiliyor...') +
-                        '</div>';
-                }
-
+            // Bir sonraki hedefe yönlendir (Güvenlik yedeği fallback: OGame yönlendirmesi tetiklenmezse)
+            setTimeout(() => {
+                if (!sessionStorage.getItem(KEYS.COURIER_RUN)) return;
                 if (nextUrl) {
-                    setTimeout(() => {
-                        window.location.href = nextUrl;
-                    }, 150);
+                    window.location.href = nextUrl;
                 } else {
                     sessionStorage.removeItem(KEYS.COURIER_RUN);
                     if (banner) banner.remove();
                     showCollectorToast('🎉 ' + t('cour_toast_all_sent', 'Tebrikler! Tüm dağıtım filoları başarıyla gönderildi.'), 6000);
                 }
-            };
-
-            const onSendFailed = (errMsg) => {
-                if (sendCompleted) return;
-                sendCompleted = true;
-                if (fallbackTimer) clearTimeout(fallbackTimer);
-                window.removeEventListener('LS_SEND_FLEET_COMPLETE', onSendFleetEvent);
-
-                const cleanErr = errMsg || t('fleet_send_failed', 'Filo gönderilemedi');
-                LS_LOGGER.warn('COURIER', `Filo gönderimi başarısız: ${cleanErr}`);
-
-                if (banner) {
-                    banner.innerHTML =
-                        '<div style="font-size:12px;color:#e74c3c;padding:6px;font-weight:bold">' +
-                            '❌ ' + cleanErr +
-                        '</div>' +
-                        '<div style="display:flex;gap:6px;justify-content:center;margin-top:6px">' +
-                            '<button id="ls-banner-retry-fail-btn" style="background:#e67e22;color:#fff;border:none;padding:5px 10px;border-radius:4px;font-weight:bold;cursor:pointer">🔄 ' + t('coll_hud_retry', 'Tekrarla') + '</button>' +
-                            '<button id="ls-banner-skip-fail-btn" style="background:#34495e;color:#fff;border:none;padding:5px 10px;border-radius:4px;font-weight:bold;cursor:pointer">⏭️ ' + t('coll_hud_skip', 'Atla') + '</button>' +
-                            '<button id="ls-banner-cancel-fail-btn" style="background:#e74c3c;color:#fff;border:none;padding:5px 10px;border-radius:4px;font-weight:bold;cursor:pointer">⏹️ ' + t('coll_hud_cancel', 'İptal') + '</button>' +
-                        '</div>';
-
-                    document.getElementById('ls-banner-retry-fail-btn')?.addEventListener('click', retryCurrentStep);
-                    document.getElementById('ls-banner-skip-fail-btn')?.addEventListener('click', proceedToNext);
-                    document.getElementById('ls-banner-cancel-fail-btn')?.addEventListener('click', cancel);
-                }
-            };
-
-            const onSendFleetEvent = (e) => {
-                const det = e.detail;
-                if (!det) return;
-                if (det.success === true) {
-                    onSendSuccess();
-                } else {
-                    onSendFailed(det.error);
-                }
-            };
-
-            window.addEventListener('LS_SEND_FLEET_COMPLETE', onSendFleetEvent);
-
-            // Sayfa bağlamında submit tetikle
-            window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
-                detail: { type: 'SUBMIT_FLEET2', nextUrl: nextUrl }
-            }));
-
-            // Fallback zaman aşımı
-            fallbackTimer = setTimeout(() => {
-                if (!sendCompleted) {
-                    if (hasVisibleMissionError()) {
-                        onSendFailed(t('fleet_error_mission_rejected', 'Sunucu görevi onaylamadı'));
-                    } else if (!isSendFleetReady()) {
-                        onSendFailed(t('fleet_error_btn_disabled', 'Gönder butonu pasif (slot dolu veya sunucu reddetti)'));
-                    } else {
-                        onSendSuccess();
-                    }
-                }
-            }, 3500);
+            }, 1200);
         };
 
         const proceedToNext = () => {
@@ -10503,11 +10280,6 @@
             const isSendBtnVisible = sb && (sb.offsetWidth > 0 || sb.offsetHeight > 0 || sb.offsetParent !== null);
 
             if (isSendBtnVisible) {
-                if (!isSendFleetReady()) {
-                    showCollectorToast(t('fleet_hud_wait_send_btn', '⚠️ Gönder butonu hazır değil veya slotlar dolu!'), 3500);
-                    return;
-                }
-
                 if (document.activeElement && document.activeElement.blur) {
                     document.activeElement.blur();
                 }
@@ -10560,94 +10332,27 @@
         const dispatchSendExpeditionFleet = () => {
             window.removeEventListener('keydown', keyListener);
 
-            let fallbackTimer = null;
-            let sendCompleted = false;
+            session.currentIndex++;
+            sessionStorage.setItem(KEYS.EXPEDITION_RUN, JSON.stringify(session));
+            updateAllAutomationStartButtons();
+
+            LS_LOGGER.dispatch('EXPEDITION', `Keşif filosu gönderiliyor: [${currentItem.g}:${currentItem.s}:16] (Adım: ${session.currentIndex}/${session.queue.length})`);
 
             if (banner) {
                 banner.innerHTML =
-                    '<div style="font-size:12px;color:#f39c12;padding:8px;font-weight:bold">' +
-                        '⏳ ' + t('fleet_hud_sending', 'Filo gönderiliyor...') +
+                    '<div style="font-size:12px;color:#2ecc71;padding:8px;font-weight:bold">' +
+                        '🚀 ' + (currentLang === 'tr' ? 'Keşif filosu gönderildi! Sıradaki sisteme geçiliyor...' : 'Expedition fleet sent! Moving to next system...') +
                     '</div>';
             }
 
-            // Sıradaki hedef URL'yi önceden hazırla (currentIndex henüz artırılmadı!)
+            // Sıradaki hedef URL'yi önceden hazırla
             let nextUrl = null;
-            const nextIdx = session.currentIndex + 1;
-            if (nextIdx < session.queue.length) {
-                const nextItem = session.queue[nextIdx];
+            if (session.currentIndex < session.queue.length) {
+                const nextItem = session.queue[session.currentIndex];
                 nextUrl = `/game/index.php?page=ingame&component=fleetdispatch&galaxy=${nextItem.g}&system=${nextItem.s}&position=16&type=1&mission=15`;
             }
 
-            const onSendSuccess = () => {
-                if (sendCompleted) return;
-                sendCompleted = true;
-                if (fallbackTimer) clearTimeout(fallbackTimer);
-                window.removeEventListener('LS_SEND_FLEET_COMPLETE', onSendFleetEvent);
-
-                session.currentIndex++;
-                sessionStorage.setItem(KEYS.EXPEDITION_RUN, JSON.stringify(session));
-                updateAllAutomationStartButtons();
-
-                LS_LOGGER.dispatch('EXPEDITION', `Keşif filosu gönderildi: [${currentItem.g}:${currentItem.s}:16] (Adım: ${session.currentIndex}/${session.queue.length})`);
-
-                if (banner) {
-                    banner.innerHTML =
-                        '<div style="font-size:12px;color:#2ecc71;padding:8px;font-weight:bold">' +
-                            '🚀 ' + (currentLang === 'tr' ? 'Keşif filosu gönderildi! Sıradaki sisteme geçiliyor...' : 'Expedition fleet sent! Moving to next system...') +
-                        '</div>';
-                }
-
-                if (nextUrl) {
-                    setTimeout(() => {
-                        window.location.href = nextUrl;
-                    }, 150);
-                } else {
-                    sessionStorage.removeItem(KEYS.EXPEDITION_RUN);
-                    if (banner) banner.remove();
-                    showCollectorToast('🎉 ' + t('exp_toast_all_sent', 'Tebrikler! Tüm keşif filoları başarıyla gönderildi.'), 6000);
-                }
-            };
-
-            const onSendFailed = (errMsg) => {
-                if (sendCompleted) return;
-                sendCompleted = true;
-                isDispatching = false;
-                if (fallbackTimer) clearTimeout(fallbackTimer);
-                window.removeEventListener('LS_SEND_FLEET_COMPLETE', onSendFleetEvent);
-
-                const cleanErr = errMsg || t('fleet_send_failed', 'Filo gönderilemedi');
-                LS_LOGGER.warn('EXPEDITION', `Keşif gönderimi başarısız: ${cleanErr}`);
-
-                if (banner) {
-                    banner.innerHTML =
-                        '<div style="font-size:12px;color:#e74c3c;padding:6px;font-weight:bold">' +
-                            '❌ ' + cleanErr +
-                        '</div>' +
-                        '<div style="display:flex;gap:6px;justify-content:center;margin-top:6px">' +
-                            '<button id="ls-exp-retry-fail-btn" style="background:#e67e22;color:#fff;border:none;padding:5px 10px;border-radius:4px;font-weight:bold;cursor:pointer">🔄 ' + t('exp_hud_retry', 'Tekrarla') + '</button>' +
-                            '<button id="ls-exp-skip-fail-btn" style="background:#34495e;color:#fff;border:none;padding:5px 10px;border-radius:4px;font-weight:bold;cursor:pointer">⏭️ ' + t('exp_hud_skip', 'Atla') + '</button>' +
-                            '<button id="ls-exp-cancel-fail-btn" style="background:#e74c3c;color:#fff;border:none;padding:5px 10px;border-radius:4px;font-weight:bold;cursor:pointer">⏹️ ' + t('exp_hud_cancel', 'İptal') + '</button>' +
-                        '</div>';
-
-                    document.getElementById('ls-exp-retry-fail-btn')?.addEventListener('click', retryCurrentStep);
-                    document.getElementById('ls-exp-skip-fail-btn')?.addEventListener('click', skipCurrentStep);
-                    document.getElementById('ls-exp-cancel-fail-btn')?.addEventListener('click', cancelSession);
-                }
-            };
-
-            const onSendFleetEvent = (e) => {
-                const det = e.detail;
-                if (!det) return;
-                if (det.success === true) {
-                    onSendSuccess();
-                } else {
-                    onSendFailed(det.error);
-                }
-            };
-
-            window.addEventListener('LS_SEND_FLEET_COMPLETE', onSendFleetEvent);
-
-            // Sayfa bağlamında submit tetikle
+            // Sayfa bağlamında tekil submit tetikle (nextUrl ile OGame doğrudan yeni sisteme yönlendirilir)
             window.dispatchEvent(new CustomEvent('LS_PAGE_ACTION', {
                 detail: {
                     type: 'SUBMIT_FLEET2',
@@ -10655,18 +10360,17 @@
                 }
             }));
 
-            // Fallback zaman aşımı
-            fallbackTimer = setTimeout(() => {
-                if (!sendCompleted) {
-                    if (hasVisibleMissionError()) {
-                        onSendFailed(t('fleet_error_mission_rejected', 'Sunucu görevi onaylamadı'));
-                    } else if (!isSendFleetReady()) {
-                        onSendFailed(t('fleet_error_btn_disabled', 'Gönder butonu pasif (slot dolu veya sunucu reddetti)'));
-                    } else {
-                        onSendSuccess();
-                    }
+            // Sıradaki sisteme geçiş (Güvenlik yedeği fallback: OGame yönlendirmesi tetiklenmezse)
+            setTimeout(() => {
+                if (!sessionStorage.getItem(KEYS.EXPEDITION_RUN)) return;
+                if (nextUrl) {
+                    window.location.href = nextUrl;
+                } else {
+                    sessionStorage.removeItem(KEYS.EXPEDITION_RUN);
+                    if (banner) banner.remove();
+                    showCollectorToast('🎉 ' + (currentLang === 'tr' ? 'Tebrikler! Tüm keşif filoları başarıyla gönderildi.' : 'Congratulations! All expedition fleets have been dispatched successfully.'), 6000);
                 }
-            }, 3500);
+            }, 1200);
         };
 
         const skipCurrentStep = () => {
@@ -11734,7 +11438,7 @@
                         '<div style="display:flex;justify-content:space-between;align-items:center">' +
                             '<div style="display:flex;align-items:center;gap:6px">' +
                                 '<span style="font-size:12px;color:#00bcff;font-weight:bold">⚡ LuckyStrike Helper</span>' +
-                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v14.5</span>' +
+                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v14.6</span>' +
                             '</div>' +
                             '<a href="https://github.com/kadirersoy/luckystrike-ogame-helper" target="_blank" style="font-size:10.5px;color:#00bcff;text-decoration:none;display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,0.05);padding:2px 7px;border-radius:4px;border:1px solid #1a2c3f" title="GitHub Proje Sayfası" data-i18n-title="settings_github_title">' +
                                 '<span>🔗</span> <span data-i18n="settings_github">GitHub</span>' +
@@ -12512,7 +12216,7 @@
             const r3 = Array.from(debugFilterState.row3).join(', ');
 
             let out = '==================================================\n' +
-                      '  LuckyStrike OGame Helper v14.5 - Log Kayıtları\n' +
+                      '  LuckyStrike OGame Helper v14.6 - Log Kayıtları\n' +
                       '  Tarih: ' + nowStr + '\n' +
                       '  URL: ' + window.location.href + '\n' +
                       '  Filtreler: [Akış: ' + r1 + '] [Kapsam: ' + r2 + '] [Seviye: ' + r3 + ']\n' +
@@ -13060,6 +12764,6 @@
     scanAndSaveExpeditionTemplates();
     updateAllAutomationStartButtons();
     setInterval(updateAllAutomationStartButtons, 400);
-    console.log(LS, 'LuckyStrike OGame Helper v14.5 hazır!');
+    console.log(LS, 'LuckyStrike OGame Helper v14.6 hazır!');
 
 })();

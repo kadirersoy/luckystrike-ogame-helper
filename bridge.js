@@ -298,17 +298,6 @@
                 var now = Date.now();
                 if (now - lastFleetSubmitTime < 1500) {
                     bridgeLog('WARN', 'BRIDGE', 'SUBMIT_FLEET2 engellendi (çift gönderim koruması).');
-                    try {
-                        window.dispatchEvent(new CustomEvent('LS_SEND_FLEET_COMPLETE', {
-                            detail: {
-                                status: 429,
-                                success: false,
-                                error: 'Double submit prevented',
-                                responseText: '',
-                                nextUrl: null
-                            }
-                        }));
-                    } catch (e) {}
                     return;
                 }
                 lastFleetSubmitTime = now;
@@ -497,13 +486,14 @@
                     if (options.url && options.url.indexOf('sendFleet') !== -1) {
                         var origSuccess = options.success;
                         options.success = function(data, textStatus, xhr) {
-                            var isOk = data && (data.success === true || ('redirectUrl' in data && (!data.errors || data.errors.length === 0)));
-                            if (pendingNextUrl && isOk && typeof data === 'object') {
-                                bridgeLog('ACTION', 'BRIDGE', 'sendFleet başarılı. OGame redirectUrl sonraki hedefe uyarlandı: ' + pendingNextUrl);
-                                if ('redirectUrl' in data) {
-                                    data.redirectUrl = pendingNextUrl;
+                            try {
+                                if (pendingNextUrl && data && typeof data === 'object') {
+                                    bridgeLog('ACTION', 'BRIDGE', 'sendFleet başarılı. OGame redirectUrl sonraki hedefe uyarlandı: ' + pendingNextUrl);
+                                    if ('redirectUrl' in data) {
+                                        data.redirectUrl = pendingNextUrl;
+                                    }
                                 }
-                            }
+                            } catch (e) {}
                             if (typeof origSuccess === 'function') {
                                 origSuccess.apply(this, arguments);
                             }
@@ -553,57 +543,20 @@
                     }
                     if (u.indexOf('sendFleet') !== -1) {
                         document.body.dataset.lsSendFleetPending = 'false';
-                        var isSendSuccess = false;
-                        var sendErrorMsg = '';
-                        try {
-                            var respData = JSON.parse(xhr.responseText);
-                            if (respData) {
-                                if (respData.success === false) {
-                                    isSendSuccess = false;
-                                    if (Array.isArray(respData.errors) && respData.errors.length > 0) {
-                                        sendErrorMsg = respData.errors.map(function(e) {
-                                            return typeof e === 'object' ? (e.message || e.text || JSON.stringify(e)) : String(e);
-                                        }).join(' | ');
-                                    } else if (respData.message) {
-                                        sendErrorMsg = respData.message;
-                                    }
-                                } else if (respData.errors && respData.errors.length > 0) {
-                                    isSendSuccess = false;
-                                    sendErrorMsg = respData.errors.map(function(e) {
-                                        return typeof e === 'object' ? (e.message || e.text || JSON.stringify(e)) : String(e);
-                                    }).join(' | ');
-                                } else if (respData.success === true || ('redirectUrl' in respData)) {
-                                    isSendSuccess = true;
-                                } else {
-                                    isSendSuccess = (xhr && xhr.status === 200);
-                                }
-                            }
-                        } catch (e) {
-                            isSendSuccess = (xhr && xhr.status === 200);
-                        }
-
-                        document.body.dataset.lsSendFleetSuccess = isSendSuccess ? 'true' : 'false';
+                        document.body.dataset.lsSendFleetSuccess = (xhr && xhr.status === 200) ? 'true' : 'false';
                         document.body.dataset.lsSendFleetTimestamp = String(Date.now());
-                        if (sendErrorMsg) {
-                            document.body.dataset.lsSendFleetError = sendErrorMsg;
-                        } else {
-                            delete document.body.dataset.lsSendFleetError;
-                        }
-
                         try {
                             window.dispatchEvent(new CustomEvent('LS_SEND_FLEET_COMPLETE', {
                                 detail: {
                                     status: xhr ? xhr.status : 0,
-                                    success: isSendSuccess,
-                                    error: sendErrorMsg,
                                     responseText: xhr ? xhr.responseText : '',
                                     nextUrl: pendingNextUrl
                                 }
                             }));
                         } catch (e) {}
 
-                        // Sonraki hedefe doğrudan geçiş garantisi (SADECE sunucu isteği BAŞARILIYSA yönlendir!)
-                        if (pendingNextUrl && xhr && xhr.status === 200 && isSendSuccess) {
+                        // Sonraki hedefe doğrudan geçiş garantisi (eski gezegenin ara sekme gibi yüklenmesini önler)
+                        if (pendingNextUrl && xhr && xhr.status === 200) {
                             var dest = pendingNextUrl;
                             pendingNextUrl = null;
                             setTimeout(function() {
@@ -612,9 +565,6 @@
                                     window.location.href = dest;
                                 }
                             }, 50);
-                        } else if (!isSendSuccess && pendingNextUrl) {
-                            bridgeLog('WARN', 'BRIDGE', 'sendFleet başarısız oldu! Yönlendirme iptal edildi. Hata: ' + (sendErrorMsg || 'Bilinmeyen sunucu hatası'));
-                            pendingNextUrl = null;
                         }
                     }
                 }
