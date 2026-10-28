@@ -1,10 +1,10 @@
 # ⚡ LuckyStrike OGame Helper (v14.6)
 
-[English](#-english-description) | [Türkçe](#-türkçe-açıklama)
+[English (ENG)](#eng-english-description) | [Türkçe (TR)](#tr-türkçe-açıklama)
 
 ---
 
-## 🇹🇷 Türkçe Açıklama
+## [TR] Türkçe Açıklama
 
 **LuckyStrike OGame Helper**, OGame oyuncuları için günlük filo ve hammadde hesaplamalarını, maliyet planlamasını, kargo gereksinimlerini ve evren takibini kolaylaştırmak üzere tasarlanmış, **Gameforge oyun kurallarına tam uyumlu** bir kullanıcı arayüzü ve hesaplama asistanıdır (**Chrome / Edge Extension - Manifest V3**).
 
@@ -159,7 +159,7 @@ LuckyStrike, filo hazırlığı gerektiren tüm ana modüllerde (**Maliyet Sepet
 
 ---
 
-## 🇬🇧 English Description
+## [ENG] English Description
 
 **LuckyStrike OGame Helper** is a browser assistant (**Chrome / Edge Extension - Manifest V3**) designed for OGame players to assist with daily calculations, resource planning, cargo capacity estimation, and universe tracking while strictly complying with **Gameforge Fair-Play Rules**.
 
@@ -328,7 +328,7 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 
 ## 📜 Sürüm Notları / Release Notes
 
-Detaylı sürüm geçmişi, tüm yenilikler ve hata düzeltmeleri her versiyon için iki dilde (🇹🇷 Türkçe ve 🇬🇧 English) doğrudan GitHub Releases sayfasında yayınlanmaktadır:
+Detaylı sürüm geçmişi, tüm yenilikler ve hata düzeltmeleri her versiyon için iki dilde (TR ve ENG) doğrudan GitHub Releases sayfasında yayınlanmaktadır:
 👉 **[GitHub Releases — Sürüm Notları / Release Notes](https://github.com/kadirersoy/luckystrike-ogame-helper/releases)**
 
-For full release history, feature highlights, and bilingual changelogs (🇹🇷 Turkish & 🇬🇧 English), please visit the GitHub Releases page linked above.
+For full release history, feature highlights, and bilingual changelogs (TR & ENG), please visit the GitHub Releases page linked above.

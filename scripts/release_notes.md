@@ -1,4 +1,4 @@
-### 🇹🇷 Türkçe Sürüm Notları (v14.6)
+### [TR] Türkçe Sürüm Notları (v14.6)
 - **🚀 Kararlı Filo Gönderim Mimarisi (v14.3) Yeniden Sağlandı:**
   Keşif, Maliyet Sepeti, Toplayıcı ve Postacı asistanlarında ilk filodan sonraki filolara geçişi engelleyen ve filonun ilk adımda dönüp durmasına yol açan mantıksal gerilemeler tamamen giderildi.
 - **🛡️ AJAX Prefilter & Tip Güvenliği:**
@@ -14,7 +14,7 @@
 
 ---
 
-### 🇬🇧 English Release Notes (v14.6)
+### [ENG] English Release Notes (v14.6)
 - **🚀 Restoration of the Stable Fleet Dispatch Architecture (v14.3):**
   Resolved the regression where expeditions and fleet assistants would hang or loop on the first fleet without advancing to subsequent targets.
 - **🛡️ AJAX Prefilter & Type-Safe Callback Handling:**
