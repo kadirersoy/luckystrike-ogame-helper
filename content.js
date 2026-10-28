@@ -2,7 +2,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v14.6 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v14.7 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -42,7 +42,8 @@
         LANG: 'LS_LANGUAGE',
         THEME: 'LS_THEME',
         OPACITY: 'LS_PANEL_OPACITY',
-        HOVER_FOCUS: 'LS_HOVER_FOCUS'
+        HOVER_FOCUS: 'LS_HOVER_FOCUS',
+        KM_COST: 'LS_KM_COST'
     };
 
     let activeAutomationCancel = null;
@@ -63,6 +64,7 @@
             tab_scanner: 'Tarayıcı',
             tab_finder: 'Arama',
             tab_alarm: 'Alarm',
+            tab_kmcost: 'KM Hesap',
             tab_settings: 'Ayarlar',
 
             // Tab Tooltips (Hover 3s)
@@ -82,8 +84,44 @@
             tab_tip_desc_finder: 'Oyuncu veya gezegen adına göre arama yaparak oyuncuların tüm kolonilerini, koordinatlarını ve ittifak bilgilerini tek ekranda haritalandırır.',
             tab_tip_title_alarm: '🚨 Tehdit Bildirimi',
             tab_tip_desc_alarm: 'Gezegenlerinize yönelik saldırı veya casus sondası tehditlerini ekran güncellendiğinde anında algılar; yüksek sesli alarm ve masaüstü bildirimiyle sizi uyarır.',
+            tab_tip_title_kmcost: '⏱️ KM Süre Yarılayıcı Hesabı',
+            tab_tip_desc_kmcost: 'Bina, tersane ve araştırmaların süresini Karanlık Madde (KM) ile yarılamak veya anında bitirmek için gereken tam KM miktarını ve tavan sınırlarını hesaplar.',
             tab_tip_title_settings: '⚙️ Ayarlar',
             tab_tip_desc_settings: 'Dil (TR / ENG), panel teması, saydamlık kaydırıcısı ve fare üzerine gelince tam görünürlük (Hover to Focus) gibi genel eklenti tercihlerini yönetir.',
+
+            // KM Cost Tab
+            km_type_heading: 'Kategori:',
+            km_type_build: '🏗️ İnşaat & Filo',
+            km_type_build_tip: 'Kaynak binaları, tesisler, ay yapıları, canlı türü binaları, filo ve savunma üretimleri',
+            km_type_research: '🔬 Araştırmalar',
+            km_type_research_tip: 'Laboratuvar araştırmaları ve canlı türü araştırmaları',
+            km_inputs_title: 'Süre:',
+            km_lbl_day: 'Gün',
+            km_lbl_hour: 'Saat',
+            km_lbl_min: 'Dk',
+            km_lbl_sec: 'Sn',
+            km_ph_text: 'Süre metni yapıştırın: 15g 4s, 14:30:00...',
+            km_quick_presets: 'Hazır Süreler:',
+            km_btn_reset: 'Sıfırla 🔄',
+            km_res_total_time: 'Toplam Süre:',
+            km_res_halve_title: '⚡ Yarılama Ücreti',
+            km_res_halve_sub: 'Kazanç:',
+            km_res_finish_title: '🚀 Tamamlama Ücreti',
+            km_res_finish_sub: 'Anında Bitiş',
+            km_badge_zero: 'Süre girin',
+            km_badge_base: 'Taban Tarife: 750 KM',
+            km_badge_std: 'Standart Tarife',
+            km_badge_cap_build: 'İnşaat Tavanı: 72.000 KM',
+            km_badge_cap_research: 'Araştırma Tavanı: 108.000 KM',
+            km_guide_title: 'KM Yarılama Kuralları:',
+            km_rule1_title: '🏗️ İnşaat, Filo ve Savunma:',
+            km_rule1_desc: '<b>Kapsam:</b> Kaynak binaları, tesisler, ay yapıları, canlı türü binaları, filo ve savunma üretimleri.<br><b>Tarife:</b> 48 saate kadar her 30 dakika için <b>750 KM</b>, saatte 1.500 KM alınır. 48 saati aşan tüm sürelerde yarılama sabit <b>72.000 KM</b>, tamamlama <b>144.000 KM</b>\'dir.',
+            km_rule2_title: '🔬 Araştırmalar:',
+            km_rule2_desc: '<b>Kapsam:</b> Laboratuvar araştırmaları ve canlı türü araştırmaları.<br><b>Tarife:</b> 72 saate kadar formül devam eder. 72 saati aşan tüm araştırmalarda yarılama sabit <b>108.000 KM</b>, tamamlama <b>216.000 KM</b>\'dir.',
+            km_rule3_title: '❓ Kapsam Dışı İşlemler:',
+            km_rule3_desc: 'Filo uçuşları, keşifler ve enkaz toplama gibi süreçler KM ile hızlandırılamaz. Oyun motorunda yalnızca yukarıdaki 2 kategori geçerlidir.',
+            km_rule4_title: '💡 Başlangıç Süresi Kuralı:',
+            km_rule4_desc: 'KM maliyeti kalan süreye göre değil, işin orijinal <b>başlangıç süresine</b> göre alınır. Sürenin yarısından fazlası doğal olarak geçmişse tek tıkla <b>anında tamamlanır</b>.',
 
             // Header
             header_title: 'LuckyStrike Helper',
@@ -431,6 +469,7 @@
             tab_scanner: 'Scanner',
             tab_finder: 'Finder',
             tab_alarm: 'Alarm',
+            tab_kmcost: 'DM Cost',
             tab_settings: 'Settings',
 
             // Tab Tooltips (Hover 3s)
@@ -450,8 +489,44 @@
             tab_tip_desc_finder: 'Searches players or planet names to map out all colonies, coordinates, and alliance affiliations on a single screen using official public data.',
             tab_tip_title_alarm: '🚨 Threat Alert',
             tab_tip_desc_alarm: 'Detects incoming attacks and espionage probes whenever the screen updates, alerting you with distinct audio klaxons and desktop notifications.',
+            tab_tip_title_kmcost: '⏱️ DM Halving Cost Calculator',
+            tab_tip_desc_kmcost: 'Calculates exact Dark Matter costs and rule ceilings to halve or instantly finish buildings, shipyard orders, and research queues.',
             tab_tip_title_settings: '⚙️ Settings',
             tab_tip_desc_settings: 'Configures language (TR / ENG), panel theme, opacity slider, and hover-to-focus visibility preferences.',
+
+            // KM Cost Tab
+            km_type_heading: 'Category:',
+            km_type_build: '🏗️ Construction',
+            km_type_build_tip: 'Resource buildings, facilities, moon, lifeform buildings, fleet and defense queues',
+            km_type_research: '🔬 Research',
+            km_type_research_tip: 'Laboratory research and lifeform research tech tree',
+            km_inputs_title: 'Duration:',
+            km_lbl_day: 'Day',
+            km_lbl_hour: 'Hr',
+            km_lbl_min: 'Min',
+            km_lbl_sec: 'Sec',
+            km_ph_text: 'Paste duration: 15d 4h, 14:30:00...',
+            km_quick_presets: 'Presets:',
+            km_btn_reset: 'Reset 🔄',
+            km_res_total_time: 'Total Duration:',
+            km_res_halve_title: '⚡ Halving Cost',
+            km_res_halve_sub: 'Saved:',
+            km_res_finish_title: '🚀 Completion Cost',
+            km_res_finish_sub: 'Instant Finish',
+            km_badge_zero: 'Enter duration',
+            km_badge_base: 'Base Rate: 750 DM',
+            km_badge_std: 'Standard Rate',
+            km_badge_cap_build: 'Construction Cap: 72,000 DM',
+            km_badge_cap_research: 'Research Cap: 108,000 DM',
+            km_guide_title: 'DM Halving Rules:',
+            km_rule1_title: '🏗️ Construction, Fleet & Defense:',
+            km_rule1_desc: '<b>Scope:</b> Resource buildings, facilities, moon, lifeform buildings, fleet and defense queues.<br><b>Rate:</b> 750 DM per 30 mins, 1,500 DM per hour up to 48 hours. Beyond 48 hours, capped at flat <b>72,000 DM</b> to halve, <b>144,000 DM</b> to finish.',
+            km_rule2_title: '🔬 Research Technologies:',
+            km_rule2_desc: '<b>Scope:</b> Laboratory research and lifeform research tech tree.<br><b>Rate:</b> Scales up to 72 hours. Beyond 72 hours, capped at flat <b>108,000 DM</b> to halve, <b>216,000 DM</b> to finish.',
+            km_rule3_title: '❓ Unsupported Actions:',
+            km_rule3_desc: 'Fleet flights, expeditions, and debris harvesting cannot be accelerated with DM. Only the two categories above are eligible.',
+            km_rule4_title: '💡 Initial Duration Principle:',
+            km_rule4_desc: 'Cost is calculated from the initial starting time, not remaining time. If more than 50% has naturally elapsed, one click completes it <b>instantly</b>.',
 
             // Header
             header_title: 'LuckyStrike Helper',
@@ -801,7 +876,14 @@
     function applyTranslations() {
         document.querySelectorAll('[data-i18n]').forEach(el => {
             const k = el.getAttribute('data-i18n');
-            if (k) el.textContent = t(k);
+            if (k) {
+                const val = t(k);
+                if (val && val.indexOf('<') !== -1 && val.indexOf('>') !== -1) {
+                    el.innerHTML = val;
+                } else {
+                    el.textContent = val;
+                }
+            }
         });
         document.querySelectorAll('[data-i18n-title]').forEach(el => {
             const k = el.getAttribute('data-i18n-title');
@@ -822,6 +904,7 @@
             scanner: 'tab_scanner',
             finder: 'tab_finder',
             alarm: 'tab_alarm',
+            kmcost: 'tab_kmcost',
             settings: 'tab_settings',
             debug: 'tab_settings'
         };
@@ -843,6 +926,7 @@
         try { if (typeof updateFinderStatusInfo === 'function') updateFinderStatusInfo(); } catch (e) {}
         try { if (typeof updateRefreshButtonCooldown === 'function') updateRefreshButtonCooldown(); } catch (e) {}
         try { if (typeof renderDebugLogs === 'function') renderDebugLogs(); } catch (e) {}
+        try { if (typeof renderKmCost === 'function') renderKmCost(); } catch (e) {}
         try { if (typeof applyPanelOpacity === 'function') applyPanelOpacity(); } catch (e) {}
         try {
             if (typeof updateModeBtnUI === 'function') {
@@ -4846,13 +4930,17 @@
     function updateScanStatusInfo() {
         const statusEl = document.getElementById('ls-scan-status');
         if (!statusEl || statusEl.getAttribute('data-busy')) return;
-        const cache = getUniverseCache();
-        if (cache && cache.ts && Array.isArray(cache.coords)) {
-            const timeStr = new Date(cache.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const pLbl = (currentLang !== 'en') ? 'gezegen' : 'planets';
-            const cLbl = t('scan_cached', 'Önbellek');
-            statusEl.innerHTML = '<span style="color:#607d8b">' + cLbl + ': ' + timeStr + ' (' + formatTimeAgo(cache.ts) + ') · ' + (cache.coords.length || 0).toLocaleString() + ' ' + pLbl + '</span>';
-        } else {
+        try {
+            const cache = getUniverseCache();
+            if (cache && cache.ts && !isNaN(Number(cache.ts)) && Array.isArray(cache.coords)) {
+                const timeStr = new Date(Number(cache.ts)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const pLbl = (currentLang !== 'en') ? 'gezegen' : 'planets';
+                const cLbl = t('scan_cached', 'Önbellek');
+                statusEl.innerHTML = '<span style="color:#607d8b">' + cLbl + ': ' + timeStr + ' (' + formatTimeAgo(cache.ts) + ') · ' + (cache.coords.length || 0).toLocaleString() + ' ' + pLbl + '</span>';
+            } else {
+                statusEl.innerHTML = '<span style="color:#8899aa">' + t('scan_no_data', 'Henüz evren verisi indirilmedi') + '</span>';
+            }
+        } catch (e) {
             statusEl.innerHTML = '<span style="color:#8899aa">' + t('scan_no_data', 'Henüz evren verisi indirilmedi') + '</span>';
         }
     }
@@ -4861,17 +4949,21 @@
         const infoEl = document.getElementById('ls-find-cache-info');
         if (!infoEl || infoEl.getAttribute('data-busy')) return;
 
-        let apiData = loadApiDataSync();
+        try {
+            let apiData = loadApiDataSync();
 
-        if (apiData && apiData.ts) {
-            const timeStr = new Date(apiData.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const pCount = (Array.isArray(apiData.planets) ? apiData.planets.length : 0);
-            const uCount = (apiData.players && typeof apiData.players === 'object' ? Object.keys(apiData.players).length : 0);
-            const pLbl = (currentLang !== 'en') ? 'Gezegen' : 'Planets';
-            const uLbl = (currentLang !== 'en') ? 'Oyuncu' : 'Players';
-            const cLbl = t('find_cached', 'Önbellek');
-            infoEl.innerHTML = '<span style="color:#607d8b">' + cLbl + ': ' + timeStr + ' (' + formatTimeAgo(apiData.ts) + ') · ' + pCount.toLocaleString() + ' ' + pLbl + ' · ' + uCount.toLocaleString() + ' ' + uLbl + '</span>';
-        } else {
+            if (apiData && apiData.ts && !isNaN(Number(apiData.ts))) {
+                const timeStr = new Date(Number(apiData.ts)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const pCount = (Array.isArray(apiData.planets) ? apiData.planets.length : 0);
+                const uCount = (apiData.players && typeof apiData.players === 'object' ? Object.keys(apiData.players).length : 0);
+                const pLbl = (currentLang !== 'en') ? 'Gezegen' : 'Planets';
+                const uLbl = (currentLang !== 'en') ? 'Oyuncu' : 'Players';
+                const cLbl = t('find_cached', 'Önbellek');
+                infoEl.innerHTML = '<span style="color:#607d8b">' + cLbl + ': ' + timeStr + ' (' + formatTimeAgo(apiData.ts) + ') · ' + pCount.toLocaleString() + ' ' + pLbl + ' · ' + uCount.toLocaleString() + ' ' + uLbl + '</span>';
+            } else {
+                infoEl.innerHTML = '<span style="color:#8899aa">' + t('find_no_cache', 'Henüz evren/oyuncu verisi indirilmedi') + '</span>';
+            }
+        } catch (e) {
             infoEl.innerHTML = '<span style="color:#8899aa">' + t('find_no_cache', 'Henüz evren/oyuncu verisi indirilmedi') + '</span>';
         }
     }
@@ -5359,6 +5451,12 @@
         try {
             const AudioContextClass = window.AudioContext || window.webkitAudioContext;
             if (!AudioContextClass) return null;
+
+            // Chrome Autoplay Policy: Kullanıcı henüz sayfada herhangi bir yere tıklamadıysa konsola uyarı/hata düşmesini önle
+            if (navigator.userActivation && !navigator.userActivation.hasBeenActive) {
+                return null;
+            }
+
             if (!audioCtx || audioCtx.state === 'closed') {
                 audioCtx = new AudioContextClass();
             }
@@ -5367,7 +5465,7 @@
             }
             return audioCtx;
         } catch (e) {
-            return audioCtx;
+            return null;
         }
     }
 
@@ -10585,6 +10683,398 @@
     }
 
     // ============================================================
+    // KM COST (DARK MATTER HALVING CALCULATOR)
+    // ============================================================
+    function getKmCostSettings() {
+        try {
+            const raw = localStorage.getItem(KEYS.KM_COST);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                const d = (parsed.d !== undefined ? parsed.d : 0) + ((parsed.w || 0) * 7) + ((parsed.mo || 0) * 30);
+                return {
+                    type: parsed.type || 'build',
+                    d: Math.max(0, d),
+                    h: Math.max(0, parsed.h || 0),
+                    m: Math.max(0, parsed.m || 0),
+                    s: Math.max(0, parsed.s || 0),
+                    text: parsed.text || ''
+                };
+            }
+        } catch (e) {}
+        return {
+            type: 'build',
+            d: 0,
+            h: 0,
+            m: 0,
+            s: 0,
+            text: ''
+        };
+    }
+
+    function saveKmCostSettings(s) {
+        try {
+            localStorage.setItem(KEYS.KM_COST, JSON.stringify(s));
+        } catch (e) {}
+    }
+
+    function calculateKmCost(totalSeconds, projectType) {
+        if (totalSeconds <= 0) {
+            return {
+                totalSeconds: 0,
+                halveDm: 0,
+                finishDm: 0,
+                reducedSeconds: 0,
+                badgeKey: 'km_badge_zero',
+                isCap: false
+            };
+        }
+
+        const totalMinutes = totalSeconds / 60;
+        const totalHours = totalSeconds / 3600;
+        const reducedSeconds = Math.floor(totalSeconds / 2);
+
+        let rawHalfDm = Math.ceil(totalMinutes / 30) * 750;
+        if (rawHalfDm < 750) rawHalfDm = 750;
+
+        let halveDm = rawHalfDm;
+        let isCap = false;
+        let badgeKey = 'km_badge_std';
+
+        if (totalMinutes <= 30) {
+            badgeKey = 'km_badge_base';
+        }
+
+        if (projectType === 'build') {
+            // Group 1: Buildings, Facilities, Moon, Lifeform Buildings, Fleet & Defense capped at 48 hours = 72,000 DM
+            if (totalHours >= 48) {
+                halveDm = 72000;
+                isCap = true;
+                badgeKey = 'km_badge_cap_build';
+            }
+        } else {
+            // Group 2: Regular & Lifeform Research capped at 72 hours = 108,000 DM
+            if (totalHours >= 72) {
+                halveDm = 108000;
+                isCap = true;
+                badgeKey = 'km_badge_cap_research';
+            }
+        }
+
+        const finishDm = halveDm * 2;
+
+        return {
+            totalSeconds,
+            halveDm,
+            finishDm,
+            reducedSeconds,
+            badgeKey,
+            isCap
+        };
+    }
+
+    function formatDurationDetailed(sec, lang) {
+        if (sec <= 0) return '0 ' + (lang === 'tr' ? 'Saniye' : 'Seconds');
+        const d = Math.floor(sec / 86400);
+        const rem = sec % 86400;
+        const h = Math.floor(rem / 3600);
+        const m = Math.floor((rem % 3600) / 60);
+        const s = rem % 60;
+
+        const parts = [];
+        if (lang === 'tr') {
+            if (d > 0) parts.push(d + ' Gün');
+            if (h > 0) parts.push(h + ' Saat');
+            if (m > 0) parts.push(m + ' Dk');
+            if (s > 0 || parts.length === 0) parts.push(s + ' Sn');
+        } else {
+            if (d > 0) parts.push(d + ' Day' + (d > 1 ? 's' : ''));
+            if (h > 0) parts.push(h + ' Hr' + (h > 1 ? 's' : ''));
+            if (m > 0) parts.push(m + ' Min');
+            if (s > 0 || parts.length === 0) parts.push(s + ' Sec');
+        }
+        return parts.join(' ');
+    }
+
+    function parseDurationText(str) {
+        if (!str || typeof str !== 'string') return null;
+        const s = str.trim().toLowerCase();
+        if (!s) return null;
+
+        let d = 0, h = 0, m = 0, sec = 0;
+        let matched = false;
+
+        // Check colon formats: hh:mm:ss or mm:ss
+        const colonMatch = s.match(/^(\d+):(\d+)(?::(\d+))?$/);
+        if (colonMatch) {
+            if (colonMatch[3] !== undefined) {
+                h = parseInt(colonMatch[1], 10) || 0;
+                m = parseInt(colonMatch[2], 10) || 0;
+                sec = parseInt(colonMatch[3], 10) || 0;
+            } else {
+                m = parseInt(colonMatch[1], 10) || 0;
+                sec = parseInt(colonMatch[2], 10) || 0;
+            }
+            return { d, h, m, s: sec };
+        }
+
+        // Detect Turkish vs English formats
+        const isTurkish = /\b\d+\s*(?:g|gün|gun|saat|hafta|dk|sn)\b/.test(s);
+
+        let mo = 0, w = 0;
+        const moM = s.match(/(\d+)\s*(?:ay|mo|month|months)\b/);
+        if (moM) { mo = parseInt(moM[1], 10) || 0; matched = true; }
+
+        if (isTurkish) {
+            const wM = s.match(/(\d+)\s*(?:hafta|h)\b/);
+            if (wM) { w = parseInt(wM[1], 10) || 0; matched = true; }
+
+            const dM = s.match(/(\d+)\s*(?:gün|gun|g)\b/);
+            if (dM) { d = parseInt(dM[1], 10) || 0; matched = true; }
+
+            const hM = s.match(/(\d+)\s*(?:saat|s(?!n))\b/);
+            if (hM) { h = parseInt(hM[1], 10) || 0; matched = true; }
+
+            const mM = s.match(/(\d+)\s*(?:dakika|dk|d(?!ay))\b/);
+            if (mM) { m = parseInt(mM[1], 10) || 0; matched = true; }
+
+            const secM = s.match(/(\d+)\s*(?:saniye|sn)\b/);
+            if (secM) { sec = parseInt(secM[1], 10) || 0; matched = true; }
+        } else {
+            const wM = s.match(/(\d+)\s*(?:week|weeks|wk|w)\b/);
+            if (wM) { w = parseInt(wM[1], 10) || 0; matched = true; }
+
+            const dM = s.match(/(\d+)\s*(?:day|days|d)\b/);
+            if (dM) { d = parseInt(dM[1], 10) || 0; matched = true; }
+
+            const hM = s.match(/(\d+)\s*(?:hour|hours|hr|hrs|h)\b/);
+            if (hM) { h = parseInt(hM[1], 10) || 0; matched = true; }
+
+            const mM = s.match(/(\d+)\s*(?:minute|minutes|min|mins|m)\b/);
+            if (mM) { m = parseInt(mM[1], 10) || 0; matched = true; }
+
+            const secM = s.match(/(\d+)\s*(?:second|seconds|sec|secs|s)\b/);
+            if (secM) { sec = parseInt(secM[1], 10) || 0; matched = true; }
+        }
+
+        // Convert any months (30d) and weeks (7d) to days seamlessly
+        d += (mo * 30) + (w * 7);
+
+        return matched ? { d, h, m, s: sec } : null;
+    }
+
+    function renderKmCost() {
+        const tc = document.getElementById('tc-kmcost');
+        if (!tc) return;
+
+        const dEl = document.getElementById('ls-km-d');
+        const hEl = document.getElementById('ls-km-h');
+        const mEl = document.getElementById('ls-km-m');
+        const sEl = document.getElementById('ls-km-s');
+        const textEl = document.getElementById('ls-km-text-inp');
+        const typeBuildBtn = document.getElementById('ls-km-type-build');
+        const typeResearchBtn = document.getElementById('ls-km-type-research');
+
+        if (!dEl || !hEl || !mEl || !sEl) return;
+
+        const d = Math.max(0, parseInt(dEl.value, 10) || 0);
+        const h = Math.max(0, parseInt(hEl.value, 10) || 0);
+        const m = Math.max(0, parseInt(mEl.value, 10) || 0);
+        const s = Math.max(0, parseInt(sEl.value, 10) || 0);
+
+        const isResearch = typeResearchBtn && typeResearchBtn.classList.contains('active');
+        const projectType = isResearch ? 'research' : 'build';
+
+        const totalSeconds = (d * 86400) + (h * 3600) + (m * 60) + s;
+        const res = calculateKmCost(totalSeconds, projectType);
+
+        // Update Total Time Display
+        const totalDispEl = document.getElementById('ls-km-total-display');
+        if (totalDispEl) {
+            if (totalSeconds <= 0) {
+                totalDispEl.textContent = '0 ' + (currentLang === 'tr' ? 'Saniye' : 'Seconds');
+            } else {
+                const totalMins = Math.round(totalSeconds / 60);
+                const totalHrs = (totalSeconds / 3600).toFixed(1);
+                const hrUnit = currentLang === 'tr' ? 'sa' : 'hrs';
+                const minUnit = currentLang === 'tr' ? 'dk' : 'min';
+                totalDispEl.textContent = `${formatDurationDetailed(totalSeconds, currentLang)} · ${fmt(totalMins)} ${minUnit} · ${totalHrs} ${hrUnit}`;
+            }
+        }
+
+        // Update Halve Amount (1st click)
+        const halveValEl = document.getElementById('ls-km-val-halve');
+        if (halveValEl) {
+            halveValEl.textContent = totalSeconds <= 0 ? '0 KM' : `${fmt(res.halveDm)} KM`;
+        }
+
+        const halveSubEl = document.getElementById('ls-km-sub-halve');
+        if (halveSubEl) {
+            if (totalSeconds <= 0) {
+                halveSubEl.textContent = t('km_res_halve_sub', 'Kazanç:') + ' 0 sn';
+            } else {
+                halveSubEl.textContent = t('km_res_halve_sub', 'Kazanç:') + ' ' + formatDurationDetailed(res.reducedSeconds, currentLang);
+            }
+        }
+
+        // Update Finish Amount (2nd click)
+        const finishValEl = document.getElementById('ls-km-val-finish');
+        if (finishValEl) {
+            finishValEl.textContent = totalSeconds <= 0 ? '0 KM' : `${fmt(res.finishDm)} KM`;
+        }
+
+        // Update Badge
+        const badgeEl = document.getElementById('ls-km-badge');
+        if (badgeEl) {
+            badgeEl.textContent = t(res.badgeKey, 'Durum');
+            if (res.badgeKey === 'km_badge_zero') {
+                badgeEl.style.background = 'rgba(255,255,255,0.05)';
+                badgeEl.style.borderColor = '#1a2c3f';
+                badgeEl.style.color = '#8899aa';
+            } else if (res.badgeKey === 'km_badge_base') {
+                badgeEl.style.background = 'rgba(46,204,113,0.1)';
+                badgeEl.style.borderColor = 'rgba(46,204,113,0.3)';
+                badgeEl.style.color = '#2ecc71';
+            } else if (res.badgeKey === 'km_badge_std') {
+                badgeEl.style.background = 'rgba(0,188,255,0.1)';
+                badgeEl.style.borderColor = 'rgba(0,188,255,0.3)';
+                badgeEl.style.color = '#00bcff';
+            } else if (res.badgeKey === 'km_badge_cap_build') {
+                badgeEl.style.background = 'rgba(243,156,18,0.15)';
+                badgeEl.style.borderColor = 'rgba(243,156,18,0.4)';
+                badgeEl.style.color = '#f39c12';
+            } else if (res.badgeKey === 'km_badge_cap_research') {
+                badgeEl.style.background = 'rgba(231,76,60,0.15)';
+                badgeEl.style.borderColor = 'rgba(231,76,60,0.4)';
+                badgeEl.style.color = '#e74c3c';
+            }
+        }
+
+        // Update preset chip labels for current language
+        const chipTexts = currentLang === 'tr'
+            ? { 1800: '30 dk', 3600: '1s', 7200: '2s', 21600: '6s', 43200: '12s', 86400: '24s', 172800: '48s Tavan', 259200: '72s Tavan' }
+            : { 1800: '30m', 3600: '1h', 7200: '2h', 21600: '6h', 43200: '12h', 86400: '24h', 172800: '48h Cap', 259200: '72h Cap' };
+        document.querySelectorAll('#tc-kmcost .ls-chip-btn').forEach(btn => {
+            const secVal = parseInt(btn.getAttribute('data-sec'), 10);
+            if (chipTexts[secVal]) btn.textContent = chipTexts[secVal];
+        });
+
+        // Save State
+        saveKmCostSettings({
+            type: projectType,
+            d, h, m, s,
+            text: textEl ? textEl.value : ''
+        });
+    }
+
+    function setupKmCostEvents() {
+        const dEl = document.getElementById('ls-km-d');
+        const hEl = document.getElementById('ls-km-h');
+        const mEl = document.getElementById('ls-km-m');
+        const sEl = document.getElementById('ls-km-s');
+        const textEl = document.getElementById('ls-km-text-inp');
+        const resetBtn = document.getElementById('ls-km-reset-btn');
+        const typeBuildBtn = document.getElementById('ls-km-type-build');
+        const typeResearchBtn = document.getElementById('ls-km-type-research');
+
+        // Restore saved settings to form inputs
+        const saved = getKmCostSettings();
+        if (dEl) dEl.value = saved.d || 0;
+        if (hEl) hEl.value = saved.h || 0;
+        if (mEl) mEl.value = saved.m || 0;
+        if (sEl) sEl.value = saved.s || 0;
+        if (textEl) textEl.value = saved.text || '';
+
+        if (typeBuildBtn && typeResearchBtn) {
+            if (saved.type === 'research') {
+                typeResearchBtn.classList.add('active');
+                typeBuildBtn.classList.remove('active');
+            } else {
+                typeBuildBtn.classList.add('active');
+                typeResearchBtn.classList.remove('active');
+            }
+
+            typeBuildBtn.addEventListener('click', () => {
+                typeBuildBtn.classList.add('active');
+                typeResearchBtn.classList.remove('active');
+                renderKmCost();
+            });
+
+            typeResearchBtn.addEventListener('click', () => {
+                typeResearchBtn.classList.add('active');
+                typeBuildBtn.classList.remove('active');
+                renderKmCost();
+            });
+        }
+
+        // Live input listeners for number fields
+        [dEl, hEl, mEl, sEl].forEach(el => {
+            if (!el) return;
+            el.addEventListener('input', () => renderKmCost());
+            el.addEventListener('change', () => renderKmCost());
+        });
+
+        // Live parser for free text (e.g. "2h 4g 12s", "1w 3d 14h", "14:30:00")
+        if (textEl) {
+            textEl.addEventListener('input', () => {
+                const val = textEl.value.trim();
+                if (!val) {
+                    renderKmCost();
+                    return;
+                }
+                const parsed = parseDurationText(val);
+                if (parsed) {
+                    if (dEl) dEl.value = parsed.d;
+                    if (hEl) hEl.value = parsed.h;
+                    if (mEl) mEl.value = parsed.m;
+                    if (sEl) sEl.value = parsed.s;
+                }
+                renderKmCost();
+            });
+        }
+
+        // Reset button
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => {
+                if (dEl) dEl.value = 0;
+                if (hEl) hEl.value = 0;
+                if (mEl) mEl.value = 0;
+                if (sEl) sEl.value = 0;
+                if (textEl) textEl.value = '';
+                renderKmCost();
+            });
+        }
+
+        // Preset chip buttons
+        document.querySelectorAll('#tc-kmcost .ls-chip-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const totalSec = parseInt(btn.getAttribute('data-sec'), 10) || 0;
+                let rem = totalSec;
+                const d = Math.floor(rem / 86400); rem %= 86400;
+                const h = Math.floor(rem / 3600); rem %= 3600;
+                const m = Math.floor(rem / 60); rem %= 60;
+                const s = rem;
+
+                if (dEl) dEl.value = d;
+                if (hEl) hEl.value = h;
+                if (mEl) mEl.value = m;
+                if (sEl) sEl.value = s;
+                if (textEl) textEl.value = '';
+
+                // Automatic project type suggestion for presets
+                if (totalSec === 259200 && typeResearchBtn && typeBuildBtn) {
+                    typeResearchBtn.classList.add('active');
+                    typeBuildBtn.classList.remove('active');
+                } else if (totalSec === 172800 && typeResearchBtn && typeBuildBtn) {
+                    typeBuildBtn.classList.add('active');
+                    typeResearchBtn.classList.remove('active');
+                }
+
+                renderKmCost();
+            });
+        });
+    }
+
+    // ============================================================
     // INJECT UI
     // ============================================================
     function buildUI() {
@@ -10620,7 +11110,7 @@
             '#ls-close:hover{color:#ff6b6b}',
 
             '#ls-tabs{display:flex;border-bottom:1px solid #1a2c3f;container-type:inline-size;container-name:lstabs}',
-            '.ls-tab{flex:1;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:3px;',
+            '.ls-tab{flex:1;min-width:0;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:3px;',
             'text-align:center;padding:7px 2px;cursor:pointer;font-size:10px;',
             'background:rgba(26,44,63,0.4);transition:all .2s;color:#8899aa;user-select:none;white-space:nowrap}',
             '.ls-tab *{pointer-events:none}',
@@ -10629,10 +11119,10 @@
             'border-bottom:2px solid #00bcff}',
             '.ls-tab-icon{font-size:12px;line-height:1;display:inline-flex;align-items:center;justify-content:center}',
             '.ls-tab-label{font-size:9.5px;line-height:1;white-space:nowrap}',
-            '@container lstabs (max-width: 480px){',
+            '@container lstabs (max-width: 540px){',
             '  .ls-tab{flex-direction:column;gap:2px;padding:5px 1px}',
             '  .ls-tab-icon{font-size:12px}',
-            '  .ls-tab-label{font-size:8.5px}',
+            '  .ls-tab-label{font-size:8px}',
             '}',
             '.ls-tabs-stacked .ls-tab{flex-direction:column;gap:2px;padding:5px 1px}',
             '.ls-tabs-stacked .ls-tab-icon{font-size:12px}',
@@ -10764,6 +11254,8 @@
             '.ls-mode-btn.fuel{background:#123a24;color:#2ecc71;border-color:#2ecc71}',
             '.ls-btn-here, #ls-cart-cur-btn, #ls-coll-cur-btn, #ls-cour-cur-btn{background:#8e44ad !important;color:#fff !important;border:1px solid #9b59b6 !important;border-radius:3px;cursor:pointer;font-size:10px;font-weight:bold;padding:2px 7px;transition:all .15s}',
             '.ls-btn-here:hover, #ls-cart-cur-btn:hover, #ls-coll-cur-btn:hover, #ls-cour-cur-btn:hover{background:#9b59b6 !important;border-color:#bb86fc !important}',
+            '.ls-chip-btn{background:#132030;color:#00bcff;border:1px solid #1f3a55;padding:2px 6px;border-radius:3px;cursor:pointer;font-size:9.5px;font-weight:bold;transition:all .15s}',
+            '.ls-chip-btn:hover{background:#00bcff;color:#000;border-color:#00bcff}',
 
             /* Origin Card Responsive Header Row */
             '.ls-origin-head-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:nowrap;gap:4px}',
@@ -10921,6 +11413,8 @@
             '#ls-panel.ls-theme-fb .ls-tab[data-tab="finder"] .ls-tab-icon::after{content:"⭐";visibility:visible;position:absolute;left:0;top:0}',
             '#ls-panel.ls-theme-fb .ls-tab[data-tab="alarm"] .ls-tab-icon{visibility:hidden;position:relative}',
             '#ls-panel.ls-theme-fb .ls-tab[data-tab="alarm"] .ls-tab-icon::after{content:"📢";visibility:visible;position:absolute;left:0;top:0}',
+            '#ls-panel.ls-theme-fb .ls-tab[data-tab="kmcost"] .ls-tab-icon{visibility:hidden;position:relative}',
+            '#ls-panel.ls-theme-fb .ls-tab[data-tab="kmcost"] .ls-tab-icon::after{content:"⏱️";visibility:visible;position:absolute;left:0;top:0}',
             '#ls-panel.ls-theme-fb .ls-tab[data-tab="settings"] .ls-tab-icon{visibility:hidden;position:relative}',
             '#ls-panel.ls-theme-fb .ls-tab[data-tab="settings"] .ls-tab-icon::after{content:"⚙️";visibility:visible;position:absolute;left:0;top:0}',
 
@@ -10953,7 +11447,7 @@
             '@keyframes ls-pulse-red{0%{box-shadow:0 0 10px rgba(231,76,60,0.6)}50%{box-shadow:0 0 22px rgba(231,76,60,0.95)}100%{box-shadow:0 0 10px rgba(231,76,60,0.6)}}',
 
             /* Fenerbahçe Kartlar, Satırlar, Kaydırma Çubuğu & Arayüz */
-            '#ls-panel.ls-theme-fb .ls-coll-card, #ls-panel.ls-theme-fb .ls-cart-card, #ls-panel.ls-theme-fb .ls-finder-card, #ls-panel.ls-theme-fb #tc-alarm > div, #ls-panel.ls-theme-fb #tc-debris > div, #ls-panel.ls-theme-fb #tc-settings > div{background:#06152b !important;border-color:#132a4a !important}',
+            '#ls-panel.ls-theme-fb .ls-coll-card, #ls-panel.ls-theme-fb .ls-cart-card, #ls-panel.ls-theme-fb .ls-finder-card, #ls-panel.ls-theme-fb #tc-alarm > div, #ls-panel.ls-theme-fb #tc-debris > div, #ls-panel.ls-theme-fb #tc-kmcost > div, #ls-panel.ls-theme-fb #tc-settings > div{background:#06152b !important;border-color:#132a4a !important}',
             '#ls-panel.ls-theme-fb #ls-scan-results .ls-scan-item{background:rgba(0,45,98,0.25) !important;border-left:3px solid #ffd700 !important;color:#e6edf5 !important}',
             '#ls-panel.ls-theme-fb .ls-coll-prow, #ls-panel.ls-theme-fb .ls-coll-mrow{background:rgba(0,45,98,0.18) !important;border:1px solid rgba(255,215,0,0.08) !important}',
             '#ls-panel.ls-theme-fb .ls-coll-prow:hover, #ls-panel.ls-theme-fb .ls-coll-mrow:hover{background:rgba(255,215,0,0.09) !important;border-color:rgba(255,215,0,0.25) !important}',
@@ -11001,6 +11495,7 @@
                 '<div class="ls-tab" data-tab="scanner"><span class="ls-tab-icon">🌌</span><span class="ls-tab-label" data-i18n="tab_scanner">Tarayıcı</span></div>' +
                 '<div class="ls-tab" data-tab="finder"><span class="ls-tab-icon">🔍</span><span class="ls-tab-label" data-i18n="tab_finder">Arama</span></div>' +
                 '<div class="ls-tab" data-tab="alarm"><span class="ls-tab-icon">🚨</span><span class="ls-tab-label" data-i18n="tab_alarm">Alarm</span></div>' +
+                '<div class="ls-tab" data-tab="kmcost"><span class="ls-tab-icon">⏱️</span><span class="ls-tab-label" data-i18n="tab_kmcost">KM Hesap</span></div>' +
                 '<div class="ls-tab" data-tab="settings"><span class="ls-tab-icon">⚙️</span><span class="ls-tab-label" data-i18n="tab_settings">Ayarlar</span></div>' +
             '</div>' +
             '<div id="ls-tab-tooltip"><div id="ls-tab-tooltip-title"></div><div id="ls-tab-tooltip-desc"></div></div>' +
@@ -11431,6 +11926,124 @@
                     '<button id="ls-exp-start-btn" class="ls-exp-go" data-i18n="exp_start_btn">🚀 Keşifleri Başlat</button>' +
                 '</div>' +
 
+                // KM COST TAB (KARANLIK MADDE SÜRE YARILAMA HESABI)
+                '<div id="tc-kmcost" class="ls-tc">' +
+                    // GİRİŞ KARTI
+                    '<div style="background:rgba(255,255,255,0.03);border:1px solid #1a2c3f;border-radius:6px;padding:8px 10px;margin-bottom:8px;flex-shrink:0">' +
+                        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:4px">' +
+                            '<span style="font-size:11px;font-weight:bold;color:#00bcff;display:flex;align-items:center;gap:4px">' +
+                                '<span>⏱️</span> <span data-i18n="km_type_heading">Kategori:</span>' +
+                            '</span>' +
+                            '<div style="display:flex;gap:4px">' +
+                                '<button type="button" id="ls-km-type-build" class="ls-cart-mbtn active" style="font-size:9.5px;padding:3px 6px" title="Kaynak binaları, tesisler, ay yapıları, canlı türü binaları, filo ve savunma üretimleri" data-i18n-title="km_type_build_tip" data-i18n="km_type_build">🏗️ İnşaat & Filo</button>' +
+                                '<button type="button" id="ls-km-type-research" class="ls-cart-mbtn" style="font-size:9.5px;padding:3px 6px" title="Laboratuvar araştırmaları ve canlı türü araştırmaları" data-i18n-title="km_type_research_tip" data-i18n="km_type_research">🔬 Araştırmalar</button>' +
+                            '</div>' +
+                        '</div>' +
+
+                        // SÜRE ALANLARI (GRID: 4 SÜTUN: GÜN, SAAT, DK, SN)
+                        '<div style="font-size:10px;color:#8899aa;font-weight:bold;margin-bottom:4px" data-i18n="km_inputs_title">' +
+                            'Süre:' +
+                        '</div>' +
+                        '<div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:6px;margin-bottom:6px">' +
+                            '<div style="display:flex;flex-direction:column;align-items:center">' +
+                                '<span style="font-size:9.5px;color:#d1d8e0;margin-bottom:2px" data-i18n="km_lbl_day">Gün</span>' +
+                                '<input type="number" id="ls-km-d" class="ls-inp" min="0" max="999" value="0" style="width:100%;text-align:center;padding:4px 2px;font-family:monospace;font-size:12px">' +
+                            '</div>' +
+                            '<div style="display:flex;flex-direction:column;align-items:center">' +
+                                '<span style="font-size:9.5px;color:#d1d8e0;margin-bottom:2px" data-i18n="km_lbl_hour">Saat</span>' +
+                                '<input type="number" id="ls-km-h" class="ls-inp" min="0" max="23" value="0" style="width:100%;text-align:center;padding:4px 2px;font-family:monospace;font-size:12px">' +
+                            '</div>' +
+                            '<div style="display:flex;flex-direction:column;align-items:center">' +
+                                '<span style="font-size:9.5px;color:#d1d8e0;margin-bottom:2px" data-i18n="km_lbl_min">Dk</span>' +
+                                '<input type="number" id="ls-km-m" class="ls-inp" min="0" max="59" value="0" style="width:100%;text-align:center;padding:4px 2px;font-family:monospace;font-size:12px">' +
+                            '</div>' +
+                            '<div style="display:flex;flex-direction:column;align-items:center">' +
+                                '<span style="font-size:9.5px;color:#d1d8e0;margin-bottom:2px" data-i18n="km_lbl_sec">Sn</span>' +
+                                '<input type="number" id="ls-km-s" class="ls-inp" min="0" max="59" value="0" style="width:100%;text-align:center;padding:4px 2px;font-family:monospace;font-size:12px">' +
+                            '</div>' +
+                        '</div>' +
+
+                        // HIZLI METİN YAPIŞTIRMA ALANI
+                        '<div style="display:flex;gap:4px;align-items:center;margin-bottom:6px">' +
+                            '<input type="text" id="ls-km-text-inp" class="ls-inp" style="flex:1;font-size:10px;padding:3px 6px" placeholder="Süre metni yapıştırın: 15g 4s, 14:30:00..." data-i18n-placeholder="km_ph_text">' +
+                            '<button type="button" id="ls-km-reset-btn" class="ls-btn-d ls-btn-sm" style="padding:3px 8px;font-size:10px;white-space:nowrap" data-i18n="km_btn_reset">Sıfırla 🔄</button>' +
+                        '</div>' +
+
+                        // HIZLI SÜRE BUTONLARI (PRESETS - ÜST LİMİT ÜZERİNDEKİLER KALDIRILDI)
+                        '<div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center">' +
+                            '<span style="font-size:9.5px;color:#8899aa;font-weight:bold" data-i18n="km_quick_presets">Hazır Süreler:</span>' +
+                            '<button type="button" class="ls-chip-btn" data-sec="1800">30 dk</button>' +
+                            '<button type="button" class="ls-chip-btn" data-sec="3600">1s</button>' +
+                            '<button type="button" class="ls-chip-btn" data-sec="7200">2s</button>' +
+                            '<button type="button" class="ls-chip-btn" data-sec="21600">6s</button>' +
+                            '<button type="button" class="ls-chip-btn" data-sec="43200">12s</button>' +
+                            '<button type="button" class="ls-chip-btn" data-sec="86400">24s</button>' +
+                            '<button type="button" class="ls-chip-btn" data-sec="172800">48s Tavan</button>' +
+                            '<button type="button" class="ls-chip-btn" data-sec="259200">72s Tavan</button>' +
+                        '</div>' +
+                    '</div>' +
+
+                    // HESAPLAMA SONUÇ KARTI
+                    '<div style="background:linear-gradient(135deg,rgba(0,188,255,0.06),rgba(13,27,42,0.6));border:1px solid #1a3c5a;border-radius:6px;padding:8px 10px;margin-bottom:8px;flex-shrink:0">' +
+                        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
+                            '<div style="font-size:10.5px;color:#8899aa;font-weight:bold" data-i18n="km_res_total_time">Toplam Süre:</div>' +
+                            '<div id="ls-km-total-display" style="font-size:11px;font-weight:bold;color:#fff;font-family:monospace">0 Saniye</div>' +
+                        '</div>' +
+
+                        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">' +
+                            // 1. TIK: YARILAMAK İÇİN
+                            '<div style="background:#0a121e;border:1px solid #1e3a5a;border-radius:6px;padding:6px 8px;text-align:center">' +
+                                '<div style="font-size:10px;color:#00bcff;font-weight:bold;margin-bottom:2px" data-i18n="km_res_halve_title">⚡ Yarılama Ücreti</div>' +
+                                '<div id="ls-km-val-halve" style="font-size:16px;font-weight:bold;color:#00bcff;font-family:monospace">0 KM</div>' +
+                                '<div id="ls-km-sub-halve" style="font-size:9px;color:#8899aa;margin-top:2px">Kazanç: 0 sn</div>' +
+                            '</div>' +
+
+                            // 2. TIK: BİTİRMEK İÇİN
+                            '<div style="background:#0a121e;border:1px solid #3d3215;border-radius:6px;padding:6px 8px;text-align:center">' +
+                                '<div style="font-size:10px;color:#ffbe3b;font-weight:bold;margin-bottom:2px" data-i18n="km_res_finish_title">🚀 Tamamlama Ücreti</div>' +
+                                '<div id="ls-km-val-finish" style="font-size:16px;font-weight:bold;color:#ffbe3b;font-family:monospace">0 KM</div>' +
+                                '<div style="font-size:9px;color:#8899aa;margin-top:2px" data-i18n="km_res_finish_sub">Anında Bitiş</div>' +
+                            '</div>' +
+                        '</div>' +
+
+                        // DURUM ROZETİ
+                        '<div id="ls-km-badge" style="background:rgba(255,255,255,0.05);border:1px solid #1a2c3f;border-radius:4px;padding:3px 6px;font-size:10px;text-align:center;color:#d1d8e0">' +
+                            'Süre girin' +
+                        '</div>' +
+                    '</div>' +
+
+                    // OGAME KM SÜRE YARILAMA KURALLARI VE REHBERİ
+                    '<div style="background:rgba(255,255,255,0.02);border:1px solid #1a2c3f;border-radius:6px;padding:8px 10px;flex:1;overflow-y:auto">' +
+                        '<div style="font-size:11px;font-weight:bold;color:#00bcff;margin-bottom:6px;display:flex;align-items:center;gap:4px">' +
+                            '<span>📜</span> <span data-i18n="km_guide_title">KM Yarılama Kuralları:</span>' +
+                        '</div>' +
+
+                        // Kural 1: Binalar, Filo & Savunma
+                        '<div style="background:rgba(243,156,18,0.04);border-left:3px solid #f39c12;padding:5px 8px;border-radius:0 4px 4px 0;margin-bottom:6px">' +
+                            '<div style="font-size:10.5px;font-weight:bold;color:#f39c12;margin-bottom:2px" data-i18n="km_rule1_title">🏗️ İnşaat, Filo ve Savunma:</div>' +
+                            '<div style="font-size:10px;color:#c8d6e5;line-height:1.4" data-i18n="km_rule1_desc"><b>Kapsam:</b> Kaynak binaları, tesisler, ay yapıları, canlı türü binaları, filo ve savunma üretimleri.<br><b>Tarife:</b> 48 saate kadar her 30 dakika için <b>750 KM</b>, saatte 1.500 KM alınır. 48 saati aşan tüm sürelerde yarılama sabit <b>72.000 KM</b>, tamamlama <b>144.000 KM</b>\'dir.</div>' +
+                        '</div>' +
+
+                        // Kural 2: Tüm Araştırmalar
+                        '<div style="background:rgba(231,76,60,0.04);border-left:3px solid #e74c3c;padding:5px 8px;border-radius:0 4px 4px 0;margin-bottom:6px">' +
+                            '<div style="font-size:10.5px;font-weight:bold;color:#e74c3c;margin-bottom:2px" data-i18n="km_rule2_title">🔬 Araştırmalar:</div>' +
+                            '<div style="font-size:10px;color:#c8d6e5;line-height:1.4" data-i18n="km_rule2_desc"><b>Kapsam:</b> Laboratuvar araştırmaları ve canlı türü araştırmaları.<br><b>Tarife:</b> 72 saate kadar formül devam eder. 72 saati aşan tüm araştırmalarda yarılama sabit <b>108.000 KM</b>, tamamlama <b>216.000 KM</b>\'dir.</div>' +
+                        '</div>' +
+
+                        // Kural 3: Kapsam Dışı İşlemler
+                        '<div style="background:rgba(0,188,255,0.04);border-left:3px solid #00bcff;padding:5px 8px;border-radius:0 4px 4px 0;margin-bottom:6px">' +
+                            '<div style="font-size:10.5px;font-weight:bold;color:#00bcff;margin-bottom:2px" data-i18n="km_rule3_title">❓ Kapsam Dışı İşlemler:</div>' +
+                            '<div style="font-size:10px;color:#c8d6e5;line-height:1.4" data-i18n="km_rule3_desc">Filo uçuşları, keşifler ve enkaz toplama gibi süreçler KM ile hızlandırılamaz. Oyun motorunda yalnızca yukarıdaki 2 kategori geçerlidir.</div>' +
+                        '</div>' +
+
+                        // Kural 4: Başlangıç Süresi Kuralı
+                        '<div style="background:rgba(46,204,113,0.04);border-left:3px solid #2ecc71;padding:5px 8px;border-radius:0 4px 4px 0">' +
+                            '<div style="font-size:10.5px;font-weight:bold;color:#2ecc71;margin-bottom:2px" data-i18n="km_rule4_title">💡 Başlangıç Süresi Kuralı:</div>' +
+                            '<div style="font-size:10px;color:#c8d6e5;line-height:1.4" data-i18n="km_rule4_desc">KM maliyeti kalan süreye göre değil, işin orijinal <b>başlangıç süresine</b> göre alınır. Sürenin yarısından fazlası doğal olarak geçmişse tek tıkla <b>anında tamamlanır</b>.</div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+
                 // SETTINGS TAB (AYARLAR)
                 '<div id="tc-settings" class="ls-tc">' +
                     // VERSİYON KARTI (EN ÜSTTE)
@@ -11438,7 +12051,7 @@
                         '<div style="display:flex;justify-content:space-between;align-items:center">' +
                             '<div style="display:flex;align-items:center;gap:6px">' +
                                 '<span style="font-size:12px;color:#00bcff;font-weight:bold">⚡ LuckyStrike Helper</span>' +
-                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v14.6</span>' +
+                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v14.7</span>' +
                             '</div>' +
                             '<a href="https://github.com/kadirersoy/luckystrike-ogame-helper" target="_blank" style="font-size:10.5px;color:#00bcff;text-decoration:none;display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,0.05);padding:2px 7px;border-radius:4px;border:1px solid #1a2c3f" title="GitHub Proje Sayfası" data-i18n-title="settings_github_title">' +
                                 '<span>🔗</span> <span data-i18n="settings_github">GitHub</span>' +
@@ -11831,6 +12444,7 @@
                 if (t === 'expedition') renderExpedition();
                 if (t === 'scanner') { updateScanStatusInfo(); updateRefreshButtonCooldown(); }
                 if (t === 'finder') { updateFinderStatusInfo(); updateRefreshButtonCooldown(); }
+                if (t === 'kmcost') renderKmCost();
                 if (t === 'settings' || t === 'debug') renderDebugLogs();
                 LS_LOGGER.action('UI', 'Sekme değiştirildi: ' + t);
                 updateAllAutomationStartButtons();
@@ -11845,6 +12459,7 @@
         if (activeTab === 'expedition') renderExpedition();
         if (activeTab === 'scanner') { updateScanStatusInfo(); updateRefreshButtonCooldown(); }
         if (activeTab === 'finder') { updateFinderStatusInfo(); updateRefreshButtonCooldown(); }
+        if (activeTab === 'kmcost') renderKmCost();
         if (activeTab === 'settings' || activeTab === 'debug') renderDebugLogs();
         if (!savedTabEl) {
             const first = document.querySelector('.ls-tab');
@@ -12143,6 +12758,9 @@
         setupExpeditionEvents();
         renderExpedition();
 
+        setupKmCostEvents();
+        renderKmCost();
+
         // Pasif Tehdit İzleme (Ek Sunucu İsteği Olmaksızın Doğrudan DOM Değişiklikleri Dinlenir)
         // OGame'in kendi DOM değişiklikleri ve kendi dahili eventList AJAX çağrıları dinlenir
         const attEl = document.getElementById('attack_alert');
@@ -12216,7 +12834,7 @@
             const r3 = Array.from(debugFilterState.row3).join(', ');
 
             let out = '==================================================\n' +
-                      '  LuckyStrike OGame Helper v14.6 - Log Kayıtları\n' +
+                      '  LuckyStrike OGame Helper v14.7 - Log Kayıtları\n' +
                       '  Tarih: ' + nowStr + '\n' +
                       '  URL: ' + window.location.href + '\n' +
                       '  Filtreler: [Akış: ' + r1 + '] [Kapsam: ' + r2 + '] [Seviye: ' + r3 + ']\n' +
@@ -12764,6 +13382,6 @@
     scanAndSaveExpeditionTemplates();
     updateAllAutomationStartButtons();
     setInterval(updateAllAutomationStartButtons, 400);
-    console.log(LS, 'LuckyStrike OGame Helper v14.6 hazır!');
+    console.log(LS, 'LuckyStrike OGame Helper v14.7 hazır!');
 
 })();

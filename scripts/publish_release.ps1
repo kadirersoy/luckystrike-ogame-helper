@@ -28,7 +28,7 @@ Write-Host ">>> Starting Release Pipeline for $tag ($releaseTitle) <<<"
 # ============================================================
 Write-Host "[GitHub-Fix 1/2] Verifying UI Screenshot Freshness..."
 $screenshotsDir = "$projectRoot\screenshots"
-$requiredScreenshots = @("tab_alarm.png", "tab_cart.png", "tab_collector.png", "tab_courier.png", "tab_debris.png", "tab_expedition.png", "tab_finder.png", "tab_scanner.png", "tab_settings.png")
+$requiredScreenshots = @("tab_alarm.png", "tab_cart.png", "tab_collector.png", "tab_courier.png", "tab_debris.png", "tab_expedition.png", "tab_finder.png", "tab_kmcost.png", "tab_scanner.png", "tab_settings.png")
 
 $needRegen = $false
 foreach ($ss in $requiredScreenshots) {

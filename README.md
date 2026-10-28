@@ -1,4 +1,4 @@
-# ⚡ LuckyStrike OGame Helper (v14.6)
+# ⚡ LuckyStrike OGame Helper (v14.7)
 
 [English (ENG)](#eng-english-description) | [Türkçe (TR)](#tr-türkçe-açıklama)
 
@@ -128,7 +128,22 @@ LuckyStrike OGame Helper, **Gameforge Kullanım Şartları ve Oyun Kuralları (K
 
 ---
 
-#### 9. ⚙️ Ayarlar, Özelleştirme & Sistem Teşhis Günlükleri
+#### 9. ⏱️ KM Hesap (Karanlık Madde Süre Yarılama & Bitirme)
+
+<p align="center">
+  <img src="screenshots/tab_kmcost.png" width="380" alt="LuckyStrike KM Hesap Asistanı">
+</p>
+
+- **İki Resmi Kategori:** Oyun kurallarına göre ayrıştırılmış tavan hesaplamaları:
+  - **İnşaat, Filo ve Savunma:** Kaynak binaları, tesisler, ay yapıları, canlı türü binaları, filo ve savunma üretimleri (Maksimum 48 saat / Sabit 72.000 KM yarılama, 144.000 KM tamamlama).
+  - **Araştırmalar:** Normal laboratuvar araştırmaları ve canlı türü araştırmaları (Maksimum 72 saat / Sabit 108.000 KM yarılama, 216.000 KM tamamlama).
+- **Esnek Süre Girişi:** Gün, Saat, Dakika, Saniye kutuları veya serbest metin yapıştırma desteği (Örn: `15g 4s`, `14:30:00`).
+- **Hazır Süre Butonları:** Hızlı hesaplama için 30 dk, 1s, 2s, 6s, 12s, 24s, 48s Tavan, 72s Tavan kısayolları.
+- **Anlık Maliyet & Kazanç:** Yarılama ücreti, anında tamamlama maliyeti, düşülecek süre ve kural tavanı durumu tek ekranda.
+
+---
+
+#### 10. ⚙️ Ayarlar, Özelleştirme & Sistem Teşhis Günlükleri
 
 <p align="center">
   <img src="screenshots/tab_settings.png" width="380" alt="LuckyStrike Ayarlar ve Teşhis">
@@ -146,7 +161,7 @@ LuckyStrike OGame Helper, **Gameforge Kullanım Şartları ve Oyun Kuralları (K
 ---
 
 ### ⏱️ Sekmeler İçin 3 Saniye Kullanım Rehberi (Hover Tooltips)
-Panel üzerindeki 9 sekmenin (`Maliyet`, `Toplayıcı`, `Postacı`, `Harabe`, `Keşif`, `Tarayıcı`, `Arama`, `Alarm`, `Ayarlar`) üzerine fare ile gelinip **3 saniye** beklendiğinde, o sekmenin ne işe yaradığını ve nasıl kullanılacağını anlatan Türkçe/İngilizce ipucu kutusu (tooltip) belirir; fare çekildiğinde otomatik kaybolur.
+Panel üzerindeki 10 sekmenin (`Maliyet`, `Toplayıcı`, `Postacı`, `Harabe`, `Keşif`, `Tarayıcı`, `Arama`, `Alarm`, `KM Hesap`, `Ayarlar`) üzerine fare ile gelinip **3 saniye** beklendiğinde, o sekmenin ne işe yaradığını ve nasıl kullanılacağını anlatan Türkçe/İngilizce ipucu kutusu (tooltip) belirir; fare çekildiğinde otomatik kaybolur.
 
 ---
 
@@ -283,7 +298,22 @@ LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Term
 
 ---
 
-#### 9. ⚙️ Settings, Customization & System Diagnostics
+#### 9. ⏱️ DM Cost (Dark Matter Halving & Completion Calculator)
+
+<p align="center">
+  <img src="screenshots/en/tab_kmcost.png" width="380" alt="LuckyStrike DM Cost Calculator">
+</p>
+
+- **Two Strict Rule Categories:** Accurate official caps modeled after OGame mechanics:
+  - **Construction, Fleet & Defense:** Resource buildings, facilities, moon structures, lifeform buildings, fleet and defense queues (Max 48h / Flat 72,000 DM halve, 144,000 DM finish).
+  - **Research:** Regular laboratory research and lifeform tech tree (Max 72h / Flat 108,000 DM halve, 216,000 DM finish).
+- **Flexible Duration Inputs:** Dedicated Day, Hour, Min, Sec numeric fields or free-text duration paste parser (e.g. `15d 4h`, `14:30:00`).
+- **Quick-Preset Chips:** Instant shortcuts for 30m, 1h, 2h, 6h, 12h, 24h, 48h Cap, and 72h Cap.
+- **Real-Time Cost & Time Saved:** Instant calculation of halving cost, total completion cost, reduced time, and active rule cap status.
+
+---
+
+#### 10. ⚙️ Settings, Customization & System Diagnostics
 
 <p align="center">
   <img src="screenshots/en/tab_settings.png" width="380" alt="LuckyStrike Settings and Diagnostics">
@@ -301,7 +331,7 @@ LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Term
 ---
 
 ### ⏱️ 3-Second Guidance Tooltips (Hover Tooltips)
-Hovering your mouse over any of the 9 tabs (`Cart`, `Collector`, `Courier`, `Debris`, `Expedition`, `Scanner`, `Finder`, `Alarm`, `Settings`) for **3 seconds** reveals an educational tooltip explaining the purpose and usage of that module; it automatically dismisses when moving the mouse away.
+Hovering your mouse over any of the 10 tabs (`Cart`, `Collector`, `Courier`, `Debris`, `Expedition`, `Scanner`, `Finder`, `Alarm`, `KM Cost`, `Settings`) for **3 seconds** reveals an educational tooltip explaining the purpose and usage of that module; it automatically dismisses when moving the mouse away.
 
 ---
 
@@ -317,7 +347,7 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ## 🚀 Kurulum / Installation
 
 ### Chrome & Microsoft Edge
-1. İndirin / Download: [`luckystrike-ogame-helper-v14.6.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
+1. İndirin / Download: [`luckystrike-ogame-helper-v14.7.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
 2. Tarayıcıda eklentiler sayfasına gidin / Open extensions page:
    - **Chrome:** `chrome://extensions`
    - **Edge:** `edge://extensions`

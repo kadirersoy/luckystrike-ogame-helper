@@ -13,7 +13,7 @@ if (-not (Test-Path $enScreenshotsDir)) {
 
 $edgePath = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
 
-$allTabs = @("cart", "collector", "courier", "debris", "expedition", "scanner", "finder", "alarm", "settings")
+$allTabs = @("cart", "collector", "courier", "debris", "expedition", "scanner", "finder", "alarm", "kmcost", "settings")
 $tabs = if ($Tab -eq "all" -or [string]::IsNullOrWhiteSpace($Tab)) { 
     $allTabs 
 } else { 
@@ -296,6 +296,14 @@ $htmlTemplate = @'
             if (alarmStatus) {
                 alarmStatus.textContent = (TARGET_LANG === 'en') ? 'Watcher Active \u00B7 No Threat' : 'G\u00F6zc\u00FC Aktif \u00B7 Tehdit Yok';
             }
+        }
+
+        if (TARGET_TAB === 'kmcost') {
+            const dEl = document.getElementById('ls-km-d');
+            if (dEl) dEl.value = 15;
+            const hEl = document.getElementById('ls-km-h');
+            if (hEl) hEl.value = 4;
+            if (typeof renderKmCost === 'function') renderKmCost();
         }
 
         if (TARGET_TAB === 'settings') {
