@@ -1,0 +1,2 @@
+# Exclude deployment and utility scripts from repository language statistics
+scripts/* linguist-vendored
