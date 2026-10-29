@@ -2,7 +2,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v15.1 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v15.2 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -211,6 +211,13 @@
             coll_jump_moon_hint: 'Aya geç',
             coll_planets_count: 'gezegen',
             coll_moons_count: 'ay',
+            coll_global_reserve: '🛡️ Deu Rezerv',
+            coll_global_reserve_hint: 'Seçili hedeflere uygulanacak Deu Rezerv tutarı (örn: 250k, 1m)',
+            coll_reserve_apply: '⚡ Eşitle',
+            coll_reserve_apply_title: 'Bu rezerv tutarını sadece seçili gezegen ve aylara uygula',
+            coll_reserve_updated_toast: 'seçili hedefin Deu rezervi',
+            coll_reserve_updated_toast_end: 'olarak eşitlendi.',
+            coll_skip_no_cargo: '⏭️ {name}: Taşınacak maden yok (Rezerv ve yakıt korundu). Sonraki hedefe geçiliyor...',
 
             // Collector Floating HUD
             coll_hud_title: 'Maden Toplayıcı',
@@ -638,6 +645,13 @@
             coll_jump_moon_hint: 'Switch to moon',
             coll_planets_count: 'planets',
             coll_moons_count: 'moons',
+            coll_global_reserve: '🛡️ Deut Reserve',
+            coll_global_reserve_hint: 'Deut Reserve amount for selected targets (e.g. 250k, 1m)',
+            coll_reserve_apply: '⚡ Equalize',
+            coll_reserve_apply_title: 'Apply this reserve amount only to selected planets and moons',
+            coll_reserve_updated_toast: 'selected targets set to',
+            coll_reserve_updated_toast_end: 'Deut reserve.',
+            coll_skip_no_cargo: '⏭️ {name}: No resources to collect (Reserve and fuel protected). Skipping to next target...',
 
             // Collector Floating HUD
             coll_hud_title: 'Resource Collector',
@@ -1656,12 +1670,15 @@
         targetName: '',
         manualTarget: false,
         mission: 3,
+        missions: {},
         priorityMode: 'speed',
         selectedShips: { bn: true, kn: true, rehber: false },
         selectedRes: { deu: true, cri: true, met: true },
+        globalReserve: 250000,
         reserves: {},
         selectedItems: {}
     }, JSON.parse(localStorage.getItem(KEYS.COLLECTOR) || '{}'));
+    if (!collectorSettings.missions) collectorSettings.missions = {};
     if (!collectorSettings.priorityMode) collectorSettings.priorityMode = 'speed';
     if (collectorSettings.targetType === 3 && collectorSettings.targetName) {
         collectorSettings.targetName = cleanMoonName(collectorSettings.targetName);
@@ -2926,6 +2943,28 @@
             if (val > 0) return val;
         }
         return 0;
+    }
+
+    function estimateFlightFuel(fromCoord, fromType, toCoord, toType) {
+        if (!fromCoord || !toCoord) return 200;
+        const [g1, s1, p1] = String(fromCoord).split(':').map(Number);
+        const [g2, s2, p2] = String(toCoord).split(':').map(Number);
+        if (isNaN(g1) || isNaN(g2)) return 200;
+
+        let dist = 5;
+        if (g1 !== g2) {
+            dist = Math.abs(g1 - g2) * 20000;
+        } else if (s1 !== s2) {
+            dist = 2700 + Math.abs(s1 - s2) * 95;
+        } else if (p1 !== p2) {
+            dist = 1000 + Math.abs(p1 - p2) * 5;
+        } else {
+            dist = 5;
+        }
+
+        if (dist <= 5) return 200;
+        const est = Math.round(150 + (dist * 0.22));
+        return Math.max(200, Math.min(35000, est));
     }
 
     function isTargetTypeSelected(targetType) {
@@ -7604,6 +7643,11 @@
         if (criChk) criChk.checked = !!collectorSettings.selectedRes.cri;
         if (metChk) metChk.checked = !!collectorSettings.selectedRes.met;
 
+        const globalRezInp = document.getElementById('ls-coll-global-reserve-inp');
+        if (globalRezInp && !globalRezInp.matches(':focus')) {
+            globalRezInp.value = fmt(collectorSettings.globalReserve || 250000);
+        }
+
         // 4. Gezegen & Ay Listesini Çiz
         let listHtml = '';
         if (empire.length === 0) {
@@ -7628,11 +7672,16 @@
                         `<button class="ls-coll-jump" data-cp="${p.id}" title="${t('coll_jump_hint', 'Gezegene geç')}">🚀</button>` +
                     `</div>`;
                 } else {
+                    const pMission = (collectorSettings.missions && collectorSettings.missions[p.id]) ? collectorSettings.missions[p.id] : (collectorSettings.mission || 3);
                     listHtml += `<div class="ls-coll-prow">` +
                         `<input type="checkbox" class="ls-coll-item-chk" data-id="${p.id}" ${pChecked ? 'checked' : ''}>` +
                         `<div class="ls-coll-info">` +
                             `<div class="ls-coll-name"><b>${escapeHtml(p.name)}</b><span class="crd">${p.coords}</span></div>` +
                             `<div class="ls-coll-res"><span class="ls-coll-m">${formatShort(pRes.metal)}</span><span class="ls-coll-k">${formatShort(pRes.crystal)}</span><span class="ls-coll-d">${formatShort(pRes.deuterium)}</span></div>` +
+                        `</div>` +
+                        `<div class="ls-coll-mbtns-wrap" style="display:flex;gap:3px;flex-shrink:0">` +
+                            `<button type="button" class="ls-cart-mbtn ${pMission === 3 ? 'active' : ''}" data-action="coll-item-mission" data-id="${p.id}" data-val="3" title="${t('coll_transport_title', 'Nakliye: Boş geri döner')}">${t('coll_transport', 'Nakliye')}</button>` +
+                            `<button type="button" class="ls-cart-mbtn deploy ${pMission === 4 ? 'active' : ''}" data-action="coll-item-mission" data-id="${p.id}" data-val="4" title="${t('coll_deploy_title', 'Konuşlandır: Hedefte kalır')}">${t('coll_deploy', 'Konuşlandır')}</button>` +
                         `</div>` +
                         `<input class="ls-inp ls-coll-rez" data-id="${p.id}" value="${fmt(pReserve)}" title="${t('coll_reserve_hint', 'Deu Rezerv (Korumalı miktar)')}">` +
                         `<button class="ls-coll-jump" data-cp="${p.id}" title="${t('coll_jump_hint', 'Gezegene geç')}">🚀</button>` +
@@ -7657,11 +7706,16 @@
                             `<button class="ls-coll-jump" data-cp="${p.moon.id}" title="${t('coll_jump_moon_hint', 'Aya geç')}">🚀</button>` +
                         `</div>`;
                     } else {
+                        const mMission = (collectorSettings.missions && collectorSettings.missions[p.moon.id]) ? collectorSettings.missions[p.moon.id] : (collectorSettings.mission || 3);
                         listHtml += `<div class="ls-coll-mrow">` +
                             `<input type="checkbox" class="ls-coll-item-chk" data-id="${p.moon.id}" ${mChecked ? 'checked' : ''}>` +
                             `<div class="ls-coll-info">` +
                                 `<div class="ls-coll-name"><b>🌕 ${escapeHtml(mTitle)}</b></div>` +
                                 `<div class="ls-coll-res"><span class="ls-coll-m">${formatShort(mRes.metal)}</span><span class="ls-coll-k">${formatShort(mRes.crystal)}</span><span class="ls-coll-d">${formatShort(mRes.deuterium)}</span></div>` +
+                            `</div>` +
+                            `<div class="ls-coll-mbtns-wrap" style="display:flex;gap:3px;flex-shrink:0">` +
+                                `<button type="button" class="ls-cart-mbtn ${mMission === 3 ? 'active' : ''}" data-action="coll-item-mission" data-id="${p.moon.id}" data-val="3" title="${t('coll_transport_title', 'Nakliye: Boş geri döner')}">${t('coll_transport', 'Nakliye')}</button>` +
+                                `<button type="button" class="ls-cart-mbtn deploy ${mMission === 4 ? 'active' : ''}" data-action="coll-item-mission" data-id="${p.moon.id}" data-val="4" title="${t('coll_deploy_title', 'Konuşlandır: Hedefte kalır')}">${t('coll_deploy', 'Konuşlandır')}</button>` +
                             `</div>` +
                             `<input class="ls-inp ls-coll-rez" data-id="${p.moon.id}" value="${fmt(mReserve)}" title="${t('coll_reserve_hint', 'Deu Rezerv (Korumalı miktar)')}">` +
                             `<button class="ls-coll-jump" data-cp="${p.moon.id}" title="${t('coll_jump_moon_hint', 'Aya geç')}">🚀</button>` +
@@ -7693,9 +7747,10 @@
                 checkedPCount++;
                 const res = getPlanetCachedResources(p.id);
                 const rez = collectorSettings.reserves[p.id] !== undefined ? collectorSettings.reserves[p.id] : 250000;
+                const estFuel = estimateFlightFuel(p.coords, 1, collectorSettings.targetCoord, collectorSettings.targetType || 1);
                 if (collectorSettings.selectedRes.met) totalM += (res.metal || 0);
                 if (collectorSettings.selectedRes.cri) totalC += (res.crystal || 0);
-                if (collectorSettings.selectedRes.deu) totalD += Math.max(0, (res.deuterium || 0) - rez);
+                if (collectorSettings.selectedRes.deu) totalD += Math.max(0, (res.deuterium || 0) - rez - estFuel);
             }
 
             if (p.moon) {
@@ -7704,9 +7759,10 @@
                     checkedMCount++;
                     const res = getPlanetCachedResources(p.moon.id);
                     const rez = collectorSettings.reserves[p.moon.id] !== undefined ? collectorSettings.reserves[p.moon.id] : 250000;
+                    const estFuel = estimateFlightFuel(p.coords, 3, collectorSettings.targetCoord, collectorSettings.targetType || 1);
                     if (collectorSettings.selectedRes.met) totalM += (res.metal || 0);
                     if (collectorSettings.selectedRes.cri) totalC += (res.crystal || 0);
-                    if (collectorSettings.selectedRes.deu) totalD += Math.max(0, (res.deuterium || 0) - rez);
+                    if (collectorSettings.selectedRes.deu) totalD += Math.max(0, (res.deuterium || 0) - rez - estFuel);
                 }
             }
         });
@@ -7799,14 +7855,26 @@
 
         document.getElementById('ls-coll-mission-3')?.addEventListener('click', () => {
             collectorSettings.mission = 3;
+            if (!collectorSettings.missions) collectorSettings.missions = {};
+            empire().forEach(p => {
+                collectorSettings.missions[p.id] = 3;
+                if (p.moon) collectorSettings.missions[p.moon.id] = 3;
+            });
             saveCollectorSettings();
             updateMissionUi();
+            renderCollector();
         });
 
         document.getElementById('ls-coll-mission-4')?.addEventListener('click', () => {
             collectorSettings.mission = 4;
+            if (!collectorSettings.missions) collectorSettings.missions = {};
+            empire().forEach(p => {
+                collectorSettings.missions[p.id] = 4;
+                if (p.moon) collectorSettings.missions[p.moon.id] = 4;
+            });
             saveCollectorSettings();
             updateMissionUi();
+            renderCollector();
         });
 
         // Öncelik Modu Butonu (Hız / Yakıt)
@@ -7936,6 +8004,24 @@
             }, true);
 
             listEl.addEventListener('click', (e) => {
+                const mBtn = e.target.closest('[data-action="coll-item-mission"]');
+                if (mBtn) {
+                    const id = mBtn.getAttribute('data-id');
+                    const val = parseInt(mBtn.getAttribute('data-val'), 10) || 3;
+                    if (!collectorSettings.missions) collectorSettings.missions = {};
+                    collectorSettings.missions[id] = val;
+                    saveCollectorSettings();
+
+                    const parent = mBtn.parentElement;
+                    if (parent) {
+                        parent.querySelectorAll('[data-action="coll-item-mission"]').forEach(b => {
+                            const bVal = parseInt(b.getAttribute('data-val'), 10) || 3;
+                            b.classList.toggle('active', bVal === val);
+                        });
+                    }
+                    return;
+                }
+
                 const jumpBtn = e.target.closest('.ls-coll-jump');
                 if (jumpBtn) {
                     const cp = jumpBtn.getAttribute('data-cp');
@@ -7945,6 +8031,65 @@
                 }
             });
         }
+
+        // Genel Deu Rezerv Eşitleme
+        const applyGlobalReserve = () => {
+            const globalInp = document.getElementById('ls-coll-global-reserve-inp');
+            if (!globalInp) return;
+            const parsed = parseOgNum(globalInp.value);
+            const clean = Math.max(0, isNaN(parsed) ? 250000 : parsed);
+            collectorSettings.globalReserve = clean;
+            globalInp.value = fmt(clean);
+
+            let updatedCount = 0;
+            const empire = getEmpirePlanetsAndMoons();
+            empire.forEach(p => {
+                const isTargetP = (collectorSettings.targetCoord === p.coords && collectorSettings.targetType === 1);
+                const pChecked = !isTargetP && (collectorSettings.selectedItems[p.id] !== false);
+                if (pChecked) {
+                    collectorSettings.reserves[p.id] = clean;
+                    const pInp = document.querySelector(`.ls-coll-rez[data-id="${p.id}"]`);
+                    if (pInp) pInp.value = fmt(clean);
+                    updatedCount++;
+                }
+                if (p.moon) {
+                    const isTargetM = (collectorSettings.targetCoord === p.coords && collectorSettings.targetType === 3);
+                    const mChecked = !isTargetM && (collectorSettings.selectedItems[p.moon.id] === true);
+                    if (mChecked) {
+                        collectorSettings.reserves[p.moon.id] = clean;
+                        const mInp = document.querySelector(`.ls-coll-rez[data-id="${p.moon.id}"]`);
+                        if (mInp) mInp.value = fmt(clean);
+                        updatedCount++;
+                    }
+                }
+            });
+
+            saveCollectorSettings();
+            updateCollectorSummary();
+            showCollectorToast(`⚡ ${updatedCount} ${t('coll_reserve_updated_toast', 'seçili hedefin Deu rezervi')} ${fmt(clean)} ${t('coll_reserve_updated_toast_end', 'olarak eşitlendi.')}`, 3000);
+        };
+
+        document.getElementById('ls-coll-global-reserve-apply')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            applyGlobalReserve();
+        });
+
+        document.getElementById('ls-coll-global-reserve-inp')?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                applyGlobalReserve();
+            }
+        });
+
+        document.getElementById('ls-coll-global-reserve-inp')?.addEventListener('blur', () => {
+            const globalInp = document.getElementById('ls-coll-global-reserve-inp');
+            if (!globalInp) return;
+            const parsed = parseOgNum(globalInp.value);
+            const clean = Math.max(0, isNaN(parsed) ? 250000 : parsed);
+            collectorSettings.globalReserve = clean;
+            globalInp.value = fmt(clean);
+            saveCollectorSettings();
+        });
 
         // Toplamayı Başlat Butonu
         document.getElementById('ls-coll-start-btn')?.addEventListener('click', () => {
@@ -7980,12 +8125,32 @@
         empire.forEach(p => {
             const isTargetPlanet = (collectorSettings.targetCoord === p.coords && collectorSettings.targetType === 1);
             if (!isTargetPlanet && collectorSettings.selectedItems[p.id] !== false) {
-                queue.push({ id: p.id, name: p.name, coords: p.coords, isMoon: false });
+                const pRes = getPlanetCachedResources(p.id);
+                const pRez = collectorSettings.reserves[p.id] !== undefined ? collectorSettings.reserves[p.id] : 250000;
+                const estFuel = estimateFlightFuel(p.coords, 1, collectorSettings.targetCoord, collectorSettings.targetType || 1);
+                const hasMet = collectorSettings.selectedRes.met && (pRes.metal || 0) > 0;
+                const hasCri = collectorSettings.selectedRes.cri && (pRes.crystal || 0) > 0;
+                const hasDeu = collectorSettings.selectedRes.deu && ((pRes.deuterium || 0) - pRez - estFuel) > 0;
+                const isKnownEmpty = (pRes.metal !== undefined || pRes.crystal !== undefined || pRes.deuterium !== undefined) && !hasMet && !hasCri && !hasDeu;
+                if (!isKnownEmpty) {
+                    const pMission = (collectorSettings.missions && collectorSettings.missions[p.id]) ? collectorSettings.missions[p.id] : (collectorSettings.mission || 3);
+                    queue.push({ id: p.id, name: p.name, coords: p.coords, isMoon: false, mission: pMission });
+                }
             }
             if (p.moon) {
                 const isTargetMoon = (collectorSettings.targetCoord === p.coords && collectorSettings.targetType === 3);
                 if (!isTargetMoon && collectorSettings.selectedItems[p.moon.id] === true) {
-                    queue.push({ id: p.moon.id, name: p.moon.name || `${p.name} ( ${t('coll_moon_name')} )`, coords: p.coords, isMoon: true });
+                    const mRes = getPlanetCachedResources(p.moon.id);
+                    const mRez = collectorSettings.reserves[p.moon.id] !== undefined ? collectorSettings.reserves[p.moon.id] : 250000;
+                    const estFuel = estimateFlightFuel(p.coords, 3, collectorSettings.targetCoord, collectorSettings.targetType || 1);
+                    const hasMet = collectorSettings.selectedRes.met && (mRes.metal || 0) > 0;
+                    const hasCri = collectorSettings.selectedRes.cri && (mRes.crystal || 0) > 0;
+                    const hasDeu = collectorSettings.selectedRes.deu && ((mRes.deuterium || 0) - mRez - estFuel) > 0;
+                    const isKnownEmpty = (mRes.metal !== undefined || mRes.crystal !== undefined || mRes.deuterium !== undefined) && !hasMet && !hasCri && !hasDeu;
+                    if (!isKnownEmpty) {
+                        const mMission = (collectorSettings.missions && collectorSettings.missions[p.moon.id]) ? collectorSettings.missions[p.moon.id] : (collectorSettings.mission || 3);
+                        queue.push({ id: p.moon.id, name: p.moon.name || `${p.name} ( ${t('coll_moon_name')} )`, coords: p.coords, isMoon: true, mission: mMission });
+                    }
                 }
             }
         });
@@ -8031,7 +8196,8 @@
         const firstItem = queue[0];
         const [g, s, p] = session.targetCoord.split(':');
         const firstType = firstItem.isMoon ? 3 : 1;
-        const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${firstItem.id}&type=${firstType}&galaxy=${g}&system=${s}&position=${p}&mission=${session.mission || 3}`;
+        const firstMission = firstItem.mission || session.mission || 3;
+        const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${firstItem.id}&type=${firstType}&galaxy=${g}&system=${s}&position=${p}&mission=${firstMission}`;
 
         const metaId = document.querySelector('meta[name="ogame-planet-id"]')?.getAttribute('content');
         const metaType = document.querySelector('meta[name="ogame-planet-type"]')?.getAttribute('content');
@@ -8089,7 +8255,8 @@
         if (!isFleetPage || (metaId && metaId !== String(currentItem.id)) || typeMismatch) {
             const [g, s, p] = session.targetCoord.split(':');
             const itemType = currentItem.isMoon ? 3 : 1;
-            const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${currentItem.id}&type=${itemType}&galaxy=${g}&system=${s}&position=${p}&mission=${session.mission || 3}`;
+            const itemMission = currentItem.mission || session.mission || 3;
+            const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${currentItem.id}&type=${itemType}&galaxy=${g}&system=${s}&position=${p}&mission=${itemMission}`;
             window.location.href = url;
             return;
         }
@@ -8108,7 +8275,8 @@
                 clearInterval(pollInterval);
                 const [g, s, p] = session.targetCoord.split(':');
                 const itemType = currentItem.isMoon ? 3 : 1;
-                const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${currentItem.id}&type=${itemType}&galaxy=${g}&system=${s}&position=${p}&mission=${session.mission || 3}`;
+                const itemMission = currentItem.mission || session.mission || 3;
+                const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${currentItem.id}&type=${itemType}&galaxy=${g}&system=${s}&position=${p}&mission=${itemMission}`;
                 window.location.href = url;
                 return;
             }
@@ -8140,10 +8308,33 @@
         updateActivePlanetCache();
 
         const reserve = collectorSettings.reserves[currentItem.id] !== undefined ? collectorSettings.reserves[currentItem.id] : 250000;
-        const deuAvail = session.resources.deu ? Math.max(0, liveRes.deuterium - reserve) : 0;
+        const fromType = currentItem.isMoon ? 3 : 1;
+        const toType = session.targetType || 1;
+        const estFuel = estimateFlightFuel(currentItem.coords, fromType, session.targetCoord, toType);
+
+        // Yakıt Korumalı Rezerv: Uçuş yakıtı rezerve eklenerek korunur
+        const protectedDeu = reserve + estFuel;
+        const deuAvail = session.resources.deu ? Math.max(0, liveRes.deuterium - protectedDeu) : 0;
         const criAvail = session.resources.cri ? Math.max(0, liveRes.crystal) : 0;
         const metAvail = session.resources.met ? Math.max(0, liveRes.metal) : 0;
         const totalCargoNeeded = deuAvail + criAvail + metAvail;
+
+        // EĞER TAŞINACAK HİÇBİR ŞEY YOKSA (Tüm kaynaklar 0 veya rezerv altında):
+        // Boşuna filo kaldırıp yakıt yakarak rezervi eritme, adımı otomatik atla!
+        if (totalCargoNeeded <= 0) {
+            LS_LOGGER.info('COLLECTOR', `${currentItem.name || ''} [${currentItem.coords}] üzerinde toplanacak taşınabilir maden bulunamadı (Tüm madenler rezerv altında veya 0). Adım atlanıyor...`);
+            const skipMsg = t('coll_skip_no_cargo', '⏭️ {name}: Taşınacak maden yok (Rezerv ve yakıt korundu). Sonraki hedefe geçiliyor...')
+                .replace('{name}', currentItem.name || currentItem.coords);
+            showCollectorToast(skipMsg, 2500);
+
+            session.currentIndex++;
+            sessionStorage.setItem(KEYS.COLLECTOR_RUN, JSON.stringify(session));
+            updateAllAutomationStartButtons();
+            setTimeout(() => {
+                checkAndRunCollectorAssistant();
+            }, 600);
+            return;
+        }
 
         const caps = calculateShipCapacities();
         const shipCounts = calculateSmartCargoFleet(totalCargoNeeded, session.ships);
@@ -8176,6 +8367,28 @@
         const [g, s, p] = session.targetCoord.split(':');
 
         let isStepCancelled = false;
+
+        const details = {
+            bn: bnCount, kn: knCount, rehber: rehberCount,
+            deu: deuLoad, cri: criLoad, met: metLoad,
+            totalCap: totalCap,
+            totalCargoNeeded: totalCargoNeeded,
+            missingCargo: missingCargo,
+            missingMet: missingMet,
+            missingCri: missingCri,
+            missingDeu: missingDeu,
+            hasAnyShortage: hasAnyShortage,
+            reserve: reserve,
+            fuel: estFuel,
+            g: g, s: s, p: p,
+            prepareStep2: null,
+            cancel: () => {
+                isStepCancelled = true;
+                if (ensureShipsTimer) clearInterval(ensureShipsTimer);
+                if (step2Interval) clearInterval(step2Interval);
+                if (step2CheckTimer) clearInterval(step2CheckTimer);
+            }
+        };
 
         const updateCollectorBannerReady = (slots) => {
             const btn = document.getElementById('ls-banner-send-btn');
@@ -8238,7 +8451,7 @@
         // Step 2 (Görev ve Kaynaklar) Hazırlık Fonksiyonu
         const prepareStep2 = () => {
             if (isStepCancelled) return;
-            const missionId = session.mission || 3;
+            const missionId = currentItem.mission || session.mission || 3;
             const targetType = session.targetType || 1;
 
             if (step2CheckTimer) clearInterval(step2CheckTimer);
@@ -8288,14 +8501,36 @@
                 const targetChecking = isTargetCheckPending();
 
                 // 3. Kaynak doldurma ve doğrulama (Hedef kontrolü bittikten sonra ve görev seçiliyken)
-                const isAllRes = session.resources.met && session.resources.cri && session.resources.deu;
-                const needsCargo = (metLoad > 0 || criLoad > 0 || deuLoad > 0);
-                const isCargoLoaded = !needsCargo || areFleetResourcesLoaded(metLoad, criLoad, deuLoad);
+                const actualFuel = getFleetFuelConsumption();
+                const fuelToProtect = (actualFuel > 0) ? actualFuel : estFuel;
+                const exactProtectedDeu = reserve + fuelToProtect;
+                const exactDeuAvail = session.resources.deu ? Math.max(0, liveRes.deuterium - exactProtectedDeu) : 0;
+
+                // Değer Önceliği ile dinamik kargo ambarı hesabı:
+                let curRemCap = totalCap;
+                let curDeuLoad = Math.min(curRemCap, exactDeuAvail);
+                curRemCap -= curDeuLoad;
+                let curCriLoad = Math.min(curRemCap, criAvail);
+                curRemCap -= curCriLoad;
+                let curMetLoad = Math.min(curRemCap, metAvail);
+                curRemCap -= curMetLoad;
+
+                if (typeof details !== 'undefined' && details) {
+                    details.deu = curDeuLoad;
+                    details.cri = curCriLoad;
+                    details.met = curMetLoad;
+                    details.fuel = fuelToProtect;
+                    const bannerDeuEl = document.getElementById('ls-coll-hud-deu-val');
+                    if (bannerDeuEl) bannerDeuEl.textContent = formatShort(curDeuLoad) + ' ' + t('coll_deut');
+                }
+
+                const needsCargo = (curMetLoad > 0 || curCriLoad > 0 || curDeuLoad > 0);
+                const isCargoLoaded = !needsCargo || areFleetResourcesLoaded(curMetLoad, curCriLoad, curDeuLoad);
 
                 if (!targetChecking && isMissionSelected(missionId)) {
                     if (!isCargoLoaded && Date.now() - lastResourceFillTime > 400) {
                         lastResourceFillTime = Date.now();
-                        fillFleetResources(metLoad, criLoad, deuLoad);
+                        fillFleetResources(curMetLoad, curCriLoad, curDeuLoad);
                         stableReadyTicks = 0;
                     }
                 }
@@ -8314,7 +8549,7 @@
                     stableReadyTicks = 0;
                     if (totalTicks > 20 && !targetChecking && !isCargoLoaded && Date.now() - lastResourceFillTime > 400) {
                         lastResourceFillTime = Date.now();
-                        fillFleetResources(metLoad, criLoad, deuLoad);
+                        fillFleetResources(curMetLoad, curCriLoad, curDeuLoad);
                     }
                     if (totalTicks > 40 && isSendBtnVisible && isReady) {
                         updateCollectorBannerReady(slots);
@@ -8410,27 +8645,10 @@
             }, 80);
         }
 
+        details.prepareStep2 = prepareStep2;
+
         // Asistan Banner'ını Çiz
-        renderCollectorAssistantBanner(session, currentItem, {
-            bn: bnCount, kn: knCount, rehber: rehberCount,
-            deu: deuLoad, cri: criLoad, met: metLoad,
-            totalCap: totalCap,
-            totalCargoNeeded: totalCargoNeeded,
-            missingCargo: missingCargo,
-            missingMet: missingMet,
-            missingCri: missingCri,
-            missingDeu: missingDeu,
-            hasAnyShortage: hasAnyShortage,
-            reserve: reserve,
-            g: g, s: s, p: p,
-            prepareStep2: prepareStep2,
-            cancel: () => {
-                isStepCancelled = true;
-                if (ensureShipsTimer) clearInterval(ensureShipsTimer);
-                if (step2Interval) clearInterval(step2Interval);
-                if (step2CheckTimer) clearInterval(step2CheckTimer);
-            }
-        });
+        renderCollectorAssistantBanner(session, currentItem, details);
     }
 
     function renderCollectorAssistantBanner(session, currentItem, details) {
@@ -8446,7 +8664,8 @@
         const totalItems = session.queue.length;
         const currentStep = session.currentIndex + 1;
         const hasShips = details.totalCap > 0;
-        const missionName = (session.mission === 4 ? '🛡️ ' + t('coll_deploy') : '🚚 ' + t('coll_transport'));
+        const itemMission = currentItem.mission || session.mission || 3;
+        const missionName = (itemMission === 4 ? '🛡️ ' + t('coll_deploy') : '🚚 ' + t('coll_transport'));
 
         let shipDesc = [];
         if (details.bn > 0) shipDesc.push(details.bn + ' ' + t('coll_bn'));
@@ -8519,7 +8738,8 @@
                 '<b style="color:#8899aa">' + t('coll_hud_transported') + '</b> ' +
                 '<span style="color:#ffbe3b">' + formatShort(details.met) + ' ' + t('coll_met') + '</span> · ' +
                 '<span style="color:#5dade2">' + formatShort(details.cri) + ' ' + t('coll_crys') + '</span> · ' +
-                '<span style="color:#2ecc71">' + formatShort(details.deu) + ' ' + t('coll_deut') + '</span>' +
+                '<span id="ls-coll-hud-deu-val" style="color:#2ecc71">' + formatShort(details.deu) + ' ' + t('coll_deut') + '</span>' +
+                (details.reserve !== undefined ? ' <span style="font-size:10px;color:#2ecc71;background:rgba(46,204,113,0.15);padding:1px 5px;border-radius:3px;margin-left:6px;border:1px solid rgba(46,204,113,0.3)">🛡️ ' + formatShort(details.reserve) + ' Rezerv Korundu</span>' : '') +
             '</div>' +
             '<div id="ls-coll-hud-controls" style="display:flex;gap:6px;justify-content:center;align-items:center;' + (hasShortage ? 'display:none;' : '') + '">' +
                 (hasShips ?
@@ -12407,6 +12627,13 @@
                             '<label class="ls-coll-chk"><input type="checkbox" id="ls-coll-res-cri"> <span class="ls-coll-k" data-i18n="coll_crys">Kristal</span></label>' +
                             '<label class="ls-coll-chk"><input type="checkbox" id="ls-coll-res-met"> <span class="ls-coll-m" data-i18n="coll_met">Metal</span></label>' +
                         '</div>' +
+                        '<div class="ls-coll-row" style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.06);align-items:center;justify-content:space-between">' +
+                            '<div style="display:flex;align-items:center;gap:6px;flex:1">' +
+                                '<span class="ls-label" style="color:#2ecc71;width:auto;flex-shrink:0" data-i18n="coll_global_reserve">🛡️ Deu Rezerv</span>' +
+                                '<input type="text" id="ls-coll-global-reserve-inp" class="ls-inp" style="width:85px;height:22px;padding:2px 6px;font-size:11px;text-align:right;color:#2ecc71;font-weight:bold" value="250.000" placeholder="250.000" title="Seçili hedeflere uygulanacak Deu Rezerv tutarı (örn: 250k, 1m)" data-i18n-title="coll_global_reserve_hint">' +
+                            '</div>' +
+                            '<button type="button" id="ls-coll-global-reserve-apply" class="ls-btn-sm" style="background:#27ae60;color:#fff;border:none;border-radius:3px;padding:3px 10px;font-size:10px;cursor:pointer;flex-shrink:0;font-weight:bold" title="Bu rezerv tutarını sadece seçili gezegen ve aylara uygula" data-i18n-title="coll_reserve_apply_title" data-i18n="coll_reserve_apply">⚡ Eşitle</button>' +
+                        '</div>' +
                     '</div>' +
 
                     '<div class="ls-coll-selbar">' +
@@ -12676,7 +12903,7 @@
                         '<div style="display:flex;justify-content:space-between;align-items:center">' +
                             '<div style="display:flex;align-items:center;gap:6px">' +
                                 '<span style="font-size:12px;color:#00bcff;font-weight:bold">⚡ LuckyStrike Helper</span>' +
-                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v15.1</span>' +
+                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v15.2</span>' +
                             '</div>' +
                             '<a href="https://github.com/kadirersoy/luckystrike-ogame-helper" target="_blank" style="font-size:10.5px;color:#00bcff;text-decoration:none;display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,0.05);padding:2px 7px;border-radius:4px;border:1px solid #1a2c3f" title="GitHub Proje Sayfası" data-i18n-title="settings_github_title">' +
                                 '<span>🔗</span> <span data-i18n="settings_github">GitHub</span>' +
@@ -13480,7 +13707,7 @@
             const r3 = Array.from(debugFilterState.row3).join(', ');
 
             let out = '==================================================\n' +
-                      '  LuckyStrike OGame Helper v15.1 - Log Kayıtları\n' +
+                      '  LuckyStrike OGame Helper v15.2 - Log Kayıtları\n' +
                       '  Tarih: ' + nowStr + '\n' +
                       '  URL: ' + window.location.href + '\n' +
                       '  Filtreler: [Akış: ' + r1 + '] [Kapsam: ' + r2 + '] [Seviye: ' + r3 + ']\n' +
@@ -14028,6 +14255,6 @@
     scanAndSaveExpeditionTemplates();
     updateAllAutomationStartButtons();
     setInterval(updateAllAutomationStartButtons, 400);
-    console.log(LS, 'LuckyStrike OGame Helper v15.1 hazır!');
+    console.log(LS, 'LuckyStrike OGame Helper v15.2 hazır!');
 
 })();
