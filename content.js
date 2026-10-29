@@ -2,7 +2,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v15.3 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v15.4 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -217,6 +217,9 @@
             coll_reserve_apply_title: 'Bu rezerv tutarını sadece seçili gezegen ve aylara uygula',
             coll_reserve_updated_toast: 'seçili hedefin Deu rezervi',
             coll_reserve_updated_toast_end: 'olarak eşitlendi.',
+            coll_refresh: '🔄 Yenile',
+            coll_refresh_title: 'Kaynakları yenile',
+            coll_refresh_done: '🔄 Kaynaklar güncellendi.',
             coll_skip_no_cargo: '⏭️ {name}: Taşınacak maden yok (Rezerv ve yakıt korundu). Sonraki hedefe geçiliyor...',
 
             // Collector Floating HUD
@@ -652,6 +655,9 @@
             coll_reserve_apply_title: 'Apply this reserve amount only to selected planets and moons',
             coll_reserve_updated_toast: 'selected targets set to',
             coll_reserve_updated_toast_end: 'Deut reserve.',
+            coll_refresh: '🔄 Refresh',
+            coll_refresh_title: 'Refresh resources',
+            coll_refresh_done: '🔄 Resources refreshed.',
             coll_skip_no_cargo: '⏭️ {name}: No resources to collect (Reserve and fuel protected). Skipping to next target...',
 
             // Collector Floating HUD
@@ -7501,23 +7507,39 @@
         return list;
     }
 
-    function updateActivePlanetCache() {
+    function extractNumbersFromDomNode(root, excludeNode = null) {
+        if (!root) return [];
+        const nums = [];
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
+        let node;
+        while ((node = walker.nextNode())) {
+            const p = node.parentElement;
+            if (!p) continue;
+            if (excludeNode && (excludeNode === p || excludeNode.contains(p))) continue;
+            if (p.closest('.planet-name, .planet-koords, .titlePlanet, .coordinates, .icon-moon, .icon-planet, .construction, .activity, .alert')) continue;
+
+            const txt = (node.textContent || '').trim();
+            if (!txt) continue;
+
+            const match = txt.match(/^[\s●•🔴🔵🟢🟡▪▫\u2022\u25CF\u25CB*#]*([0-9]+(?:[.,][0-9]+)*\s*(?:[kKmMbB]|mrd|mn)?)$/i);
+            if (match && match[1]) {
+                nums.push(parseOgNum(match[1]));
+            }
+        }
+        return nums;
+    }
+
+    function scrapePlanetListResources() {
+        let pCache = JSON.parse(localStorage.getItem(KEYS.PLANET_CACHE) || '{}');
+        let updatedCount = 0;
+
+        // 1. Önce aktif gezegen/ayın canlı değerlerini oku
         try {
             const liveRes = getLiveResources();
-            if (!liveRes || (liveRes.metal === 0 && liveRes.crystal === 0 && liveRes.deuterium === 0)) return;
-
-            let activeId = null;
-            let activeCoords = null;
-            let isMoon = false;
-
-            const metaId = document.querySelector('meta[name="ogame-planet-id"]')?.getAttribute('content');
-            const metaCoords = document.querySelector('meta[name="ogame-planet-coordinates"]')?.getAttribute('content');
-            const metaType = document.querySelector('meta[name="ogame-planet-type"]')?.getAttribute('content');
-            if (metaId) {
-                activeId = metaId;
-                activeCoords = metaCoords;
-                isMoon = (metaType === 'moon');
-            }
+            let activeId = document.querySelector('meta[name="ogame-planet-id"]')?.getAttribute('content');
+            let activeCoords = document.querySelector('meta[name="ogame-planet-coordinates"]')?.getAttribute('content');
+            let activeType = document.querySelector('meta[name="ogame-planet-type"]')?.getAttribute('content');
+            let isMoon = (activeType === 'moon');
 
             if (!activeId) {
                 const activeMoon = document.querySelector('#planetList .moonlink.active, .smallplanet .moonlink.active');
@@ -7541,8 +7563,7 @@
                 }
             }
 
-            if (activeId) {
-                let pCache = JSON.parse(localStorage.getItem(KEYS.PLANET_CACHE) || '{}');
+            if (activeId && liveRes && (liveRes.metal > 0 || liveRes.crystal > 0 || liveRes.deuterium > 0)) {
                 pCache[activeId] = {
                     metal: liveRes.metal,
                     crystal: liveRes.crystal,
@@ -7551,21 +7572,166 @@
                     isMoon: isMoon,
                     ts: Date.now()
                 };
-                localStorage.setItem(KEYS.PLANET_CACHE, JSON.stringify(pCache));
+                updatedCount++;
             }
+        } catch (e) {}
+
+        // 2. Sidebar (#planetList / #myPlanets) Gezegen ve Ay Elemanlarını Tara
+        try {
+            const planetEls = document.querySelectorAll('#planetList .smallplanet, #myPlanets .smallplanet');
+            planetEls.forEach((pEl, idx) => {
+                const pLink = pEl.querySelector('a.planetlink') || pEl.querySelector('a:not(.moonlink)');
+                if (!pLink) return;
+
+                let pId = '';
+                const hrefMatch = (pLink.getAttribute('href') || '').match(/cp=(\d+)/);
+                if (hrefMatch) pId = hrefMatch[1];
+                if (!pId && pEl.id) {
+                    const m = pEl.id.match(/\d+/);
+                    if (m) pId = m[0];
+                }
+                if (!pId) return;
+
+                const coordEl = pLink.querySelector('.planet-koords');
+                let coords = '';
+                if (coordEl) {
+                    coords = coordEl.textContent.replace(/[\[\]]/g, '').trim();
+                } else {
+                    const m = (pLink.getAttribute('title') || pLink.textContent || '').match(/\[?(\d+:\d+:\d+)\]?/);
+                    if (m) coords = m[1];
+                }
+
+                const mLink = pEl.querySelector('a.moonlink');
+                let mId = '';
+                if (mLink) {
+                    const mHrefMatch = (mLink.getAttribute('href') || '').match(/cp=(\d+)/);
+                    if (mHrefMatch) mId = mHrefMatch[1];
+                    if (!mId) {
+                        const dataId = mLink.getAttribute('data-moon-id') || mLink.getAttribute('data-cp');
+                        if (dataId) mId = dataId;
+                    }
+                }
+
+                const moonArea = pEl.querySelector('.moonlink, [class*="moonlink"], [class*="moon-res"], [class*="moon_res"], [class*="ogk-moon"]');
+
+                // --- AY KAYNAKLARINI ÇEK ---
+                if (mId && moonArea) {
+                    const mM = moonArea.querySelector('[class*="metal"], [class*="ogk-m"]');
+                    const mC = moonArea.querySelector('[class*="crystal"], [class*="ogk-c"]');
+                    const mD = moonArea.querySelector('[class*="deuterium"], [class*="deut"], [class*="ogk-d"]');
+                    let moonNumbers = null;
+                    if (mM && mC && mD) {
+                        moonNumbers = [parseOgNum(mM.textContent), parseOgNum(mC.textContent), parseOgNum(mD.textContent)];
+                    } else {
+                        moonNumbers = extractNumbersFromDomNode(moonArea);
+                    }
+
+                    if (moonNumbers && moonNumbers.length >= 3) {
+                        pCache[mId] = {
+                            metal: moonNumbers[0],
+                            crystal: moonNumbers[1],
+                            deuterium: moonNumbers[2],
+                            coords: coords,
+                            isMoon: true,
+                            ts: Date.now()
+                        };
+                        updatedCount++;
+                    }
+                }
+
+                // --- GEZEGEN KAYNAKLARINI ÇEK ---
+                const pM = pEl.querySelector(':not(.moonlink):not([class*="moon"]) > [class*="metal"], .ogk-planet-res [class*="metal"], .ogk-planet-res [class*="ogk-m"]');
+                const pC = pEl.querySelector(':not(.moonlink):not([class*="moon"]) > [class*="crystal"], .ogk-planet-res [class*="crystal"], .ogk-planet-res [class*="ogk-c"]');
+                const pD = pEl.querySelector(':not(.moonlink):not([class*="moon"]) > [class*="deuterium"], :not(.moonlink):not([class*="moon"]) > [class*="deut"], .ogk-planet-res [class*="deut"], .ogk-planet-res [class*="ogk-d"]');
+                let planetNumbers = null;
+                if (pM && pC && pD && (!moonArea || (!moonArea.contains(pM) && !moonArea.contains(pC) && !moonArea.contains(pD)))) {
+                    planetNumbers = [parseOgNum(pM.textContent), parseOgNum(pC.textContent), parseOgNum(pD.textContent)];
+                } else {
+                    planetNumbers = extractNumbersFromDomNode(pEl, moonArea);
+                }
+
+                if (planetNumbers && planetNumbers.length >= 3) {
+                    pCache[pId] = {
+                        metal: planetNumbers[0],
+                        crystal: planetNumbers[1],
+                        deuterium: planetNumbers[2],
+                        coords: coords,
+                        isMoon: false,
+                        ts: Date.now()
+                    };
+                    updatedCount++;
+                }
+            });
         } catch (e) {
-            console.warn(LS, 'Planet cache güncellenemedi:', e.message || e);
+            console.warn(LS, 'Sidebar kaynak taraması hatası:', e.message || e);
         }
+
+        // 3. Infinity / Eklenti LocalStorage Taraması (Mevcutsa tam sayıları al)
+        try {
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (/ogk|infinity|agr|ogl/i.test(k) && /empire|planet|cache|data/i.test(k)) {
+                    const raw = localStorage.getItem(k);
+                    if (raw && (raw.startsWith('{') || raw.startsWith('['))) {
+                        const parsed = JSON.parse(raw);
+                        if (parsed && typeof parsed === 'object') {
+                            const entries = Array.isArray(parsed) ? parsed : Object.values(parsed);
+                            entries.forEach(item => {
+                                if (item && typeof item === 'object') {
+                                    const id = item.id || item.cp || item.planetId;
+                                    const m = parseOgNum(item.metal || item.m);
+                                    const c = parseOgNum(item.crystal || item.c);
+                                    const d = parseOgNum(item.deuterium || item.d || item.deut);
+                                    if (id && (m > 0 || c > 0 || d > 0)) {
+                                        pCache[id] = Object.assign(pCache[id] || {}, {
+                                            metal: m,
+                                            crystal: c,
+                                            deuterium: d,
+                                            ts: Date.now()
+                                        });
+                                        updatedCount++;
+                                    }
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+        } catch (e) {}
+
+        try {
+            localStorage.setItem(KEYS.PLANET_CACHE, JSON.stringify(pCache));
+        } catch (e) {}
+
+        return updatedCount;
+    }
+
+    function updateActivePlanetCache() {
+        return scrapePlanetListResources();
     }
 
     function getPlanetCachedResources(id) {
         // Eğer şu an aktif gezegen/ay ise canlı oku
         const metaId = document.querySelector('meta[name="ogame-planet-id"]')?.getAttribute('content');
         if (metaId === String(id)) {
-            return getLiveResources();
+            const live = getLiveResources();
+            return {
+                metal: (live && live.metal) || 0,
+                crystal: (live && live.crystal) || 0,
+                deuterium: (live && live.deuterium) || 0,
+                isLive: true,
+                ts: Date.now()
+            };
         }
         let pCache = JSON.parse(localStorage.getItem(KEYS.PLANET_CACHE) || '{}');
-        return pCache[id] || { metal: 0, crystal: 0, deuterium: 0 };
+        const c = pCache[id] || { metal: 0, crystal: 0, deuterium: 0 };
+        return {
+            metal: c.metal || 0,
+            crystal: c.crystal || 0,
+            deuterium: c.deuterium || 0,
+            isLive: false,
+            ts: c.ts || 0
+        };
     }
 
     function showCollectorToast(msg, duration = 4000) {
@@ -7716,6 +7882,7 @@
             empire.forEach(p => {
                 const isTargetPlanet = (collectorSettings.targetCoord === p.coords && collectorSettings.targetType === 1);
                 const pRes = getPlanetCachedResources(p.id);
+                const pResTitle = `${t('coll_met', 'Metal')}: ${fmt(pRes.metal)} | ${t('coll_crys', 'Kristal')}: ${fmt(pRes.crystal)} | ${t('coll_deut', 'Deuterium')}: ${fmt(pRes.deuterium)}`;
                 const pReserve = collectorSettings.reserves[p.id] !== undefined ? collectorSettings.reserves[p.id] : 250000;
                 const pChecked = collectorSettings.selectedItems[p.id] !== false;
 
@@ -7726,7 +7893,7 @@
                         `<input type="checkbox" disabled>` +
                         `<div class="ls-coll-info">` +
                             `<div class="ls-coll-name"><b>${escapeHtml(p.name)}</b><span class="crd">${p.coords}</span></div>` +
-                            `<div class="ls-coll-res"><span class="ls-coll-m">${formatShort(pRes.metal)}</span><span class="ls-coll-k">${formatShort(pRes.crystal)}</span><span class="ls-coll-d">${formatShort(pRes.deuterium)}</span></div>` +
+                            `<div class="ls-coll-res" title="${escapeHtml(pResTitle)}"><span class="ls-coll-m">${formatShort(pRes.metal)}</span><span class="ls-coll-k">${formatShort(pRes.crystal)}</span><span class="ls-coll-d">${formatShort(pRes.deuterium)}</span></div>` +
                         `</div>` +
                         `<span class="note">📥 ${t('coll_target_point', 'Toplama noktası')}</span>` +
                         `<button class="ls-coll-jump" data-cp="${p.id}" title="${t('coll_jump_hint', 'Gezegene geç')}">🚀</button>` +
@@ -7737,7 +7904,7 @@
                         `<input type="checkbox" class="ls-coll-item-chk" data-id="${p.id}" ${pChecked ? 'checked' : ''}>` +
                         `<div class="ls-coll-info">` +
                             `<div class="ls-coll-name"><b>${escapeHtml(p.name)}</b><span class="crd">${p.coords}</span></div>` +
-                            `<div class="ls-coll-res"><span class="ls-coll-m">${formatShort(pRes.metal)}</span><span class="ls-coll-k">${formatShort(pRes.crystal)}</span><span class="ls-coll-d">${formatShort(pRes.deuterium)}</span></div>` +
+                            `<div class="ls-coll-res" title="${escapeHtml(pResTitle)}"><span class="ls-coll-m">${formatShort(pRes.metal)}</span><span class="ls-coll-k">${formatShort(pRes.crystal)}</span><span class="ls-coll-d">${formatShort(pRes.deuterium)}</span></div>` +
                         `</div>` +
                         `<div class="ls-coll-mbtns-wrap" style="display:flex;gap:3px;flex-shrink:0">` +
                             `<button type="button" class="ls-cart-mbtn ${pMission === 3 ? 'active' : ''}" data-action="coll-item-mission" data-id="${p.id}" data-val="3" title="${t('coll_transport_title', 'Nakliye: Boş geri döner')}">${t('coll_transport', 'Nakliye')}</button>` +
@@ -7751,6 +7918,7 @@
                 if (p.moon) {
                     const isTargetMoon = (collectorSettings.targetCoord === p.coords && collectorSettings.targetType === 3);
                     const mRes = getPlanetCachedResources(p.moon.id);
+                    const mResTitle = `${t('coll_met', 'Metal')}: ${fmt(mRes.metal)} | ${t('coll_crys', 'Kristal')}: ${fmt(mRes.crystal)} | ${t('coll_deut', 'Deuterium')}: ${fmt(mRes.deuterium)}`;
                     const mReserve = collectorSettings.reserves[p.moon.id] !== undefined ? collectorSettings.reserves[p.moon.id] : 250000;
                     const mChecked = collectorSettings.selectedItems[p.moon.id] === true;
                     const mTitle = p.moon.name || `${p.name} ( ${t('coll_moon_name', 'Ay')} )`;
@@ -7760,7 +7928,7 @@
                             `<input type="checkbox" disabled>` +
                             `<div class="ls-coll-info">` +
                                 `<div class="ls-coll-name"><b>🌕 ${escapeHtml(mTitle)}</b></div>` +
-                                `<div class="ls-coll-res"><span class="ls-coll-m">${formatShort(mRes.metal)}</span><span class="ls-coll-k">${formatShort(mRes.crystal)}</span><span class="ls-coll-d">${formatShort(mRes.deuterium)}</span></div>` +
+                                `<div class="ls-coll-res" title="${escapeHtml(mResTitle)}"><span class="ls-coll-m">${formatShort(mRes.metal)}</span><span class="ls-coll-k">${formatShort(mRes.crystal)}</span><span class="ls-coll-d">${formatShort(mRes.deuterium)}</span></div>` +
                             `</div>` +
                             `<span class="note">📥 ${t('coll_target_point', 'Toplama noktası')}</span>` +
                             `<button class="ls-coll-jump" data-cp="${p.moon.id}" title="${t('coll_jump_moon_hint', 'Aya geç')}">🚀</button>` +
@@ -7771,7 +7939,7 @@
                             `<input type="checkbox" class="ls-coll-item-chk" data-id="${p.moon.id}" ${mChecked ? 'checked' : ''}>` +
                             `<div class="ls-coll-info">` +
                                 `<div class="ls-coll-name"><b>🌕 ${escapeHtml(mTitle)}</b></div>` +
-                                `<div class="ls-coll-res"><span class="ls-coll-m">${formatShort(mRes.metal)}</span><span class="ls-coll-k">${formatShort(mRes.crystal)}</span><span class="ls-coll-d">${formatShort(mRes.deuterium)}</span></div>` +
+                                `<div class="ls-coll-res" title="${escapeHtml(mResTitle)}"><span class="ls-coll-m">${formatShort(mRes.metal)}</span><span class="ls-coll-k">${formatShort(mRes.crystal)}</span><span class="ls-coll-d">${formatShort(mRes.deuterium)}</span></div>` +
                             `</div>` +
                             `<div class="ls-coll-mbtns-wrap" style="display:flex;gap:3px;flex-shrink:0">` +
                                 `<button type="button" class="ls-cart-mbtn ${mMission === 3 ? 'active' : ''}" data-action="coll-item-mission" data-id="${p.moon.id}" data-val="3" title="${t('coll_transport_title', 'Nakliye: Boş geri döner')}">${t('coll_transport', 'Nakliye')}</button>` +
@@ -8132,6 +8300,22 @@
         document.getElementById('ls-coll-global-reserve-apply')?.addEventListener('click', (e) => {
             e.preventDefault();
             applyGlobalReserve();
+        });
+
+        document.getElementById('ls-coll-refresh-btn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('ls-coll-refresh-btn');
+            if (btn) {
+                btn.style.opacity = '0.7';
+                btn.style.transform = 'scale(0.96)';
+                setTimeout(() => {
+                    btn.style.opacity = '1';
+                    btn.style.transform = 'none';
+                }, 150);
+            }
+            scrapePlanetListResources();
+            renderCollector();
+            showCollectorToast(t('coll_refresh_done', '🔄 Kaynaklar güncellendi.'), 2500);
         });
 
         document.getElementById('ls-coll-global-reserve-inp')?.addEventListener('keydown', (e) => {
@@ -9116,6 +9300,7 @@
             empire.forEach(p => {
                 const isOriginPlanet = (courierSettings.originCoord === p.coords && courierSettings.originType === 1);
                 const pRes = getPlanetCachedResources(p.id);
+                const pResTitle = `${t('coll_met', 'Metal')}: ${fmt(pRes.metal)} | ${t('coll_crys', 'Kristal')}: ${fmt(pRes.crystal)} | ${t('coll_deut', 'Deuterium')}: ${fmt(pRes.deuterium)}`;
                 const pChecked = courierSettings.selectedItems[p.id] !== false;
                 const pTarget = (courierSettings.targets && courierSettings.targets[p.id]) ? courierSettings.targets[p.id] : { met: 0, cri: 0, deu: 0 };
 
@@ -9126,7 +9311,7 @@
                         `<input type="checkbox" disabled>` +
                         `<div class="ls-coll-info">` +
                             `<div class="ls-coll-name"><b>${escapeHtml(p.name)}</b><span class="crd">${p.coords}</span></div>` +
-                            `<div class="ls-coll-res"><span class="ls-coll-m">${formatShort(pRes.metal)}</span><span class="ls-coll-k">${formatShort(pRes.crystal)}</span><span class="ls-coll-d">${formatShort(pRes.deuterium)}</span></div>` +
+                            `<div class="ls-coll-res" title="${escapeHtml(pResTitle)}"><span class="ls-coll-m">${formatShort(pRes.metal)}</span><span class="ls-coll-k">${formatShort(pRes.crystal)}</span><span class="ls-coll-d">${formatShort(pRes.deuterium)}</span></div>` +
                         `</div>` +
                         `<span class="ls-cour-origin-badge note">${t('cour_origin_badge', '📍 Dağıtım Merkezi')}</span>` +
                         `<button class="ls-coll-jump" data-cp="${p.id}" title="${t('coll_jump_hint', 'Gezegene geç')}">🚀</button>` +
@@ -9136,7 +9321,7 @@
                         `<input type="checkbox" class="ls-cour-item-chk" data-id="${p.id}" ${pChecked ? 'checked' : ''}>` +
                         `<div class="ls-coll-info">` +
                             `<div class="ls-coll-name"><b>${escapeHtml(p.name)}</b><span class="crd">${p.coords}</span></div>` +
-                            `<div class="ls-coll-res"><span class="ls-coll-m">${formatShort(pRes.metal)}</span><span class="ls-coll-k">${formatShort(pRes.crystal)}</span><span class="ls-coll-d">${formatShort(pRes.deuterium)}</span></div>` +
+                            `<div class="ls-coll-res" title="${escapeHtml(pResTitle)}"><span class="ls-coll-m">${formatShort(pRes.metal)}</span><span class="ls-coll-k">${formatShort(pRes.crystal)}</span><span class="ls-coll-d">${formatShort(pRes.deuterium)}</span></div>` +
                         `</div>` +
                         `<div class="ls-cour-inputs-wrap ls-cour-row-inputs">` +
                             `<input type="text" class="ls-cour-inp ls-cour-inp-m" data-id="${p.id}" data-res="met" value="${pTarget.met > 0 ? fmt(pTarget.met) : ''}" placeholder="M" title="Metal">` +
@@ -9150,6 +9335,7 @@
                 if (p.moon) {
                     const isOriginMoon = (courierSettings.originCoord === p.coords && courierSettings.originType === 3);
                     const mRes = getPlanetCachedResources(p.moon.id);
+                    const mResTitle = `${t('coll_met', 'Metal')}: ${fmt(mRes.metal)} | ${t('coll_crys', 'Kristal')}: ${fmt(mRes.crystal)} | ${t('coll_deut', 'Deuterium')}: ${fmt(mRes.deuterium)}`;
                     const mChecked = courierSettings.selectedItems[p.moon.id] === true;
                     const mTarget = (courierSettings.targets && courierSettings.targets[p.moon.id]) ? courierSettings.targets[p.moon.id] : { met: 0, cri: 0, deu: 0 };
                     const mTitle = p.moon.name || `${p.name} ( ${t('coll_moon_name', 'Ay')} )`;
@@ -9159,7 +9345,7 @@
                             `<input type="checkbox" disabled>` +
                             `<div class="ls-coll-info">` +
                                 `<div class="ls-coll-name"><b>🌕 ${escapeHtml(mTitle)}</b></div>` +
-                                `<div class="ls-coll-res"><span class="ls-coll-m">${formatShort(mRes.metal)}</span><span class="ls-coll-k">${formatShort(mRes.crystal)}</span><span class="ls-coll-d">${formatShort(mRes.deuterium)}</span></div>` +
+                                `<div class="ls-coll-res" title="${escapeHtml(mResTitle)}"><span class="ls-coll-m">${formatShort(mRes.metal)}</span><span class="ls-coll-k">${formatShort(mRes.crystal)}</span><span class="ls-coll-d">${formatShort(mRes.deuterium)}</span></div>` +
                             `</div>` +
                             `<span class="ls-cour-origin-badge note">${t('cour_origin_badge', '📍 Dağıtım Merkezi')}</span>` +
                             `<button class="ls-coll-jump" data-cp="${p.moon.id}" title="${t('coll_jump_moon_hint', 'Aya geç')}">🚀</button>` +
@@ -9169,7 +9355,7 @@
                             `<input type="checkbox" class="ls-cour-item-chk" data-id="${p.moon.id}" ${mChecked ? 'checked' : ''}>` +
                             `<div class="ls-coll-info">` +
                                 `<div class="ls-coll-name"><b>🌕 ${escapeHtml(mTitle)}</b></div>` +
-                                `<div class="ls-coll-res"><span class="ls-coll-m">${formatShort(mRes.metal)}</span><span class="ls-coll-k">${formatShort(mRes.crystal)}</span><span class="ls-coll-d">${formatShort(mRes.deuterium)}</span></div>` +
+                                `<div class="ls-coll-res" title="${escapeHtml(mResTitle)}"><span class="ls-coll-m">${formatShort(mRes.metal)}</span><span class="ls-coll-k">${formatShort(mRes.crystal)}</span><span class="ls-coll-d">${formatShort(mRes.deuterium)}</span></div>` +
                             `</div>` +
                             `<div class="ls-cour-inputs-wrap ls-cour-row-inputs">` +
                                 `<input type="text" class="ls-cour-inp ls-cour-inp-m" data-id="${p.moon.id}" data-res="met" value="${mTarget.met > 0 ? fmt(mTarget.met) : ''}" placeholder="M" title="Metal">` +
@@ -12193,6 +12379,8 @@
             '.ls-coll-rez{width:68px;text-align:right;color:#2ecc71;font-family:monospace;font-weight:bold;flex-shrink:0;padding:2px 4px;font-size:10.5px}',
             '.ls-coll-jump{background:#00bcff;color:#000;border:none;padding:2px 5px;border-radius:3px;font-size:10px;line-height:16px;flex-shrink:0;cursor:pointer;font-weight:bold;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center}',
             '.ls-coll-jump:hover{background:#33cfff}',
+            '#ls-coll-refresh-btn:hover{background:#3498db !important}',
+            '#ls-coll-global-reserve-apply:hover{background:#2ecc71 !important}',
             '.ls-coll-dest{opacity:0.6}',
             '.ls-coll-dest .note{font-size:9.5px;color:#8899aa;width:68px;text-align:center;flex-shrink:0}',
             '.ls-coll-sum{display:flex;justify-content:space-between;align-items:center;font-size:11px;margin:8px 0 6px 0;flex-shrink:0}',
@@ -12319,8 +12507,8 @@
             '#ls-panel.ls-theme-fb .ls-coll-jump:hover, #ls-panel.ls-theme-fb .ls-nav-btn:hover{background:#ffffff !important;box-shadow:0 0 10px rgba(255,255,255,0.8) !important;transform:rotate(45deg);transition:transform .2s ease, background .15s !important}',
             '#ls-panel.ls-theme-fb .ls-coll-selbar .ls-btn-sm{background:#091a33 !important;border:1px solid #1a3a66 !important;color:#ffd700 !important}',
             '#ls-panel.ls-theme-fb .ls-coll-selbar .ls-btn-sm:hover{background:#002d62 !important;border-color:#ffd700 !important;color:#ffffff !important;box-shadow:0 0 6px rgba(255,215,0,0.3) !important}',
-            '#ls-panel.ls-theme-fb #ls-cour-sync-apply, #ls-panel.ls-theme-fb #ls-cart-add-extra-btn, #ls-panel.ls-theme-fb #ls-scan-btn, #ls-panel.ls-theme-fb #ls-find-btn{background:linear-gradient(180deg,#002d62,#001736) !important;border:1px solid #ffd700 !important;color:#ffd700 !important;font-weight:bold !important}',
-            '#ls-panel.ls-theme-fb #ls-cour-sync-apply:hover, #ls-panel.ls-theme-fb #ls-cart-add-extra-btn:hover, #ls-panel.ls-theme-fb #ls-scan-btn:hover, #ls-panel.ls-theme-fb #ls-find-btn:hover{background:linear-gradient(180deg,#003e87,#00224d) !important;color:#ffffff !important;box-shadow:0 0 8px rgba(255,215,0,0.4) !important}',
+            '#ls-panel.ls-theme-fb #ls-cour-sync-apply, #ls-panel.ls-theme-fb #ls-cart-add-extra-btn, #ls-panel.ls-theme-fb #ls-scan-btn, #ls-panel.ls-theme-fb #ls-find-btn, #ls-panel.ls-theme-fb #ls-coll-refresh-btn{background:linear-gradient(180deg,#002d62,#001736) !important;border:1px solid #ffd700 !important;color:#ffd700 !important;font-weight:bold !important}',
+            '#ls-panel.ls-theme-fb #ls-cour-sync-apply:hover, #ls-panel.ls-theme-fb #ls-cart-add-extra-btn:hover, #ls-panel.ls-theme-fb #ls-scan-btn:hover, #ls-panel.ls-theme-fb #ls-find-btn:hover, #ls-panel.ls-theme-fb #ls-coll-refresh-btn:hover{background:linear-gradient(180deg,#003e87,#00224d) !important;color:#ffffff !important;box-shadow:0 0 8px rgba(255,215,0,0.4) !important}',
             '#ls-panel.ls-theme-fb .ls-ship-pill{background:#091a33 !important;border-color:#1a3a66 !important;color:#9cb2cd !important}',
             '#ls-panel.ls-theme-fb .ls-ship-pill.active{background:#ffd700 !important;color:#001736 !important;border-color:#ffe600 !important;box-shadow:0 0 8px rgba(255,215,0,0.5) !important}',
             '#ls-panel.ls-theme-fb .ls-cart-mbtn{background:#091a33 !important;border-color:#1a3a66 !important;color:#9cb2cd !important}',
@@ -12692,7 +12880,10 @@
                                 '<span class="ls-label" style="color:#2ecc71;width:auto;flex-shrink:0" data-i18n="coll_global_reserve">🛡️ Deu Rezerv</span>' +
                                 '<input type="text" id="ls-coll-global-reserve-inp" class="ls-inp" style="width:85px;height:22px;padding:2px 6px;font-size:11px;text-align:right;color:#2ecc71;font-weight:bold" value="250.000" placeholder="250.000" title="Seçili hedeflere uygulanacak Deu Rezerv tutarı (örn: 250k, 1m)" data-i18n-title="coll_global_reserve_hint">' +
                             '</div>' +
-                            '<button type="button" id="ls-coll-global-reserve-apply" class="ls-btn-sm" style="background:#27ae60;color:#fff;border:none;border-radius:3px;padding:3px 10px;font-size:10px;cursor:pointer;flex-shrink:0;font-weight:bold" title="Bu rezerv tutarını sadece seçili gezegen ve aylara uygula" data-i18n-title="coll_reserve_apply_title" data-i18n="coll_reserve_apply">⚡ Eşitle</button>' +
+                            '<div style="display:flex;align-items:center;gap:4px;flex-shrink:0">' +
+                                '<button type="button" id="ls-coll-global-reserve-apply" class="ls-btn-sm" style="background:#27ae60;color:#fff;border:none;border-radius:3px;padding:3px 10px;font-size:10px;cursor:pointer;font-weight:bold" title="Bu rezerv tutarını sadece seçili gezegen ve aylara uygula" data-i18n-title="coll_reserve_apply_title" data-i18n="coll_reserve_apply">⚡ Eşitle</button>' +
+                                '<button type="button" id="ls-coll-refresh-btn" class="ls-btn-sm" style="background:#2980b9;color:#fff;border:none;border-radius:3px;padding:3px 8px;font-size:10px;cursor:pointer;font-weight:bold" title="Kaynakları yenile" data-i18n-title="coll_refresh_title" data-i18n="coll_refresh">🔄 Yenile</button>' +
+                            '</div>' +
                         '</div>' +
                     '</div>' +
 
@@ -12963,7 +13154,7 @@
                         '<div style="display:flex;justify-content:space-between;align-items:center">' +
                             '<div style="display:flex;align-items:center;gap:6px">' +
                                 '<span style="font-size:12px;color:#00bcff;font-weight:bold">⚡ LuckyStrike Helper</span>' +
-                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v15.3</span>' +
+                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v15.4</span>' +
                             '</div>' +
                             '<a href="https://github.com/kadirersoy/luckystrike-ogame-helper" target="_blank" style="font-size:10.5px;color:#00bcff;text-decoration:none;display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,0.05);padding:2px 7px;border-radius:4px;border:1px solid #1a2c3f" title="GitHub Proje Sayfası" data-i18n-title="settings_github_title">' +
                                 '<span>🔗</span> <span data-i18n="settings_github">GitHub</span>' +
@@ -13351,8 +13542,14 @@
                     fetchResearchLevels().then(() => renderCart());
                 }
                 if (t === 'debris') renderDebrisList();
-                if (t === 'collector') renderCollector();
-                if (t === 'courier') renderCourier();
+                if (t === 'collector') {
+                    scrapePlanetListResources();
+                    renderCollector();
+                }
+                if (t === 'courier') {
+                    scrapePlanetListResources();
+                    renderCourier();
+                }
                 if (t === 'expedition') renderExpedition();
                 if (t === 'scanner') { updateScanStatusInfo(); updateRefreshButtonCooldown(); }
                 if (t === 'finder') { updateFinderStatusInfo(); updateRefreshButtonCooldown(); }
@@ -13369,6 +13566,8 @@
         const savedContentEl = document.getElementById('tc-' + activeTab);
         if (savedTabEl) savedTabEl.classList.add('active');
         if (savedContentEl) savedContentEl.classList.add('active');
+        if (activeTab === 'collector') { scrapePlanetListResources(); renderCollector(); }
+        if (activeTab === 'courier') { scrapePlanetListResources(); renderCourier(); }
         if (activeTab === 'expedition') renderExpedition();
         if (activeTab === 'scanner') { updateScanStatusInfo(); updateRefreshButtonCooldown(); }
         if (activeTab === 'finder') { updateFinderStatusInfo(); updateRefreshButtonCooldown(); }
@@ -13767,7 +13966,7 @@
             const r3 = Array.from(debugFilterState.row3).join(', ');
 
             let out = '==================================================\n' +
-                      '  LuckyStrike OGame Helper v15.3 - Log Kayıtları\n' +
+                      '  LuckyStrike OGame Helper v15.4 - Log Kayıtları\n' +
                       '  Tarih: ' + nowStr + '\n' +
                       '  URL: ' + window.location.href + '\n' +
                       '  Filtreler: [Akış: ' + r1 + '] [Kapsam: ' + r2 + '] [Seviye: ' + r3 + ']\n' +
@@ -14309,12 +14508,13 @@
     setupDebrisObserver();
     checkAndApplyCartDelivery();
     updateActivePlanetCache();
+    setTimeout(scrapePlanetListResources, 1200);
     checkAndRunCollectorAssistant();
     checkAndRunCourierAssistant();
     checkAndRunExpeditionAssistant();
     scanAndSaveExpeditionTemplates();
     updateAllAutomationStartButtons();
     setInterval(updateAllAutomationStartButtons, 400);
-    console.log(LS, 'LuckyStrike OGame Helper v15.3 hazır!');
+    console.log(LS, 'LuckyStrike OGame Helper v15.4 hazır!');
 
 })();

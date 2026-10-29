@@ -1,4 +1,4 @@
-# ⚡ LuckyStrike OGame Helper (v15.3)
+# ⚡ LuckyStrike OGame Helper (v15.4)
 
 [English (ENG)](#eng-english-description) | [Türkçe (TR)](#tr-türkçe-açıklama)
 
@@ -42,7 +42,8 @@ LuckyStrike OGame Helper, **Gameforge Kullanım Şartları ve Oyun Kuralları (K
 
 - **İmparatorluk Çapında Pratik Toplama:** Seçilen tüm gezegen ve aylardan belirlenen merkez noktaya (gezegen, ay veya manuel koordinat) madenleri sıra sıra toplar.
 - **Hızlı Üs Seçimi & "Burası" Butonu:** Toplama hedefi açılır listesinden (combobox) istenen üs seçilebilir veya `Burası` butonuna tıklanarak bulunulan gezegen/ay tek tıkla hedef atanabilir.
-- **Güvenli Deuterium Rezervi:** Her gezegen için harcanmayacak minimum Deuterium koruma rezervi tanımlanabilir.
+- **Güvenli Deuterium Rezervi & Eşitleme:** Her gezegen için harcanmayacak minimum Deuterium koruma rezervi tanımlanabilir; tek tıkla seçili hedeflere eşitlenebilir.
+- **Kaynak Yenileme & Detaylı İpuçları:** `🔄 Yenile` butonuyla aktif gezegen madenleri ve sağ sidebar'daki tüm koloni kaynakları anında listeye aktarılır; kaynakların üzerine gelindiğinde tam tutarlar görüntülenir.
 - **Akıllı Filo & Görev Seçimi:** Büyük Nakliye (BN), Küçük Nakliye (KN) ve Rehber gemi dağılımı otomatik yapılır; **Nakliye** veya **Konuşlandır** görevi seçilebilir.
 - **Yüzen Bilgi Paneli & Space Desteği:** Ekranın üstünde çıkan bilgi panelinden rota ve taşınan madenler anlık izlenir; `Space` tuşu ile sıra sıra filolar güvenle gönderilir. Bağlantı gecikmelerinde `🔄 Tekrarla` butonuyla adımı sırayı bozmadan yeniden deneme imkanı sunar.
 
@@ -212,7 +213,8 @@ LuckyStrike OGame Helper is engineered with strict adherence to **Gameforge Term
 
 - **Empire-Wide Collection:** Sequentially gathers resources from all selected planets and moons to a designated central base (planet, moon, or manual coordinate).
 - **Quick Target Selection & "Here" Button:** Choose target base from the combobox dropdown or click `Here` to instantly set the active colony as target.
-- **Protected Deuterium Reserves:** Configure custom minimum deuterium reserves per colony to preserve fleet flight fuel.
+- **Protected Deuterium Reserves & Equalize:** Configure custom minimum deuterium reserves per colony to preserve fleet flight fuel; equalize across selected targets in one click.
+- **Resource Refresh & Detailed Tooltips:** The `🔄 Refresh` button updates active planet resources and syncs all colony resources from the sidebar into the list; hovering over colony resources displays unshortened exact quantities.
 - **Smart Ship & Mission Selection:** Distributes Large Cargo, Small Cargo, and Pathfinders automatically; supports both **Transport** and **Deploy** missions.
 - **Floating HUD & Spacebar Dispatch:** Real-time route and cargo status displayed on a top banner; send fleets step-by-step with `Space`. Includes a `🔄 Retry` button to reattempt steps during connection hiccups without breaking queue order.
 
@@ -347,7 +349,7 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ## 🚀 Kurulum / Installation
 
 ### Chrome & Microsoft Edge
-1. İndirin / Download: [`luckystrike-ogame-helper-v15.3.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
+1. İndirin / Download: [`luckystrike-ogame-helper-v15.4.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
 2. Tarayıcıda eklentiler sayfasına gidin / Open extensions page:
    - **Chrome:** `chrome://extensions`
    - **Edge:** `edge://extensions`
