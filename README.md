@@ -1,4 +1,4 @@
-# ⚡ LuckyStrike OGame Helper (v14.7)
+# ⚡ LuckyStrike OGame Helper (v15.1)
 
 [English (ENG)](#eng-english-description) | [Türkçe (TR)](#tr-türkçe-açıklama)
 
@@ -347,7 +347,7 @@ LuckyStrike unifies all fleet preparation modules (**Cost Cart**, **Resource Col
 ## 🚀 Kurulum / Installation
 
 ### Chrome & Microsoft Edge
-1. İndirin / Download: [`luckystrike-ogame-helper-v14.7.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
+1. İndirin / Download: [`luckystrike-ogame-helper-v15.1.zip`](https://github.com/kadirersoy/luckystrike-ogame-helper/releases/latest)
 2. Tarayıcıda eklentiler sayfasına gidin / Open extensions page:
    - **Chrome:** `chrome://extensions`
    - **Edge:** `edge://extensions`

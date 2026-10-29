@@ -2,7 +2,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v14.7 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v15.1 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -43,7 +43,9 @@
         THEME: 'LS_THEME',
         OPACITY: 'LS_PANEL_OPACITY',
         HOVER_FOCUS: 'LS_HOVER_FOCUS',
-        KM_COST: 'LS_KM_COST'
+        KM_COST: 'LS_KM_COST',
+        MUTED_ATTACKS: 'LS_MUTED_ATTACKS',
+        ACTIVE_ATTACKS: 'LS_ACTIVE_ATTACKS'
     };
 
     let activeAutomationCancel = null;
@@ -387,6 +389,28 @@
             alarm_sound_sonar_deep: 'Derin Deniz Sonarı (Klasik Ping)',
             alarm_sound_sonar_hunter: 'Aktif Avcı Sonarı (Yüksek Ping)',
             alarm_sound_sonar_echo: 'Taktik Yankı Sonarı (Çift Eko)',
+            alarm_attacks_title: '⚔️ Gelen Saldırılar',
+            alarm_attacks_none: 'Gelen aktif düşman saldırısı yok.',
+            alarm_attacks_silence_all: '🔇 Tümünü Sustur',
+            alarm_attacks_refresh: '🔄 Yenile',
+            alarm_attack_silence: '🔇 Sustur',
+            alarm_attack_silenced: 'Susturuldu 🔇',
+            alarm_attack_btn_attacker: '🎯 Saldıran',
+            alarm_attack_btn_attacker_title: 'Saldıranın koordinatını galakside aç (Gezegen değişmez)',
+            alarm_attack_btn_defender: '🛡️ Savunan',
+            alarm_attack_btn_defender_title: 'Saldırıya uğrayan gezegenin Filo sekmesine zıpla',
+            alarm_attack_jump: '🪐 Zıpla',
+            alarm_attack_jump_title: 'Hedef gezegene git',
+            alarm_attack_target: 'Hedef',
+            alarm_attack_target_planet: 'Hedef Gezegen',
+            alarm_attack_origin: 'Saldıran',
+            alarm_attack_attacker_player: 'Saldıran Oyuncu',
+            alarm_attack_origin_planet: 'Kaynak Gezegen',
+            alarm_attack_player_unknown: 'Bilinmiyor',
+            alarm_attack_ships: 'Gemi',
+            alarm_attack_badge_active: 'AKTİF',
+            alarm_status_silenced_count: '🚨 Saldırılar Susturuldu ({count})',
+            alarm_status_new_threat: '🚨 DİKKAT: YENİ SALDIRI VAR! ({count})',
 
             // Settings Tab (Ayarlar)
             settings_github: 'GitHub',
@@ -792,6 +816,28 @@
             alarm_sound_sonar_deep: 'Deep Sea Sonar (Classic Ping)',
             alarm_sound_sonar_hunter: 'Active Hunter Sonar (High Ping)',
             alarm_sound_sonar_echo: 'Tactical Echo Sonar (Double Echo)',
+            alarm_attacks_title: '⚔️ Incoming Attacks',
+            alarm_attacks_none: 'No active incoming attacks detected.',
+            alarm_attacks_silence_all: '🔇 Silence All',
+            alarm_attacks_refresh: '🔄 Refresh',
+            alarm_attack_silence: '🔇 Silence',
+            alarm_attack_silenced: 'Silenced 🔇',
+            alarm_attack_btn_attacker: '🎯 Attacker',
+            alarm_attack_btn_attacker_title: 'Open attacker coordinates in Galaxy (Keep current planet)',
+            alarm_attack_btn_defender: '🛡️ Defender',
+            alarm_attack_btn_defender_title: 'Jump to attacked planet\'s Fleet dispatch',
+            alarm_attack_jump: '🪐 Jump',
+            alarm_attack_jump_title: 'Jump to target planet',
+            alarm_attack_target: 'Target',
+            alarm_attack_target_planet: 'Target Planet',
+            alarm_attack_origin: 'Attacker',
+            alarm_attack_attacker_player: 'Attacker Player',
+            alarm_attack_origin_planet: 'Origin Planet',
+            alarm_attack_player_unknown: 'Unknown',
+            alarm_attack_ships: 'Ships',
+            alarm_attack_badge_active: 'ACTIVE',
+            alarm_status_silenced_count: '🚨 Attacks Silenced ({count})',
+            alarm_status_new_threat: '🚨 ATTENTION: NEW ATTACK INCOMING! ({count})',
 
             // Settings Tab (Ayarlar)
             settings_github: 'GitHub',
@@ -927,6 +973,7 @@
         try { if (typeof updateRefreshButtonCooldown === 'function') updateRefreshButtonCooldown(); } catch (e) {}
         try { if (typeof renderDebugLogs === 'function') renderDebugLogs(); } catch (e) {}
         try { if (typeof renderKmCost === 'function') renderKmCost(); } catch (e) {}
+        try { if (typeof renderAttackList === 'function') renderAttackList(); } catch (e) {}
         try { if (typeof applyPanelOpacity === 'function') applyPanelOpacity(); } catch (e) {}
         try {
             if (typeof updateModeBtnUI === 'function') {
@@ -5438,7 +5485,7 @@
                 return;
             }
         }
-        window.location.href = '?page=ingame&component=galaxy&galaxy=' + g + '&system=' + s;
+        window.location.href = '/game/index.php?page=ingame&component=galaxy&galaxy=' + g + '&system=' + s;
     }
     window.lsNav = navigateToGalaxy;
 
@@ -5776,7 +5823,341 @@
         }
     }
 
+    let activeAttacks = [];
+    try {
+        const rawAtt = sessionStorage.getItem(KEYS.ACTIVE_ATTACKS);
+        if (rawAtt) activeAttacks = JSON.parse(rawAtt) || [];
+    } catch (e) {}
+
+    let mutedAttackIds = new Set();
+    try {
+        const rawMuted = localStorage.getItem(KEYS.MUTED_ATTACKS);
+        if (rawMuted) mutedAttackIds = new Set(JSON.parse(rawMuted) || []);
+    } catch (e) {}
+
+    function getAttackKey(att) {
+        if (!att) return '';
+        const org = (att.originCoords || '').replace(/[\[\]]/g, '').trim();
+        const tgt = (att.targetCoords || '').replace(/[\[\]]/g, '').trim();
+        const tp = att.targetType || 'planet';
+        const arr = att.arrivalTs || att.arrivalTime || '';
+        return `${org}_${tgt}_${tp}_${arr}`;
+    }
+
+    function isAttackMuted(att) {
+        if (!att) return false;
+        if (att.id && mutedAttackIds.has(String(att.id))) return true;
+        const key = getAttackKey(att);
+        if (key && mutedAttackIds.has(key)) return true;
+        return false;
+    }
+
+    function saveMutedAttacks() {
+        try {
+            localStorage.setItem(KEYS.MUTED_ATTACKS, JSON.stringify(Array.from(mutedAttackIds)));
+        } catch (e) {}
+    }
+
+    let lastEventListFetchTime = 0;
+    let isFetchingEventList = false;
+
+    // SADECE kullanıcı Alarm sekmesindeki "🔄 Yenile" butonuna el ile bastığında çağrılır.
+    // Otomatik döngülerde veya arka planda KESİNLİKLE çağrılmaz (Sıfır ban riski).
+    async function fetchEventListHtml(force = false) {
+        const now = Date.now();
+        if (!force && (isFetchingEventList || (now - lastEventListFetchTime < 15000))) {
+            return;
+        }
+        isFetchingEventList = true;
+        lastEventListFetchTime = now;
+
+        try {
+            const resp = await fetch('/game/index.php?page=componentOnly&component=eventList');
+            if (resp.ok) {
+                const html = await resp.text();
+                if (html) {
+                    parseThreatsFromHTML(html);
+                }
+            }
+        } catch (e) {
+        } finally {
+            isFetchingEventList = false;
+        }
+    }
+
+    function openAttackerGalaxy(originCoords) {
+        if (!originCoords) return;
+        const cleanCoords = originCoords.replace(/[\[\]]/g, '').trim();
+        const m = cleanCoords.match(/(\d+):(\d+)/);
+        if (m) {
+            const g = parseInt(m[1], 10);
+            const s = parseInt(m[2], 10);
+            LS_LOGGER.action('ALARM', 'Saldıranın koordinatına galakside gidiliyor: [' + g + ':' + s + ']');
+            navigateToGalaxy(g, s);
+        }
+    }
+
+    function jumpToTargetFleet(targetCoords, isMoon) {
+        if (!targetCoords) {
+            window.location.href = '/game/index.php?page=ingame&component=fleetdispatch';
+            return;
+        }
+        const cleanTarget = targetCoords.replace(/[\[\]]/g, '').trim();
+
+        let foundCp = null;
+        if (typeof getEmpirePlanetsAndMoons === 'function') {
+            const planets = getEmpirePlanetsAndMoons();
+            for (const p of planets) {
+                if (isMoon && p.moon && p.moon.coords === cleanTarget) {
+                    foundCp = p.moon.id;
+                    break;
+                } else if (!isMoon && p.coords === cleanTarget) {
+                    foundCp = p.id;
+                    break;
+                }
+            }
+            if (!foundCp) {
+                for (const p of planets) {
+                    if (p.coords === cleanTarget) {
+                        foundCp = (isMoon && p.moon) ? p.moon.id : p.id;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!foundCp || foundCp.startsWith('p-') || foundCp.startsWith('m-')) {
+            const planetEls = document.querySelectorAll('#planetList .smallplanet, #myPlanets .smallplanet');
+            planetEls.forEach(el => {
+                const coordText = el.textContent || '';
+                if (coordText.includes(cleanTarget)) {
+                    if (isMoon) {
+                        const mLink = el.querySelector('a.moonlink');
+                        const m = (mLink?.getAttribute('href') || '').match(/cp=(\d+)/);
+                        if (m) foundCp = m[1];
+                    }
+                    if (!foundCp) {
+                        const pLink = el.querySelector('a.planetlink') || el.querySelector('a');
+                        const m = (pLink?.getAttribute('href') || '').match(/cp=(\d+)/);
+                        if (m) foundCp = m[1];
+                    }
+                }
+            });
+        }
+
+        if (foundCp && !foundCp.startsWith('p-') && !foundCp.startsWith('m-')) {
+            LS_LOGGER.action('ALARM', 'Savunulan gezegenin filo sekmesine zıplanıyor: cp=' + foundCp + ' [' + cleanTarget + ']');
+            window.location.href = `/game/index.php?page=ingame&component=fleetdispatch&cp=${foundCp}`;
+        } else {
+            LS_LOGGER.action('ALARM', 'Savunulan gezegen için filo sekmesine gidiliyor: [' + cleanTarget + ']');
+            window.location.href = '/game/index.php?page=ingame&component=fleetdispatch';
+        }
+    }
+
+    function toggleMuteAttack(id) {
+        const att = activeAttacks.find(a => String(a.id) === String(id));
+        const key = att ? getAttackKey(att) : '';
+        const alreadyMuted = mutedAttackIds.has(String(id)) || (key && mutedAttackIds.has(key));
+
+        if (alreadyMuted) {
+            if (id) mutedAttackIds.delete(String(id));
+            if (key) mutedAttackIds.delete(key);
+        } else {
+            if (id) mutedAttackIds.add(String(id));
+            if (key) mutedAttackIds.add(key);
+        }
+        saveMutedAttacks();
+        checkThreatsInDOM();
+        renderAttackList();
+    }
+
+    function silenceAllAttacks() {
+        if (activeAttacks && activeAttacks.length > 0) {
+            activeAttacks.forEach(att => {
+                if (att.id) mutedAttackIds.add(String(att.id));
+                const key = getAttackKey(att);
+                if (key) mutedAttackIds.add(key);
+            });
+            saveMutedAttacks();
+        }
+        muteCurrentThreat();
+        checkThreatsInDOM();
+        renderAttackList();
+    }
+
+    function updateActiveAttacks(newAttacks) {
+        if (!Array.isArray(newAttacks)) newAttacks = [];
+
+        // OGame'in olay paneli kapalıyken DOM'da .eventFleet öğeleri 0 görünür.
+        // Eğer sayfada attack_alert hala aktifse ve elimizde bilinen aktif saldırılar varsa
+        // listeyi sakın boşaltma!
+        if (newAttacks.length === 0 && isDOMAttackAlert() && activeAttacks.length > 0) {
+            renderAttackList();
+            return;
+        }
+
+        activeAttacks = newAttacks;
+
+        try {
+            sessionStorage.setItem(KEYS.ACTIVE_ATTACKS, JSON.stringify(activeAttacks));
+        } catch (e) {}
+
+        if (activeAttacks.length > 0) {
+            // Sadece varış süresi 2 dakikadan fazla geçmiş (tamamlanmış) saldırıları temizle
+            const now = Date.now();
+            const toDelete = [];
+            mutedAttackIds.forEach(val => {
+                const matchingActive = activeAttacks.find(a => String(a.id) === String(val) || getAttackKey(a) === String(val));
+                if (matchingActive && matchingActive.arrivalTs && (now > matchingActive.arrivalTs + 120000)) {
+                    toDelete.push(val);
+                }
+            });
+            if (toDelete.length > 0) {
+                toDelete.forEach(d => mutedAttackIds.delete(d));
+                saveMutedAttacks();
+            }
+
+            // Eksik oyuncu isimlerini arka planda evren verisinden çöz
+            const hasUnresolved = activeAttacks.some(a => !a.attackerPlayerName || a.attackerPlayerName === 'Bilinmiyor' || a.attackerPlayerName === 'Unknown');
+            if (hasUnresolved && typeof loadApiData === 'function') {
+                loadApiData().then(() => {
+                    let pChanged = false;
+                    activeAttacks.forEach(att => {
+                        if (!att.attackerPlayerName || att.attackerPlayerName === 'Bilinmiyor' || att.attackerPlayerName === 'Unknown') {
+                            const pName = resolveAttackerPlayerName(att.originCoords, att.originPlanetName, null);
+                            if (pName && pName !== att.attackerPlayerName) {
+                                att.attackerPlayerName = pName;
+                                att.attackerName = pName;
+                                pChanged = true;
+                            }
+                        }
+                    });
+                    if (pChanged) {
+                        try { sessionStorage.setItem(KEYS.ACTIVE_ATTACKS, JSON.stringify(activeAttacks)); } catch (e) {}
+                        renderAttackList();
+                    }
+                }).catch(() => {});
+            }
+        }
+
+        renderAttackList();
+    }
+
+    function renderAttackList() {
+        const listEl = document.getElementById('ls-attack-list');
+        const countTitle = document.getElementById('ls-attack-count-title');
+        if (!listEl) return;
+
+        const totalAttacks = activeAttacks.length;
+        if (countTitle) {
+            countTitle.textContent = `${t('alarm_attacks_title', '⚔️ Gelen Saldırılar')} (${totalAttacks})`;
+        }
+
+        listEl.innerHTML = '';
+        if (totalAttacks === 0) {
+            listEl.innerHTML = '<div style="text-align:center;color:#8899aa;font-size:10.5px;padding:12px 8px;background:rgba(255,255,255,0.02);border-radius:4px">' +
+                t('alarm_attacks_none', 'Gelen aktif düşman saldırısı yok.') +
+            '</div>';
+            return;
+        }
+
+        activeAttacks.forEach(att => {
+            const isMuted = isAttackMuted(att);
+            const card = document.createElement('div');
+            card.className = 'ls-item';
+            card.style.flexDirection = 'column';
+            card.style.alignItems = 'stretch';
+            card.style.gap = '4px';
+            card.style.padding = '6px 8px';
+            card.style.marginBottom = '5px';
+            card.style.borderRadius = '4px';
+            card.style.opacity = '1';
+
+            if (isMuted) {
+                card.style.background = 'rgba(255,255,255,0.03)';
+                card.style.border = '1px solid #233446';
+                card.style.borderLeft = '3px solid #7f8c8d';
+            } else {
+                card.style.background = 'linear-gradient(135deg, rgba(231,76,60,0.12), rgba(13,27,42,0.6))';
+                card.style.border = '1px solid rgba(231,76,60,0.35)';
+                card.style.borderLeft = '3px solid #e74c3c';
+            }
+
+            const missionLabel = att.mission === '2' ? (currentLang === 'tr' ? '👥 AKS' : '👥 ACS') : (att.mission === '9' ? (currentLang === 'tr' ? '💥 İmha' : '💥 Destroy') : (att.mission === '6' ? (currentLang === 'tr' ? '📡 Sonda' : '📡 Probe') : (currentLang === 'tr' ? '⚔️ Saldırı' : '⚔️ Attack')));
+            const timeDisplay = att.countdownText ? att.countdownText : '';
+            const arrivalDisplay = att.arrivalTime ? ('· ' + att.arrivalTime) : '';
+
+            const muteBtnText = isMuted ? t('alarm_attack_silenced', 'Susturuldu 🔇') : t('alarm_attack_silence', '🔇 Sustur');
+            const muteBtnStyle = isMuted
+                ? 'background:rgba(255,255,255,0.06);color:#8899aa;border:1px solid #34495e;'
+                : 'background:#c0392b;color:#fff;border:none;';
+
+            const shipsDisplay = att.shipsCount > 0 ? (' · <span style="color:#ffbe3b;font-weight:bold">' + fmt(att.shipsCount) + ' ' + t('alarm_attack_ships', 'Gemi') + '</span>') : '';
+
+            card.innerHTML =
+                '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px">' +
+                    '<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">' +
+                        '<span style="font-size:10px;font-weight:bold;color:' + (isMuted ? '#8899aa' : '#e74c3c') + '">' + missionLabel + '</span>' +
+                        '<span style="font-size:10.5px;color:#fff;font-family:monospace;font-weight:bold">' + timeDisplay + ' ' + arrivalDisplay + '</span>' +
+                        (!isMuted ? '<span style="font-size:8.5px;background:#e74c3c;color:#fff;padding:0 4px;border-radius:2px;font-weight:bold">' + t('alarm_attack_badge_active', 'AKTİF') + '</span>' : '') +
+                    '</div>' +
+                    '<div style="display:flex;align-items:center;gap:4px">' +
+                        '<button class="ls-btn-sm ls-attack-btn-attacker" data-coords="' + (att.originCoords || '') + '" style="padding:2px 6px;cursor:pointer;font-size:9.5px;background:#1a2c3f;color:#ffbe3b;border:1px solid #2c3e50;border-radius:3px;display:inline-flex;align-items:center;gap:2px" title="' + t('alarm_attack_btn_attacker_title', 'Saldıranın koordinatını galakside aç (Gezegen değişmez)') + '">' +
+                            t('alarm_attack_btn_attacker', '🎯 Saldıran') +
+                        '</button>' +
+                        '<button class="ls-btn-sm ls-attack-btn-defender" data-coords="' + (att.targetCoords || '') + '" data-moon="' + (att.targetType === 'moon' ? '1' : '0') + '" style="padding:2px 6px;cursor:pointer;font-size:9.5px;background:#1a2c3f;color:#00bcff;border:1px solid #2c3e50;border-radius:3px;display:inline-flex;align-items:center;gap:2px" title="' + t('alarm_attack_btn_defender_title', 'Saldırıya uğrayan gezegenin Filo sekmesine zıpla') + '">' +
+                            t('alarm_attack_btn_defender', '🛡️ Savunan') +
+                        '</button>' +
+                        '<button class="ls-btn-sm ls-attack-mute-btn" data-id="' + att.id + '" style="padding:2px 6px;cursor:pointer;font-size:9.5px;border-radius:3px;' + muteBtnStyle + '">' +
+                            muteBtnText +
+                        '</button>' +
+                    '</div>' +
+                '</div>' +
+                '<div style="font-size:10px;margin-top:2px;display:flex;flex-direction:column;gap:1.5px">' +
+                    '<div><span style="color:#8899aa">' + t('alarm_attack_target_planet', 'Hedef Gezegen') + ':</span> <b style="color:#00bcff">' + escapeHtml(att.targetName) + '</b>' + (att.targetCoords ? (' <span style="color:#ffbe3b;font-family:monospace">[' + att.targetCoords + ']</span>') : '') + (att.targetType === 'moon' ? ' 🌙' : '') + '</div>' +
+                    '<div><span style="color:#8899aa">' + t('alarm_attack_attacker_player', 'Saldıran Oyuncu') + ':</span> <b style="color:#e74c3c">' + escapeHtml(att.attackerPlayerName || att.attackerName || t('alarm_attack_player_unknown', 'Bilinmiyor')) + '</b></div>' +
+                    '<div><span style="color:#8899aa">' + t('alarm_attack_origin_planet', 'Kaynak Gezegen') + ':</span> <b style="color:#fff">' + escapeHtml(att.originPlanetName || att.originName || '-') + '</b>' + (att.originCoords ? (' <span style="color:#8899aa;font-family:monospace">[' + att.originCoords + ']</span>') : '') + (att.originType === 'moon' ? ' 🌙' : '') + shipsDisplay + '</div>' +
+                '</div>';
+
+            listEl.appendChild(card);
+        });
+
+        listEl.querySelectorAll('.ls-attack-btn-attacker').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const coords = btn.getAttribute('data-coords');
+                openAttackerGalaxy(coords);
+            });
+        });
+
+        listEl.querySelectorAll('.ls-attack-btn-defender').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const coords = btn.getAttribute('data-coords');
+                const isMoon = btn.getAttribute('data-moon') === '1';
+                jumpToTargetFleet(coords, isMoon);
+            });
+        });
+
+        listEl.querySelectorAll('.ls-attack-mute-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const id = btn.getAttribute('data-id');
+                if (id) toggleMuteAttack(id);
+            });
+        });
+    }
+
     function muteCurrentThreat() {
+        if (activeAttacks && activeAttacks.length > 0) {
+            activeAttacks.forEach(att => mutedAttackIds.add(att.id));
+            saveMutedAttacks();
+            renderAttackList();
+        }
+
         const stored = getStoredThreatState();
         stored.muted = true;
         setStoredThreatState(stored);
@@ -5789,8 +6170,13 @@
 
         const text = document.getElementById('ls-alarm-status-text');
         if (text) {
-            if (stored.type === 'attack') text.textContent = '🚨 Saldırı Var (Alarm Susturuldu)';
-            else if (stored.type === 'espionage') text.textContent = '📡 Sonda Geliyor (Alarm Susturuldu)';
+            if (stored.type === 'attack') {
+                text.textContent = activeAttacks.length > 0
+                    ? t('alarm_status_silenced_count', '🚨 Saldırılar Susturuldu ({count})').replace('{count}', activeAttacks.length)
+                    : (currentLang === 'tr' ? '🚨 Saldırı Var (Alarm Susturuldu)' : '🚨 Attack Incoming (Silenced)');
+            } else if (stored.type === 'espionage') {
+                text.textContent = currentLang === 'tr' ? '📡 Sonda Geliyor (Alarm Susturuldu)' : '📡 Espionage Probe Incoming (Silenced)';
+            }
         }
     }
 
@@ -5845,7 +6231,21 @@
         const isSameThreat = (stored.signature && stored.signature === currentSig) ||
                              (stored.type === currentType && stored.lastPlayTime && (now - stored.lastPlayTime) < 45000);
 
-        const isMuted = isSameThreat && !!stored.muted;
+        // Smart per-attack muting:
+        const unmutedAttacks = activeAttacks.filter(a => !a.isEspionage && !isAttackMuted(a));
+        const hasUnmutedAttack = unmutedAttacks.length > 0;
+
+        let isMuted = false;
+        if (isAttackThreat) {
+            if (activeAttacks.length > 0) {
+                isMuted = !hasUnmutedAttack;
+            } else {
+                isMuted = !!stored.muted;
+            }
+        } else if (isEspionageThreat) {
+            isMuted = isSameThreat && !!stored.muted;
+        }
+
         const playedOnce = isSameThreat && !!stored.playedOnce;
         const lastPlayTime = (isSameThreat && stored.lastPlayTime) ? stored.lastPlayTime : 0;
 
@@ -5856,12 +6256,26 @@
 
         // Banner güncelle & Sekme Başlığı Yanıp Sönmesi
         if (isAttackThreat) {
-            startTitleFlash(isMuted ? 'SALDIRI VAR (SUSTURULDU)' : 'GELEN DÜŞMAN SALDIRISI VAR!');
-            if (banner) { banner.style.background = '#301416'; banner.style.borderColor = '#e74c3c'; }
-            if (dot) { dot.style.background = '#e74c3c'; dot.style.boxShadow = '0 0 8px #e74c3c'; }
-            if (text) {
-                text.style.color = '#e74c3c';
-                text.textContent = isMuted ? '🚨 Saldırı Var (Alarm Susturuldu)' : '🚨 DİKKAT: GELEN SALDIRI VAR!';
+            if (isMuted) {
+                stopTitleFlash();
+                if (banner) { banner.style.background = '#1c2430'; banner.style.borderColor = '#34495e'; }
+                if (dot) { dot.style.background = '#7f8c8d'; dot.style.boxShadow = 'none'; }
+                if (text) {
+                    text.style.color = '#bdc3c7';
+                    text.textContent = activeAttacks.length > 0
+                        ? t('alarm_status_silenced_count', '🚨 Saldırılar Susturuldu ({count})').replace('{count}', activeAttacks.length)
+                        : (currentLang === 'tr' ? '🚨 Saldırı Var (Alarm Susturuldu)' : '🚨 Attack Incoming (Silenced)');
+                }
+            } else {
+                startTitleFlash(hasUnmutedAttack && unmutedAttacks.length < activeAttacks.length ? 'YENİ SALDIRI GELDİ!' : 'GELEN DÜŞMAN SALDIRISI VAR!');
+                if (banner) { banner.style.background = '#301416'; banner.style.borderColor = '#e74c3c'; }
+                if (dot) { dot.style.background = '#e74c3c'; dot.style.boxShadow = '0 0 8px #e74c3c'; }
+                if (text) {
+                    text.style.color = '#e74c3c';
+                    text.textContent = unmutedAttacks.length > 0
+                        ? t('alarm_status_new_threat', '🚨 DİKKAT: YENİ SALDIRI VAR! ({count})').replace('{count}', unmutedAttacks.length)
+                        : (currentLang === 'tr' ? '🚨 DİKKAT: GELEN SALDIRI VAR!' : '🚨 ATTENTION: INCOMING ATTACK!');
+                }
             }
         } else if (isEspionageThreat) {
             stopTitleFlash();
@@ -5869,7 +6283,7 @@
             if (dot) { dot.style.background = '#3498db'; dot.style.boxShadow = '0 0 8px #3498db'; }
             if (text) {
                 text.style.color = '#3498db';
-                text.textContent = isMuted ? '📡 Sonda Geliyor (Alarm Susturuldu)' : '📡 BİLGİ: Casus Sondası Geliyor';
+                text.textContent = isMuted ? (currentLang === 'tr' ? '📡 Sonda Geliyor (Alarm Susturuldu)' : '📡 Espionage Probe Incoming (Silenced)') : (currentLang === 'tr' ? '📡 BİLGİ: Casus Sondası Geliyor' : '📡 INFO: Espionage Probe Incoming');
             }
         }
 
@@ -5925,10 +6339,86 @@
         return false;
     }
 
+    function isGenericMessageWord(str) {
+        if (!str) return true;
+        const s = str.toLowerCase().trim();
+        return s === 'mesaj' || s === 'mesaj yaz' || s === 'mesaj gönder' ||
+               s === 'message' || s === 'send message' || s === 'write message' ||
+               s === 'nachricht' || s === 'chat';
+    }
+
+    function resolveAttackerPlayerName(originCoords, originPlanetName, fl) {
+        // 1. Evren API önbelleğinden koordinat eşleşmesi (En kesin ve resmi kaynak)
+        if (originCoords) {
+            const cleanCoords = originCoords.replace(/[\[\]]/g, '').trim();
+            const apiData = loadApiDataSync();
+            if (apiData && Array.isArray(apiData.planets) && apiData.players) {
+                const foundPlanet = apiData.planets.find(p => p.coords === cleanCoords);
+                if (foundPlanet && foundPlanet.player && apiData.players[foundPlanet.player]) {
+                    const pName = apiData.players[foundPlanet.player].name;
+                    if (pName && pName.trim()) return pName.trim();
+                }
+            }
+        }
+
+        // 2. Tablo satırındaki playerId özniteliklerinden arama
+        if (fl) {
+            const playerLink = fl.querySelector('a[href*="playerId="], [data-player-id], a[href*="to="]');
+            if (playerLink) {
+                const href = playerLink.getAttribute('href') || '';
+                const mId = href.match(/playerId=(\d+)/) || href.match(/to=(\d+)/) || (playerLink.getAttribute('data-player-id') || '').match(/\d+/);
+                if (mId) {
+                    const apiData = loadApiDataSync();
+                    if (apiData && apiData.players && apiData.players[mId[1] || mId[0]]) {
+                        const pName = apiData.players[mId[1] || mId[0]].name;
+                        if (pName && pName.trim()) return pName.trim();
+                    }
+                }
+            }
+
+            // 3. Mesaj (sendMail) linkindeki başlık/ipucu (Tooltip) ayrıştırması
+            const mailEl = fl.querySelector('.sendMail a, a.sendMail, .sendMail, a[href*="chat"], a[href*="message"]');
+            if (mailEl) {
+                const rawTitle = mailEl.getAttribute('title') || mailEl.getAttribute('data-tooltip-title') || '';
+                const clean = rawTitle.replace(/<[^>]*>/g, '').trim();
+                if (clean) {
+                    if (clean.includes('|')) {
+                        const parts = clean.split('|');
+                        const candidate = (parts[1] || parts[0]).trim();
+                        if (candidate && !isGenericMessageWord(candidate)) return candidate;
+                    }
+                    const colonMatch = clean.match(/:\s*([^:\[\]<]+)/);
+                    if (colonMatch && !isGenericMessageWord(colonMatch[1].trim())) {
+                        return colonMatch[1].trim();
+                    }
+                    if (!isGenericMessageWord(clean)) {
+                        return clean;
+                    }
+                }
+            }
+
+            // 4. originFleet içindeki ipucu veya oyuncu etiketleri
+            const originFleet = fl.querySelector('.originFleet');
+            if (originFleet) {
+                const tipEl = originFleet.querySelector('[title], [data-tooltip-title]');
+                if (tipEl) {
+                    const tipText = (tipEl.getAttribute('title') || tipEl.getAttribute('data-tooltip-title') || '').replace(/<[^>]*>/g, '').trim();
+                    if (tipText && tipText !== originPlanetName && !isGenericMessageWord(tipText)) {
+                        if (tipText.includes('|')) return tipText.split('|')[1].trim();
+                        return tipText;
+                    }
+                }
+            }
+        }
+
+        return '';
+    }
+
     function parseHostileFleets(doc) {
         let hasAttack = false;
         let hasEspionage = false;
         const hostileIds = [];
+        const attacks = [];
 
         // Hem .eventFleet hem de alternatif tablo satırlarını kapsa
         let fleets = doc.querySelectorAll('.eventFleet');
@@ -5943,20 +6433,134 @@
             const isReturn = fl.getAttribute('data-return-flight') === 'true';
 
             if (isHostile && !isReturn) {
-                const mission = fl.getAttribute('data-mission-type');
+                const mission = fl.getAttribute('data-mission-type') || '1';
                 const arrival = fl.getAttribute('data-arrival-time') || '';
-                const id = fl.id || (mission + '_' + arrival);
+                const cdEl = fl.querySelector('.countDown');
+                const countdownText = cdEl ? cdEl.textContent.trim() : '';
+                const arrEl = fl.querySelector('.arrivalTime');
+                const arrivalTime = arrEl ? arrEl.textContent.trim() : '';
+
+                // Origin extraction
+                const originFleetEl = fl.querySelector('.originFleet');
+                const originCoordsEl = fl.querySelector('.coordsOrigin') || fl.querySelector('.originCoords');
+                let originCoords = '';
+                let originName = '';
+                let attackerName = '';
+
+                if (originCoordsEl) {
+                    const m = originCoordsEl.textContent.match(/(\d+:\d+:\d+)/);
+                    if (m) originCoords = m[1];
+                    else {
+                        const href = originCoordsEl.querySelector('a')?.getAttribute('href') || '';
+                        const hm = href.match(/galaxy=(\d+)&system=(\d+)&position=(\d+)/);
+                        if (hm) originCoords = `${hm[1]}:${hm[2]}:${hm[3]}`;
+                    }
+                }
+                if (!originCoords && originFleetEl) {
+                    const m = originFleetEl.textContent.match(/(\d+:\d+:\d+)/);
+                    if (m) originCoords = m[1];
+                }
+
+                if (originFleetEl) {
+                    const pSpan = originFleetEl.querySelector('.originPlanet');
+                    if (pSpan) originName = pSpan.textContent.trim();
+                    else originName = originFleetEl.textContent.replace(/\[\d+:\d+:\d+\]/g, '').trim();
+                }
+
+                const isOriginMoon = !!(originFleetEl?.querySelector('.moon, figure.moon') || originCoordsEl?.querySelector('.moon, figure.moon') || /ay|moon/i.test(originFleetEl?.innerHTML || ''));
+                const attackerPlayerName = resolveAttackerPlayerName(originCoords, originName, fl);
+
+                const mailLink = fl.querySelector('.sendMail a') || fl.querySelector('a.sendMail') || fl.querySelector('a[href*="message"]');
+                if (!attackerPlayerName && mailLink) {
+                    const mailTitle = mailLink.getAttribute('title') || '';
+                    const pMatch = mailTitle.match(/:\s*([^\s\[\]<]+)/) || mailTitle.match(/\[([^\]]+)\]/);
+                    if (pMatch && !isGenericMessageWord(pMatch[1].trim())) attackerName = pMatch[1].trim();
+                }
+                if (!attackerName) attackerName = attackerPlayerName || originName || (currentLang === 'tr' ? 'Düşman' : 'Enemy');
+
+                // Destination extraction
+                const destFleetEl = fl.querySelector('.destFleet');
+                const destCoordsEl = fl.querySelector('.destCoords') || fl.querySelector('.coordsDest');
+                let targetCoords = '';
+                let targetName = '';
+                let isMoon = false;
+
+                if (destCoordsEl) {
+                    const m = destCoordsEl.textContent.match(/(\d+:\d+:\d+)/);
+                    if (m) targetCoords = m[1];
+                    else {
+                        const href = destCoordsEl.querySelector('a')?.getAttribute('href') || '';
+                        const hm = href.match(/galaxy=(\d+)&system=(\d+)&position=(\d+)/);
+                        if (hm) targetCoords = `${hm[1]}:${hm[2]}:${hm[3]}`;
+                    }
+                    isMoon = !!(destCoordsEl.querySelector('.moon, figure.moon') || /ay|moon/i.test(destCoordsEl.innerHTML));
+                }
+                if (!targetCoords && destFleetEl) {
+                    const m = destFleetEl.textContent.match(/(\d+:\d+:\d+)/);
+                    if (m) targetCoords = m[1];
+                }
+
+                if (destFleetEl) {
+                    const pSpan = destFleetEl.querySelector('.destPlanet');
+                    if (pSpan) targetName = pSpan.textContent.trim();
+                    else targetName = destFleetEl.textContent.replace(/\[\d+:\d+:\d+\]/g, '').trim();
+                    if (!isMoon) isMoon = !!(destFleetEl.querySelector('.moon, figure.moon') || /ay|moon/i.test(destFleetEl.innerHTML));
+                }
+
+                // If still missing, check all links in the row
+                if (!originCoords || !targetCoords) {
+                    const links = fl.querySelectorAll('a');
+                    const foundCoords = [];
+                    links.forEach(a => {
+                        const m = (a.textContent || '').match(/(\d+:\d+:\d+)/);
+                        if (m) foundCoords.push(m[1]);
+                        else {
+                            const href = a.getAttribute('href') || '';
+                            const hm = href.match(/galaxy=(\d+)&system=(\d+)&position=(\d+)/);
+                            if (hm) foundCoords.push(`${hm[1]}:${hm[2]}:${hm[3]}`);
+                        }
+                    });
+                    if (!originCoords && foundCoords[0]) originCoords = foundCoords[0];
+                    if (!targetCoords && foundCoords[1]) targetCoords = foundCoords[1];
+                    else if (!targetCoords && foundCoords[0] && foundCoords.length === 1) targetCoords = foundCoords[0];
+                }
+
+                const detailsEl = fl.querySelector('.detailsFleet');
+                const shipsCount = detailsEl ? parseOgNum(detailsEl.textContent) : 0;
+
+                const id = fl.id ? fl.id.replace(/^eventRow-/, '') : (mission + '_' + originCoords + '_' + targetCoords + '_' + arrival);
                 hostileIds.push(id);
 
-                if (mission === '6' || fl.classList.contains('espionage') || !!fl.querySelector('.espionage, .icon_espionage')) {
+                const isEsp = (mission === '6' || fl.classList.contains('espionage') || !!fl.querySelector('.espionage, .icon_espionage'));
+                if (isEsp) {
                     hasEspionage = true;
                 } else {
                     hasAttack = true;
                 }
+
+                attacks.push({
+                    id,
+                    mission,
+                    countdownText,
+                    arrivalTime,
+                    arrivalTs: arrival ? (parseInt(arrival, 10) * 1000) : 0,
+                    originCoords,
+                    originName,
+                    originPlanetName: originName,
+                    originType: isOriginMoon ? 'moon' : 'planet',
+                    attackerName: attackerPlayerName || attackerName || originName || (currentLang === 'tr' ? 'Düşman' : 'Enemy'),
+                    attackerPlayerName: attackerPlayerName,
+                    attackerCoords: originCoords,
+                    targetCoords,
+                    targetName,
+                    targetType: isMoon ? 'moon' : 'planet',
+                    shipsCount,
+                    isEspionage: isEsp
+                });
             }
         });
 
-        return { hasAttack, hasEspionage, hostileIds, count: fleets.length };
+        return { hasAttack, hasEspionage, hostileIds, count: fleets.length, attacks };
     }
 
     function checkThreatsInDOM() {
@@ -5968,10 +6572,11 @@
         const domFleets = document.querySelectorAll('.eventFleet');
         if (domFleets.length > 0) {
             const parsed = parseHostileFleets(document);
+            updateActiveAttacks(parsed.attacks);
             let hasAttack = parsed.hasAttack || isDOMAttackAlert();
             let hasEspionage = parsed.hasEspionage;
             let sig = '';
-            if (hasAttack) sig = 'ATT:' + parsed.hostileIds.join(',');
+            if (hasAttack) sig = 'ATT:' + parsed.attacks.map(a => getAttackKey(a) || a.id).join(',');
             else if (hasEspionage) sig = 'ESP:' + parsed.hostileIds.join(',');
 
             lastKnownEspionage = hasEspionage;
@@ -5981,12 +6586,21 @@
         } else {
             const hasAttack = isDOMAttackAlert();
             if (hasAttack) {
-                handleThreatState(true, false, 'DOM_ATTACK');
+                // DOM'da attack_alert var: Otomatik sunucu isteği ATMA! Bilinen saldırı durumunu ve susturmayı koru
+                const sig = activeAttacks.length > 0 
+                    ? ('ATT:' + activeAttacks.map(a => getAttackKey(a) || a.id).join(','))
+                    : 'DOM_ATTACK';
+                handleThreatState(true, false, sig);
             } else if (lastKnownEspionage && (Date.now() - lastKnownEspionageTime) < 15000) {
                 handleThreatState(false, true, lastKnownEspionageSig);
             } else {
                 lastKnownEspionage = false;
-                handleThreatState(false, false, '');
+                if (document.readyState === 'complete' && !isDOMAttackAlert()) {
+                    if (activeAttacks.length > 0) {
+                        updateActiveAttacks([]);
+                    }
+                    handleThreatState(false, false, '');
+                }
             }
         }
     }
@@ -5998,6 +6612,7 @@
         try {
             const doc = new DOMParser().parseFromString(html, 'text/html');
             const parsed = parseHostileFleets(doc);
+            updateActiveAttacks(parsed.attacks);
             let hasAttack = parsed.hasAttack;
             let hasEspionage = parsed.hasEspionage;
 
@@ -6026,7 +6641,7 @@
             }
 
             let sig = '';
-            if (hasAttack) sig = 'ATT:' + (parsed.hostileIds.length > 0 ? parsed.hostileIds.join(',') : 'BG_ATTACK');
+            if (hasAttack) sig = 'ATT:' + (parsed.attacks.length > 0 ? parsed.attacks.map(a => getAttackKey(a) || a.id).join(',') : 'BG_ATTACK');
             else if (hasEspionage) sig = 'ESP:' + (parsed.hostileIds.length > 0 ? parsed.hostileIds.join(',') : 'BG_ESP');
 
             lastKnownEspionage = hasEspionage;
@@ -11482,7 +12097,7 @@
             '<div id="ls-header">' +
                 '<span id="ls-header-title">' + boltSvg + ' LuckyStrike Helper</span>' +
                 '<div style="display:flex;align-items:center;gap:6px">' +
-                    '<button id="ls-header-stop-btn" class="ls-btn-d ls-btn-sm" style="display:none;padding:2px 7px;font-size:10px;align-items:center;gap:3px;cursor:pointer" title="Tekrarlayan bu alarmı sustur">⏹️ Sustur</button>' +
+                    '<button id="ls-header-stop-btn" class="ls-btn-d ls-btn-sm" style="display:none;padding:2px 7px;font-size:10px;align-items:center;gap:3px;cursor:pointer" title="Tekrarlayan bu alarmı sustur" data-i18n-title="stop_alarm_title" data-i18n="stop_alarm">⏹️ Sustur</button>' +
                     '<span id="ls-close">✖</span>' +
                 '</div>' +
             '</div>' +
@@ -11673,20 +12288,18 @@
                         '<button id="ls-alarm-esp-test" class="ls-btn-sm" style="background:#2980b9;color:#fff;border:none;padding:5px 10px;width:100%" data-i18n="alarm_esp_test">🔊 Sonda Sesini Test Et</button>' +
                     '</div>' +
 
-                    // Volume slider card
-                    '<div style="background:#131d2a;border:1px solid #233446;border-radius:6px;padding:10px;margin-bottom:8px">' +
-                        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
-                            '<span style="color:#d1d8e0;font-size:11px" data-i18n="alarm_volume_label">🔊 Ses Seviyesi:</span>' +
-                            '<span id="ls-volume-val" style="font-weight:bold;color:#00bcff;font-size:11px">70%</span>' +
+                    // Volume & Repeat controls (row layout)
+                    '<div style="flex-shrink:0;display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">' +
+                        '<div style="background:#131d2a;border:1px solid #233446;border-radius:6px;padding:6px 8px">' +
+                            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">' +
+                                '<span style="color:#d1d8e0;font-size:10px" data-i18n="alarm_volume_label">🔊 Ses Seviyesi:</span>' +
+                                '<span id="ls-volume-val" style="font-weight:bold;color:#00bcff;font-size:10px">70%</span>' +
+                            '</div>' +
+                            '<input type="range" id="ls-volume-slider" min="0" max="100" value="70" style="width:100%;accent-color:#00bcff;cursor:pointer">' +
                         '</div>' +
-                        '<input type="range" id="ls-volume-slider" min="0" max="100" value="70" style="width:100%;accent-color:#00bcff;cursor:pointer">' +
-                    '</div>' +
-
-                    // Repeat interval card
-                    '<div style="background:#131d2a;border:1px solid #233446;border-radius:6px;padding:10px;margin-bottom:8px">' +
-                        '<div style="display:flex;justify-content:space-between;align-items:center">' +
-                            '<span style="color:#d1d8e0;font-size:11px" data-i18n="alarm_repeat_label">⏱️ Tekrar Sıklığı:</span>' +
-                            '<select id="ls-alarm-repeat" class="ls-select" style="width:145px;font-size:11px;padding:3px;background:#0a0e17;color:#fff;border:1px solid #2c3e50;border-radius:3px">' +
+                        '<div style="background:#131d2a;border:1px solid #233446;border-radius:6px;padding:6px 8px">' +
+                            '<div style="color:#d1d8e0;font-size:10px;margin-bottom:3px" data-i18n="alarm_repeat_label">⏱️ Tekrar Sıklığı:</div>' +
+                            '<select id="ls-alarm-repeat" class="ls-select" style="width:100%;font-size:10px;padding:2px;background:#0a0e17;color:#fff;border:1px solid #2c3e50;border-radius:3px">' +
                                 '<option value="0" data-i18n="alarm_repeat_once">Sadece 1 kez çal</option>' +
                                 '<option value="5" data-i18n="alarm_repeat_5s">Her 5 saniyede bir</option>' +
                                 '<option value="10" data-i18n="alarm_repeat_10s">Her 10 saniyede bir</option>' +
@@ -11696,6 +12309,18 @@
                             '</select>' +
                         '</div>' +
                     '</div>' +
+
+                    // Attack list header with Silence All & Refresh buttons
+                    '<div style="flex-shrink:0;display:flex;justify-content:space-between;align-items:center;margin:6px 0 4px 0;padding-bottom:3px;border-bottom:1px solid #1a2c3f">' +
+                        '<span style="font-size:11px;font-weight:bold;color:#e74c3c" id="ls-attack-count-title" data-i18n="alarm_attacks_title">⚔️ Gelen Saldırılar (0)</span>' +
+                        '<div style="display:flex;gap:4px">' +
+                            '<button id="ls-alarm-fetch-btn" class="ls-btn-sm" style="background:#132030;color:#00bcff;border:1px solid #1f3a55;padding:2px 6px;cursor:pointer;font-size:9.5px;border-radius:3px" title="Olay listesini güncelle" data-i18n="alarm_attacks_refresh">🔄 Yenile</button>' +
+                            '<button id="ls-alarm-silence-all-btn" class="ls-btn-d ls-btn-sm" style="padding:2px 7px;font-size:9.5px;cursor:pointer" title="Listedeki tüm mevcut saldırıları sustur" data-i18n="alarm_attacks_silence_all">🔇 Tümünü Sustur</button>' +
+                        '</div>' +
+                    '</div>' +
+
+                    // Attack items list container
+                    '<div id="ls-attack-list" style="flex:1;min-height:90px;overflow-y:auto;overflow-x:hidden;width:100%;box-sizing:border-box"></div>' +
                 '</div>' +
 
                 // DEBRIS TAB (HARABE AVCISI)
@@ -12051,7 +12676,7 @@
                         '<div style="display:flex;justify-content:space-between;align-items:center">' +
                             '<div style="display:flex;align-items:center;gap:6px">' +
                                 '<span style="font-size:12px;color:#00bcff;font-weight:bold">⚡ LuckyStrike Helper</span>' +
-                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v14.7</span>' +
+                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v15.1</span>' +
                             '</div>' +
                             '<a href="https://github.com/kadirersoy/luckystrike-ogame-helper" target="_blank" style="font-size:10.5px;color:#00bcff;text-decoration:none;display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,0.05);padding:2px 7px;border-radius:4px;border:1px solid #1a2c3f" title="GitHub Proje Sayfası" data-i18n-title="settings_github_title">' +
                                 '<span>🔗</span> <span data-i18n="settings_github">GitHub</span>' +
@@ -12444,6 +13069,7 @@
                 if (t === 'expedition') renderExpedition();
                 if (t === 'scanner') { updateScanStatusInfo(); updateRefreshButtonCooldown(); }
                 if (t === 'finder') { updateFinderStatusInfo(); updateRefreshButtonCooldown(); }
+                if (t === 'alarm') renderAttackList();
                 if (t === 'kmcost') renderKmCost();
                 if (t === 'settings' || t === 'debug') renderDebugLogs();
                 LS_LOGGER.action('UI', 'Sekme değiştirildi: ' + t);
@@ -12459,6 +13085,7 @@
         if (activeTab === 'expedition') renderExpedition();
         if (activeTab === 'scanner') { updateScanStatusInfo(); updateRefreshButtonCooldown(); }
         if (activeTab === 'finder') { updateFinderStatusInfo(); updateRefreshButtonCooldown(); }
+        if (activeTab === 'alarm') renderAttackList();
         if (activeTab === 'kmcost') renderKmCost();
         if (activeTab === 'settings' || activeTab === 'debug') renderDebugLogs();
         if (!savedTabEl) {
@@ -12686,6 +13313,25 @@
             }
         });
 
+        document.getElementById('ls-alarm-silence-all-btn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            silenceAllAttacks();
+        });
+
+        document.getElementById('ls-alarm-fetch-btn')?.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const btn = e.currentTarget;
+            btn.textContent = '⏳ ...';
+            btn.disabled = true;
+            await fetchEventListHtml(true);
+            setTimeout(() => {
+                btn.textContent = t('alarm_attacks_refresh', '🔄 Yenile');
+                btn.disabled = false;
+            }, 5000);
+        });
+
+        renderAttackList();
+
         // Debris Tab Controls (Harabe Avcısı)
         const debToggle = document.getElementById('ls-debris-toggle');
         const debMinInp = document.getElementById('ls-debris-min');
@@ -12834,7 +13480,7 @@
             const r3 = Array.from(debugFilterState.row3).join(', ');
 
             let out = '==================================================\n' +
-                      '  LuckyStrike OGame Helper v14.7 - Log Kayıtları\n' +
+                      '  LuckyStrike OGame Helper v15.1 - Log Kayıtları\n' +
                       '  Tarih: ' + nowStr + '\n' +
                       '  URL: ' + window.location.href + '\n' +
                       '  Filtreler: [Akış: ' + r1 + '] [Kapsam: ' + r2 + '] [Seviye: ' + r3 + ']\n' +
@@ -13382,6 +14028,6 @@
     scanAndSaveExpeditionTemplates();
     updateAllAutomationStartButtons();
     setInterval(updateAllAutomationStartButtons, 400);
-    console.log(LS, 'LuckyStrike OGame Helper v14.7 hazır!');
+    console.log(LS, 'LuckyStrike OGame Helper v15.1 hazır!');
 
 })();

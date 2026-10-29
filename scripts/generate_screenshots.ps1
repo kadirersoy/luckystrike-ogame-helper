@@ -75,10 +75,15 @@ $htmlTemplate = @'
     <div id="resources_metal" style="display:none">2.450.000</div>
     <div id="resources_crystal" style="display:none">1.120.000</div>
     <div id="resources_deuterium" style="display:none">890.000</div>
+    <div id="attack_alert" class="soon attack" style="display:none"></div>
 
     <script>
         const TARGET_TAB = "__TARGET_TAB__";
         const TARGET_LANG = "__TARGET_LANG__";
+
+        if (TARGET_TAB !== 'alarm') {
+            document.getElementById('attack_alert').className = 'noAttack';
+        }
 
         localStorage.setItem('LS_ACTIVE_TAB', TARGET_TAB);
         localStorage.setItem('LS_LANGUAGE', TARGET_LANG);
@@ -164,6 +169,27 @@ $htmlTemplate = @'
             { id: 'tpl2', name: 'A\u011F\u0131r Ke\u015Fif (500 Komuta, 200 GD)' }
         ];
         localStorage.setItem('LS_EXPEDITION_TEMPLATES', JSON.stringify(expTemplates));
+
+        if (TARGET_TAB === 'alarm') {
+            const mockAttacks = (TARGET_LANG === 'en') ? [
+                { id: 'att-1', mission: '1', countdownText: '13h 42m 40s', arrivalTime: '07:01:27', originCoords: '5:261:5', originPlanetName: 'KIRINSHIKATO', originType: 'moon', attackerPlayerName: 'LordVader', targetCoords: '5:242:9', targetName: 'FB_521', targetType: 'planet', shipsCount: 53112, isEspionage: false },
+                { id: 'att-2', mission: '1', countdownText: '14h 56m 48s', arrivalTime: '08:15:35', originCoords: '6:266:5', originPlanetName: 'Colony', originType: 'planet', attackerPlayerName: 'LordVader', targetCoords: '5:242:9', targetName: 'FB_521', targetType: 'planet', shipsCount: 57553, isEspionage: false },
+                { id: 'att-3', mission: '1', countdownText: '1d 14h 5m', arrivalTime: '07:24:35', originCoords: '6:165:6', originPlanetName: 'AIRKOTRY2', originType: 'planet', attackerPlayerName: 'LordVader', targetCoords: '5:242:9', targetName: 'FB_521', targetType: 'planet', shipsCount: 13201, isEspionage: false }
+            ] : [
+                { id: 'att-1', mission: '1', countdownText: '13s 42dk 40sn', arrivalTime: '07:01:27', originCoords: '5:261:5', originPlanetName: 'K\u0130R\u0130NSH\u0130KATO', originType: 'moon', attackerPlayerName: 'LordVader', targetCoords: '5:242:9', targetName: 'FB_521', targetType: 'planet', shipsCount: 53112, isEspionage: false },
+                { id: 'att-2', mission: '1', countdownText: '14s 56dk 48sn', arrivalTime: '08:15:35', originCoords: '6:266:5', originPlanetName: 'S\u00F6m\u00FCrge', originType: 'planet', attackerPlayerName: 'LordVader', targetCoords: '5:242:9', targetName: 'FB_521', targetType: 'planet', shipsCount: 57553, isEspionage: false },
+                { id: 'att-3', mission: '1', countdownText: '1g 14s 5dk', arrivalTime: '07:24:35', originCoords: '6:165:6', originPlanetName: 'AIRKOTRY2', originType: 'planet', attackerPlayerName: 'LordVader', targetCoords: '5:242:9', targetName: 'FB_521', targetType: 'planet', shipsCount: 13201, isEspionage: false }
+            ];
+            sessionStorage.setItem('LS_ACTIVE_ATTACKS', JSON.stringify(mockAttacks));
+            localStorage.setItem('LS_MUTED_ATTACKS', JSON.stringify(['att-3']));
+            sessionStorage.setItem('LS_THREAT_STATE', JSON.stringify({
+                type: 'attack',
+                signature: 'ATT:att-1,att-2,att-3',
+                muted: false,
+                playedOnce: true,
+                lastPlayTime: Date.now()
+            }));
+        }
     </script>
 
     <script src="../content.js"></script>
@@ -292,9 +318,26 @@ $htmlTemplate = @'
             if (aToggle) aToggle.checked = true;
             const eToggle = document.getElementById('ls-alarm-esp-toggle');
             if (eToggle) eToggle.checked = true;
-            const alarmStatus = document.getElementById('ls-alarm-status-text');
-            if (alarmStatus) {
-                alarmStatus.textContent = (TARGET_LANG === 'en') ? 'Watcher Active \u00B7 No Threat' : 'G\u00F6zc\u00FC Aktif \u00B7 Tehdit Yok';
+
+            const mockAttacks = (TARGET_LANG === 'en') ? [
+                { id: 'att-1', mission: '1', countdownText: '14h 24m 35s', arrivalTime: '07:01:27', originCoords: '5:261:5', originName: '', attackerName: 'KIRINSHIKATO', targetCoords: '5:242:9', targetName: 'FB_521', targetType: 'planet', shipsCount: 53112, isEspionage: false },
+                { id: 'att-2', mission: '1', countdownText: '15h 38m 43s', arrivalTime: '08:15:35', originCoords: '6:266:5', originName: '', attackerName: 'Colony', targetCoords: '5:242:9', targetName: 'FB_521', targetType: 'planet', shipsCount: 57553, isEspionage: false },
+                { id: 'att-3', mission: '1', countdownText: '1d 14h 47m', arrivalTime: '07:24:35', originCoords: '6:165:6', originName: '', attackerName: 'AIRKOTRY2', targetCoords: '5:242:9', targetName: 'FB_521', targetType: 'planet', shipsCount: 13201, isEspionage: false }
+            ] : [
+                { id: 'att-1', mission: '1', countdownText: '14s 24dk 35sn', arrivalTime: '07:01:27', originCoords: '5:261:5', originName: '', attackerName: 'KİRİNSHİKATO', targetCoords: '5:242:9', targetName: 'FB_521', targetType: 'planet', shipsCount: 53112, isEspionage: false },
+                { id: 'att-2', mission: '1', countdownText: '15s 38dk 43sn', arrivalTime: '08:15:35', originCoords: '6:266:5', originName: '', attackerName: 'Sömürge', targetCoords: '5:242:9', targetName: 'FB_521', targetType: 'planet', shipsCount: 57553, isEspionage: false },
+                { id: 'att-3', mission: '1', countdownText: '1g 14s 47dk', arrivalTime: '07:24:35', originCoords: '6:165:6', originName: '', attackerName: 'AIRKOTRY2', targetCoords: '5:242:9', targetName: 'FB_521', targetType: 'planet', shipsCount: 13201, isEspionage: false }
+            ];
+
+            if (typeof mutedAttackIds !== 'undefined' && mutedAttackIds) {
+                mutedAttackIds.clear();
+                mutedAttackIds.add('att-3'); // 1 günlük oyalama saldırısı susturulmuş durumda
+            }
+            if (typeof updateActiveAttacks === 'function') {
+                updateActiveAttacks(mockAttacks);
+            }
+            if (typeof handleThreatState === 'function') {
+                handleThreatState(true, false, 'ATT:att-1,att-2,att-3');
             }
         }
 
