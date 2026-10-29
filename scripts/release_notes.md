@@ -1,33 +1,23 @@
-### [TR] Türkçe Sürüm Notları (v15.2)
-- **🪐 Toplayıcı: Gezegen & Aya Özel Görev Butonları (Maliyet Formatı):**
-  - Maliyet sekmesindeki ergonomi Toplayıcı'ya uyarlandı; her gezegen ve ay satırının yanına bireysel **[ Nakliye ]** ve **[ Konuşlandır ]** butonları eklendi.
-  - **Paralel & Bağımsız Seçim**: Üst paneldeki ana görev butonları değiştirildiğinde tüm liste paralel güncellenir; istenirse satırlardaki butonlarla belirli gezegen veya aya özel görev seçilebilir.
-- **⚡ Toplayıcı: Genel Deu Rezerv Girişi ve Eşitleme Butonu:**
-  - Tıpkı Postacı modülünde olduğu gibi, Toplayıcı sekmesine üst genel **"🛡️ Deu Rezerv"** giriş kutusu ve **"⚡ Eşitle"** butonu eklendi.
-  - Eşitle butonu (veya Enter tuşu), girilen rezerv miktarını **yalnızca seçili olan gezegen ve aylara** tek tıkla uygular; seçili olmayan kolonilerin özel rezervlerine dokunmaz.
-  - `250k`, `500k`, `1m` gibi metin kısaltmaları desteklenir ve girilen genel rezerv ayarı oturumlar arasında hatırlanır.
-- **🛡️ Yakıt Korumalı Net Deuterium Rezervi (Rezervin Erimesi Engellendi):**
-  - Filonun uçuş sırasında yakacağı gidiş yakıtı korunacak rezerve dahil edildi:
-    $$\text{Taşınacak Deu} = \max(0, \text{Mevcut Deu} - (\text{Rezerv} + \text{Uçuş Yakıtı}))$$
-  - Filo 2 adımında OGame'in hesapladığı canlı yakıt tüketimi (`consumption`) anında okunarak kargo ambarı milimetrik olarak doldurulur.
-  - Filo havalandığında OGame yakıtı çektiğinde, gezegende **kuruşu kuruşuna tam olarak belirlediğiniz rezerv (örn: 250.000)** kalır; rezervin 249.8K veya 242K gibi değerlere düşmesi tamamen önlendi.
-- **⏭️ Madensiz / Rezerv Altı Kolonileri Otomatik Atlama (Smart Skip):**
-  - Seçilen kaynaklar açısından taşınacak hiçbir madeni olmayan (Metal: 0, Kristal: 0 ve Deu <= Rezerv + Yakıt) gezegen ve aylar otomatik algılanır; boşuna filo kaldırılıp yakıt yakarak rezerv eritilmez, adım doğrudan bir sonraki hedefe atlatılır.
+### [TR] Türkçe Sürüm Notları (v15.3)
+- **📡 Casusluk Alarmı Ses Düzeltmesi (Espionage Sound Fix):**
+  - OGame'in genel düşman başlığı (`#js_eventHeaderBox.hostile`) casus sondası geldiğinde devreye girdiğinde sistemi hatalı olarak "Saldırı Tehdidi" zannetmesine ve listede saldırı gemisi bulunmadığı için alarmı yanlışlıkla sessize almasına yol açan mantık hatası tamamen giderildi.
+  - Gelen casus sondalarında seçili Sonar sesleri (Derin Deniz Sonarı, Aktif Avcı Sonarı, Taktik Yankı) artık milisaniyesinde ve kararlı şekilde çalmaktadır.
+- **🛡️ Bağımsız Casusluk & Saldırı Yönetimi (Independent Threat Pipeline):**
+  - Saldırı alarmları ile Casusluk alarmları birbirinden bağımsız iki ayrı sinir hattına ayrıldı; bir tehdidin durumu veya susturulması diğerini asla engellemez.
+  - Tıpkı saldırılarda olduğu gibi, her casusluk görevi de liste üzerinde bireysel kart olarak görünür ve bağımsız olarak "🔇 Sustur" butonuna basılarak sessize alınabilir.
+- **🛰️ Uzun Süreli Casusluklarda Yeni Tehdit Koruması (Anti-Masking):**
+  - Casus sondasının yanına Ölüm Yıldızı (RIP) veya yavaş gemi eklenerek saatler/günler sürecek şekilde atılan casusluk görevleri susturulduğunda, aradan gelecek yeni casus sondaları kesinlikle gözden kaçmaz; yeni her casusluk aktivitesi için alarm bağımsız olarak yeniden tetiklenir.
+  - Casusluk kartları ve listesi taktik mavi arayüz (`#3498db`) ve `SONDA` rozeti ile gelen saldırılardan görsel olarak ayrıştırıldı.
 
 ---
 
-### [ENG] English Release Notes (v15.2)
-- **🪐 Collector: Per-Colony Mission Toggles (Cart/Cost Style):**
-  - Added individual **[ Transport ]** and **[ Deploy ]** buttons to every planet and moon row in the Collector tab, matching the Cart workflow.
-  - **Parallel & Independent Control**: Toggling the top mission buttons updates all colonies simultaneously; individual row buttons allow overriding the mission per planet or moon.
-- **⚡ Collector: Global Deut Reserve Input & Equalize Button:**
-  - Added a global **"🛡️ Deut Reserve"** input box and **"⚡ Equalize"** button to the Resource Collector tab, mirroring Courier ergonomics.
-  - Clicking Equalize (or pressing Enter) applies the specified reserve amount **exclusively to currently selected planets and moons**, preserving custom values on unselected colonies.
-  - Supports numeric shortcuts like `250k`, `500k`, `1m` and persists the global reserve setting across sessions.
-- **🛡️ Fuel-Aware Net Deuterium Reserve Protection:**
-  - Flight fuel consumption is now factored into the protected reserve formula:
-    $$\text{Collectible Deut} = \max(0, \text{Live Deut} - (\text{Reserve} + \text{Flight Fuel}))$$
-  - Reads OGame's real-time calculated flight consumption during Fleet Step 2 to dynamically adjust cargo payload.
-  - Once the fleet launches and consumes fuel, **exactly your desired reserve (e.g. 250,000)** remains on the colony—preventing reserve erosion to 249.8K or lower.
-- **⏭️ Zero-Cargo Smart Skip:**
-  - Colonies with zero collectible resources (Metal: 0, Crystal: 0, and Deut <= Reserve + Fuel) are automatically skipped, avoiding pointless fleet launches and fuel waste.
+### [ENG] English Release Notes (v15.3)
+- **📡 Espionage Alarm Sound Fix:**
+  - Resolved an issue where OGame's general hostile header (`#js_eventHeaderBox.hostile`) falsely triggered the attack pipeline for spy probes, inadvertently muting the audio because no attack warships were present.
+  - Sonar sounds (Deep Sea Sonar, Active Hunter Sonar, Tactical Echo) now play instantly and reliably whenever espionage probes approach.
+- **🛡️ Independent Attack & Espionage Threat Pipeline:**
+  - Attack alarms and Espionage alarms now operate as separate, isolated channels; muting or triggering one never suppresses or interferes with the other.
+  - Every espionage event is displayed as an individual card with its own coordinates, player info, and "🔇 Silence" toggle.
+- **🛰️ Slow/Long Espionage Anti-Masking Protection:**
+  - When an espionage mission paired with slow ships (such as Deathstars / RIPs lasting hours or days) is muted, new incoming spy probes are not masked or silenced; any new probe arrival generates a fresh threat signature and triggers the alarm sound independently.
+  - Espionage cards and badges are rendered in a distinct tactical blue theme (`#3498db`) with `PROBE` badges to separate them cleanly from real attacks.
