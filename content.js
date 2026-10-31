@@ -2,7 +2,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v15.5 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v15.6 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -5201,13 +5201,28 @@
             universeCacheInMemory = universeData;
 
             try {
-                sessionStorage.setItem(KEYS.API, JSON.stringify(apiData));
                 sessionStorage.setItem(KEYS.UNIVERSE_CACHE, JSON.stringify(universeData));
             } catch (e) {
                 try {
-                    localStorage.setItem(KEYS.API, JSON.stringify(apiData));
                     localStorage.setItem(KEYS.UNIVERSE_CACHE, JSON.stringify(universeData));
                 } catch (e2) {}
+            }
+
+            try {
+                sessionStorage.setItem(KEYS.API, JSON.stringify(apiData));
+            } catch (e) {
+                try {
+                    localStorage.setItem(KEYS.API, JSON.stringify(apiData));
+                } catch (e2) {}
+            }
+
+            if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+                try {
+                    chrome.storage.local.set({
+                        [KEYS.UNIVERSE_CACHE]: universeData,
+                        [KEYS.API]: apiData
+                    });
+                } catch (e3) {}
             }
 
             if (scanBarEl) scanBarEl.style.width = '100%';
@@ -5262,6 +5277,15 @@
             if (cached && Array.isArray(cached.coords) && cached.coords.length > 0) {
                 return cached;
             }
+            if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+                try {
+                    const localData = await new Promise(res => chrome.storage.local.get([KEYS.UNIVERSE_CACHE], res));
+                    if (localData && localData[KEYS.UNIVERSE_CACHE] && Array.isArray(localData[KEYS.UNIVERSE_CACHE].coords)) {
+                        universeCacheInMemory = localData[KEYS.UNIVERSE_CACHE];
+                        return universeCacheInMemory;
+                    }
+                } catch (e) {}
+            }
         }
         const res = await forceRefreshAllUniverseData();
         return res?.universeData || getUniverseCache() || { coords: [] };
@@ -5276,12 +5300,12 @@
         const resBox = document.getElementById('ls-scan-results-box');
         const resList = document.getElementById('ls-scan-results');
 
-        const gStart = parseInt(document.getElementById('ls-sg1').value, 10) || 1;
-        const gEnd = parseInt(document.getElementById('ls-sg2').value, 10) || 9;
-        const sStart = parseInt(document.getElementById('ls-ss1').value, 10) || 1;
-        const sEnd = parseInt(document.getElementById('ls-ss2').value, 10) || 499;
-        const slotsStr = document.getElementById('ls-slots').value || '8';
-        const minEmpty = parseInt(document.getElementById('ls-min').value, 10) || 1;
+        const gStart = parseInt(document.getElementById('ls-sg1')?.value, 10) || 1;
+        const gEnd = parseInt(document.getElementById('ls-sg2')?.value, 10) || 9;
+        const sStart = parseInt(document.getElementById('ls-ss1')?.value, 10) || 1;
+        const sEnd = parseInt(document.getElementById('ls-ss2')?.value, 10) || 499;
+        const slotsStr = document.getElementById('ls-slots')?.value || '8';
+        const minEmpty = parseInt(document.getElementById('ls-min')?.value, 10) || 1;
 
         const targetSlots = slotsStr.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n) && n >= 1 && n <= 15);
         if (targetSlots.length === 0) { statusEl.textContent = (currentLang === 'tr' ? 'Geçerli slot girilmedi!' : 'No valid slots entered!'); return; }
@@ -5409,6 +5433,15 @@
         if (!force) {
             const cached = loadApiDataSync();
             if (cached) return cached;
+            if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+                try {
+                    const localData = await new Promise(res => chrome.storage.local.get([KEYS.API], res));
+                    if (localData && localData[KEYS.API] && localData[KEYS.API].players) {
+                        apiCacheInMemory = localData[KEYS.API];
+                        return apiCacheInMemory;
+                    }
+                } catch (e) {}
+            }
         }
 
         const res = await forceRefreshAllUniverseData();
@@ -5416,7 +5449,8 @@
     }
 
     async function startFinder() {
-        const query = document.getElementById('ls-find-q').value.trim().toLowerCase();
+        const qEl = document.getElementById('ls-find-q');
+        const query = (qEl ? qEl.value : '').trim().toLowerCase();
         const type = document.querySelector('input[name="ls-find-type"]:checked')?.value || 'player';
         const statusEl = document.getElementById('ls-find-status');
         const resultsEl = document.getElementById('ls-find-results');
@@ -5545,11 +5579,6 @@
         try {
             const AudioContextClass = window.AudioContext || window.webkitAudioContext;
             if (!AudioContextClass) return null;
-
-            // Chrome Autoplay Policy: Kullanıcı henüz sayfada herhangi bir yere tıklamadıysa konsola uyarı/hata düşmesini önle
-            if (navigator.userActivation && !navigator.userActivation.hasBeenActive) {
-                return null;
-            }
 
             if (!audioCtx || audioCtx.state === 'closed') {
                 audioCtx = new AudioContextClass();
@@ -13247,7 +13276,7 @@
                         '<div style="display:flex;justify-content:space-between;align-items:center">' +
                             '<div style="display:flex;align-items:center;gap:6px">' +
                                 '<span style="font-size:12px;color:#00bcff;font-weight:bold">⚡ LuckyStrike Helper</span>' +
-                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v15.5</span>' +
+                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v15.6</span>' +
                             '</div>' +
                             '<a href="https://github.com/kadirersoy/luckystrike-ogame-helper" target="_blank" style="font-size:10.5px;color:#00bcff;text-decoration:none;display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,0.05);padding:2px 7px;border-radius:4px;border:1px solid #1a2c3f" title="GitHub Proje Sayfası" data-i18n-title="settings_github_title">' +
                                 '<span>🔗</span> <span data-i18n="settings_github">GitHub</span>' +
@@ -14059,7 +14088,7 @@
             const r3 = Array.from(debugFilterState.row3).join(', ');
 
             let out = '==================================================\n' +
-                      '  LuckyStrike OGame Helper v15.5 - Log Kayıtları\n' +
+                      '  LuckyStrike OGame Helper v15.6 - Log Kayıtları\n' +
                       '  Tarih: ' + nowStr + '\n' +
                       '  URL: ' + window.location.href + '\n' +
                       '  Filtreler: [Akış: ' + r1 + '] [Kapsam: ' + r2 + '] [Seviye: ' + r3 + ']\n' +
@@ -14608,6 +14637,6 @@
     scanAndSaveExpeditionTemplates();
     updateAllAutomationStartButtons();
     setInterval(updateAllAutomationStartButtons, 400);
-    console.log(LS, 'LuckyStrike OGame Helper v15.5 hazır!');
+    console.log(LS, 'LuckyStrike OGame Helper v15.6 hazır!');
 
 })();

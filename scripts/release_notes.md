@@ -1,15 +1,17 @@
-### [TR] Türkçe Sürüm Notları (v15.5)
-- **🌕 Toplayıcı Ay Toplama Düzeltmeleri:**
-  - Sadece aylar seçildiğinde oturumun başlamasını engelleyen kuyruk kontrolü düzeltildi.
-  - Sağ menüdeki ay maden verilerinin eksik okunması giderilerek 6'lı hammadde ayrıştırması sağlandı.
-  - Ay filosu gönderimlerinde hedef rota parametreleri ve ay kimlik çözümlemesi optimize edildi.
-  - Taşınacak madeni bulunmayan hedefler otomatik atlandığında ilgili hedef onay kutusu güncellendi.
+### [TR] Türkçe Sürüm Notları (v15.6)
+- **🔊 Ses ve Alarm Çalma Düzeltmesi:**
+  - AudioContext başlatılmasını engelleyen kullanıcı aktivasyonu kısıtlaması kaldırıldı. Sayfa yenilemelerinde ve arka plan sekmelerinde saldırı, casusluk ve harabe alarm seslerinin çalmaması giderildi.
+- **🌌 Evren ve Oyuncu Verisi Depolama Güvencesi:**
+  - Evren koordinatlarının önbelleğe yazılma sırası optimize edildi. Tarayıcı depolama kotasının aşılması durumunda evren koordinatlarının kaybolması önlendi ve eklenti yerel depolama desteği eklendi.
+- **🔍 Galaksi Tarayıcı ve Oyuncu Arama Güvenliği:**
+  - Giriş elemanlarının okunmasında güvenli referans kontrolleri eklenerek boş değer hataları engellendi.
 
 ---
 
-### [ENG] English Release Notes (v15.5)
-- **🌕 Collector Moon Collection Fixes:**
-  - Fixed queue validation preventing the session from starting when only moons were selected.
-  - Resolved moon resource parsing from the sidebar with 6-tuple resource splitting.
-  - Corrected destination route parameters and moon ID resolution during moon collection dispatches.
-  - Automatically unchecks processed colonies when targets with no collectible cargo are skipped.
+### [ENG] English Release Notes (v15.6)
+- **🔊 Sound and Threat Alarm Audio Fix:**
+  - Removed user activation restriction blocking AudioContext initialization. Threat alarms now play reliably across page reloads and background tabs.
+- **🌌 Universe & Player Data Storage Resilience:**
+  - Prioritized universe coordinates cache writes before large player datasets. Prevented storage quota overflows from discarding universe data and added extension local storage support.
+- **🔍 Galaxy Scanner & Player Finder Safety:**
+  - Added safe optional chaining to input lookups to prevent null reference errors during early initialization.
