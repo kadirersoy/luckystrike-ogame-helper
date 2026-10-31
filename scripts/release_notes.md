@@ -1,15 +1,15 @@
-### [TR] Türkçe Sürüm Notları (v15.4)
-- **🔄 Toplayıcı Kaynak Yenileme & Ekran Senkronizasyonu:**
-  - Maden Toplayıcı sekmesine "⚡ Eşitle" butonunun yanına "🔄 Yenile" butonu eklendi.
-  - Sayfadaki sağ sidebar (OGame Infinity ve eklenti verileri dahil) taranarak tüm gezegen ve ayların mevcut maden tutarları doğrudan listeye ve alt toplamlara aktarılır.
-- **⏱️ Detaylı Kaynak İpuçları:**
-  - Gezegen ve ay satırlarındaki kaynakların üzerine gelindiğinde kısaltılmamış tam hammadde tutarları gösterilir.
+### [TR] Türkçe Sürüm Notları (v15.5)
+- **🌕 Toplayıcı Ay Toplama Düzeltmeleri:**
+  - Sadece aylar seçildiğinde oturumun başlamasını engelleyen kuyruk kontrolü düzeltildi.
+  - Sağ menüdeki ay maden verilerinin eksik okunması giderilerek 6'lı hammadde ayrıştırması sağlandı.
+  - Ay filosu gönderimlerinde hedef rota parametreleri ve ay kimlik çözümlemesi optimize edildi.
+  - Taşınacak madeni bulunmayan hedefler otomatik atlandığında ilgili hedef onay kutusu güncellendi.
 
 ---
 
-### [ENG] English Release Notes (v15.4)
-- **🔄 Collector Resource Refresh & Screen Sync:**
-  - Added a "🔄 Refresh" button next to "⚡ Equalize" in the Resource Collector tab.
-  - Scans the right sidebar in real-time to import current resources for all planets and moons into the list and summaries.
-- **⏱️ Detailed Resource Tooltips:**
-  - Hovering over colony resources displays unshortened exact values.
+### [ENG] English Release Notes (v15.5)
+- **🌕 Collector Moon Collection Fixes:**
+  - Fixed queue validation preventing the session from starting when only moons were selected.
+  - Resolved moon resource parsing from the sidebar with 6-tuple resource splitting.
+  - Corrected destination route parameters and moon ID resolution during moon collection dispatches.
+  - Automatically unchecks processed colonies when targets with no collectible cargo are skipped.

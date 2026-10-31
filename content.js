@@ -2,7 +2,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v15.4 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v15.5 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -7452,8 +7452,36 @@
                     const mHrefMatch = (mLink.getAttribute('href') || '').match(/cp=(\d+)/);
                     if (mHrefMatch) mId = mHrefMatch[1];
                     if (!mId) {
-                        const dataId = mLink.getAttribute('data-moon-id') || mLink.getAttribute('data-cp');
-                        if (dataId) mId = dataId;
+                        const dataId = mLink.getAttribute('data-moon-id') || mLink.getAttribute('data-cp') || mLink.dataset?.moonId || mLink.dataset?.cp;
+                        if (dataId && /^\d+$/.test(dataId)) mId = dataId;
+                    }
+                    if (!mId) {
+                        const otherMatches = (mLink.getAttribute('data-link') || mLink.getAttribute('data-url') || mLink.getAttribute('data-target') || mLink.getAttribute('onclick') || '').match(/cp=(\d+)/);
+                        if (otherMatches) mId = otherMatches[1];
+                    }
+                    if (!mId && (mLink.classList.contains('active') || (pEl.classList.contains('active') && (document.querySelector('meta[name="ogame-planet-type"]')?.getAttribute('content') === 'moon' || document.querySelector('meta[name="ogame-planet-type"]')?.getAttribute('content') === '3')))) {
+                        const activeMetaId = document.querySelector('meta[name="ogame-planet-id"]')?.getAttribute('content');
+                        if (activeMetaId && /^\d+$/.test(activeMetaId)) {
+                            mId = activeMetaId;
+                        }
+                    }
+                    if (!mId || !/^\d+$/.test(mId)) {
+                        try {
+                            const cachedPlanets = JSON.parse(localStorage.getItem('LS_EMPIRE_PLANETS') || '[]');
+                            const match = cachedPlanets.find(x => x.coords === coords && x.moon && x.moon.id && /^\d+$/.test(x.moon.id));
+                            if (match) mId = match.moon.id;
+                        } catch (e) {}
+                    }
+                    if (!mId || !/^\d+$/.test(mId)) {
+                        try {
+                            const pCacheObj = JSON.parse(localStorage.getItem(KEYS.PLANET_CACHE) || '{}');
+                            for (const [k, v] of Object.entries(pCacheObj)) {
+                                if (v && v.isMoon && v.coords === coords && /^\d+$/.test(k)) {
+                                    mId = k;
+                                    break;
+                                }
+                            }
+                        } catch (e) {}
                     }
                     if (!mId) mId = 'm-' + pId;
 
@@ -7607,56 +7635,82 @@
                     const mHrefMatch = (mLink.getAttribute('href') || '').match(/cp=(\d+)/);
                     if (mHrefMatch) mId = mHrefMatch[1];
                     if (!mId) {
-                        const dataId = mLink.getAttribute('data-moon-id') || mLink.getAttribute('data-cp');
-                        if (dataId) mId = dataId;
+                        const dataId = mLink.getAttribute('data-moon-id') || mLink.getAttribute('data-cp') || mLink.dataset?.moonId || mLink.dataset?.cp;
+                        if (dataId && /^\d+$/.test(dataId)) mId = dataId;
+                    }
+                    if (!mId) {
+                        const otherMatches = (mLink.getAttribute('data-link') || mLink.getAttribute('data-url') || mLink.getAttribute('data-target') || mLink.getAttribute('onclick') || '').match(/cp=(\d+)/);
+                        if (otherMatches) mId = otherMatches[1];
+                    }
+                    if (!mId && (mLink.classList.contains('active') || (pEl.classList.contains('active') && (document.querySelector('meta[name="ogame-planet-type"]')?.getAttribute('content') === 'moon' || document.querySelector('meta[name="ogame-planet-type"]')?.getAttribute('content') === '3')))) {
+                        const activeMetaId = document.querySelector('meta[name="ogame-planet-id"]')?.getAttribute('content');
+                        if (activeMetaId && /^\d+$/.test(activeMetaId)) {
+                            mId = activeMetaId;
+                        }
+                    }
+                    if (!mId || !/^\d+$/.test(mId)) {
+                        try {
+                            const cachedPlanets = JSON.parse(localStorage.getItem('LS_EMPIRE_PLANETS') || '[]');
+                            const match = cachedPlanets.find(x => x.coords === coords && x.moon && x.moon.id && /^\d+$/.test(x.moon.id));
+                            if (match) mId = match.moon.id;
+                        } catch (e) {}
+                    }
+                    if (!mId || !/^\d+$/.test(mId)) {
+                        try {
+                            const pCacheObj = JSON.parse(localStorage.getItem(KEYS.PLANET_CACHE) || '{}');
+                            for (const [k, v] of Object.entries(pCacheObj)) {
+                                if (v && v.isMoon && v.coords === coords && /^\d+$/.test(k)) {
+                                    mId = k;
+                                    break;
+                                }
+                            }
+                        } catch (e) {}
                     }
                 }
 
-                const moonArea = pEl.querySelector('.moonlink, [class*="moonlink"], [class*="moon-res"], [class*="moon_res"], [class*="ogk-moon"]');
-
-                // --- AY KAYNAKLARINI ÇEK ---
-                if (mId && moonArea) {
-                    const mM = moonArea.querySelector('[class*="metal"], [class*="ogk-m"]');
-                    const mC = moonArea.querySelector('[class*="crystal"], [class*="ogk-c"]');
-                    const mD = moonArea.querySelector('[class*="deuterium"], [class*="deut"], [class*="ogk-d"]');
-                    let moonNumbers = null;
-                    if (mM && mC && mD) {
-                        moonNumbers = [parseOgNum(mM.textContent), parseOgNum(mC.textContent), parseOgNum(mD.textContent)];
-                    } else {
-                        moonNumbers = extractNumbersFromDomNode(moonArea);
-                    }
-
-                    if (moonNumbers && moonNumbers.length >= 3) {
-                        pCache[mId] = {
-                            metal: moonNumbers[0],
-                            crystal: moonNumbers[1],
-                            deuterium: moonNumbers[2],
-                            coords: coords,
-                            isMoon: true,
-                            ts: Date.now()
-                        };
-                        updatedCount++;
-                    }
-                }
-
-                // --- GEZEGEN KAYNAKLARINI ÇEK ---
-                const pM = pEl.querySelector(':not(.moonlink):not([class*="moon"]) > [class*="metal"], .ogk-planet-res [class*="metal"], .ogk-planet-res [class*="ogk-m"]');
-                const pC = pEl.querySelector(':not(.moonlink):not([class*="moon"]) > [class*="crystal"], .ogk-planet-res [class*="crystal"], .ogk-planet-res [class*="ogk-c"]');
-                const pD = pEl.querySelector(':not(.moonlink):not([class*="moon"]) > [class*="deuterium"], :not(.moonlink):not([class*="moon"]) > [class*="deut"], .ogk-planet-res [class*="deut"], .ogk-planet-res [class*="ogk-d"]');
+                // Ay ve gezegen kaynaklarını çek
+                let moonNumbers = null;
                 let planetNumbers = null;
-                if (pM && pC && pD && (!moonArea || (!moonArea.contains(pM) && !moonArea.contains(pC) && !moonArea.contains(pD)))) {
-                    planetNumbers = [parseOgNum(pM.textContent), parseOgNum(pC.textContent), parseOgNum(pD.textContent)];
-                } else {
-                    planetNumbers = extractNumbersFromDomNode(pEl, moonArea);
+
+                const moonResContainer = pEl.querySelector('[class*="moon-res"], [class*="moon_res"], [class*="moonRes"], .moon-resources, .moonResources');
+                if (moonResContainer) {
+                    const mNums = extractNumbersFromDomNode(moonResContainer);
+                    if (mNums && mNums.length >= 3) {
+                        moonNumbers = mNums.slice(0, 3);
+                    }
                 }
 
-                if (planetNumbers && planetNumbers.length >= 3) {
+                const allNums = extractNumbersFromDomNode(pEl);
+                if (mLink && (!moonNumbers || moonNumbers.length < 3)) {
+                    if (allNums.length >= 6) {
+                        planetNumbers = [allNums[0], allNums[1], allNums[2]];
+                        moonNumbers = [allNums[3], allNums[4], allNums[5]];
+                    }
+                }
+
+                if (!planetNumbers && allNums.length >= 3) {
+                    planetNumbers = [allNums[0], allNums[1], allNums[2]];
+                }
+
+                if (pId && planetNumbers && planetNumbers.length >= 3) {
                     pCache[pId] = {
                         metal: planetNumbers[0],
                         crystal: planetNumbers[1],
                         deuterium: planetNumbers[2],
                         coords: coords,
                         isMoon: false,
+                        ts: Date.now()
+                    };
+                    updatedCount++;
+                }
+
+                if (mId && moonNumbers && moonNumbers.length >= 3) {
+                    pCache[mId] = {
+                        metal: moonNumbers[0],
+                        crystal: moonNumbers[1],
+                        deuterium: moonNumbers[2],
+                        coords: coords,
+                        isMoon: true,
                         ts: Date.now()
                     };
                     updatedCount++;
@@ -7917,6 +7971,26 @@
 
                 if (p.moon) {
                     const isTargetMoon = (collectorSettings.targetCoord === p.coords && collectorSettings.targetType === 3);
+
+                    if (collectorSettings.selectedItems['m-' + p.id] !== undefined) {
+                        if (collectorSettings.selectedItems[p.moon.id] === undefined) {
+                            collectorSettings.selectedItems[p.moon.id] = collectorSettings.selectedItems['m-' + p.id];
+                        }
+                        delete collectorSettings.selectedItems['m-' + p.id];
+                    }
+                    if (collectorSettings.reserves['m-' + p.id] !== undefined) {
+                        if (collectorSettings.reserves[p.moon.id] === undefined) {
+                            collectorSettings.reserves[p.moon.id] = collectorSettings.reserves['m-' + p.id];
+                        }
+                        delete collectorSettings.reserves['m-' + p.id];
+                    }
+                    if (collectorSettings.missions && collectorSettings.missions['m-' + p.id] !== undefined) {
+                        if (collectorSettings.missions[p.moon.id] === undefined) {
+                            collectorSettings.missions[p.moon.id] = collectorSettings.missions['m-' + p.id];
+                        }
+                        delete collectorSettings.missions['m-' + p.id];
+                    }
+
                     const mRes = getPlanetCachedResources(p.moon.id);
                     const mResTitle = `${t('coll_met', 'Metal')}: ${fmt(mRes.metal)} | ${t('coll_crys', 'Kristal')}: ${fmt(mRes.crystal)} | ${t('coll_deut', 'Deuterium')}: ${fmt(mRes.deuterium)}`;
                     const mReserve = collectorSettings.reserves[p.moon.id] !== undefined ? collectorSettings.reserves[p.moon.id] : 250000;
@@ -8365,10 +8439,17 @@
 
         const empire = getEmpirePlanetsAndMoons();
         const queue = [];
+        const allSelectedItems = [];
+        let totalSelectedCount = 0;
 
         empire.forEach(p => {
             const isTargetPlanet = (collectorSettings.targetCoord === p.coords && collectorSettings.targetType === 1);
             if (!isTargetPlanet && collectorSettings.selectedItems[p.id] !== false) {
+                totalSelectedCount++;
+                const pMission = (collectorSettings.missions && collectorSettings.missions[p.id]) ? collectorSettings.missions[p.id] : (collectorSettings.mission || 3);
+                const item = { id: p.id, name: p.name, coords: p.coords, isMoon: false, mission: pMission };
+                allSelectedItems.push(item);
+
                 const pRes = getPlanetCachedResources(p.id);
                 const pRez = collectorSettings.reserves[p.id] !== undefined ? collectorSettings.reserves[p.id] : 250000;
                 const estFuel = estimateFlightFuel(p.coords, 1, collectorSettings.targetCoord, collectorSettings.targetType || 1);
@@ -8377,13 +8458,17 @@
                 const hasDeu = collectorSettings.selectedRes.deu && ((pRes.deuterium || 0) - pRez - estFuel) > 0;
                 const isKnownEmpty = (pRes.metal !== undefined || pRes.crystal !== undefined || pRes.deuterium !== undefined) && !hasMet && !hasCri && !hasDeu;
                 if (!isKnownEmpty) {
-                    const pMission = (collectorSettings.missions && collectorSettings.missions[p.id]) ? collectorSettings.missions[p.id] : (collectorSettings.mission || 3);
-                    queue.push({ id: p.id, name: p.name, coords: p.coords, isMoon: false, mission: pMission });
+                    queue.push(item);
                 }
             }
             if (p.moon) {
                 const isTargetMoon = (collectorSettings.targetCoord === p.coords && collectorSettings.targetType === 3);
                 if (!isTargetMoon && collectorSettings.selectedItems[p.moon.id] === true) {
+                    totalSelectedCount++;
+                    const mMission = (collectorSettings.missions && collectorSettings.missions[p.moon.id]) ? collectorSettings.missions[p.moon.id] : (collectorSettings.mission || 3);
+                    const item = { id: p.moon.id, name: p.moon.name || `${p.name} ( ${t('coll_moon_name')} )`, coords: p.coords, isMoon: true, mission: mMission };
+                    allSelectedItems.push(item);
+
                     const mRes = getPlanetCachedResources(p.moon.id);
                     const mRez = collectorSettings.reserves[p.moon.id] !== undefined ? collectorSettings.reserves[p.moon.id] : 250000;
                     const estFuel = estimateFlightFuel(p.coords, 3, collectorSettings.targetCoord, collectorSettings.targetType || 1);
@@ -8392,29 +8477,30 @@
                     const hasDeu = collectorSettings.selectedRes.deu && ((mRes.deuterium || 0) - mRez - estFuel) > 0;
                     const isKnownEmpty = (mRes.metal !== undefined || mRes.crystal !== undefined || mRes.deuterium !== undefined) && !hasMet && !hasCri && !hasDeu;
                     if (!isKnownEmpty) {
-                        const mMission = (collectorSettings.missions && collectorSettings.missions[p.moon.id]) ? collectorSettings.missions[p.moon.id] : (collectorSettings.mission || 3);
-                        queue.push({ id: p.moon.id, name: p.moon.name || `${p.name} ( ${t('coll_moon_name')} )`, coords: p.coords, isMoon: true, mission: mMission });
+                        queue.push(item);
                     }
                 }
             }
         });
 
-        if (queue.length === 0) {
+        if (totalSelectedCount === 0) {
             alert(currentLang === 'tr' ? 'Toplama yapılacak en az bir gezegen veya ay seçmelisiniz!' : 'Please select at least one planet or moon to collect from!');
             return;
         }
+
+        const effectiveQueue = (queue.length > 0) ? queue : allSelectedItems;
 
         const fleetSlots = getFleetSlotsInfo();
         if (fleetSlots.isKnown && fleetSlots.isFull) {
             alert(t('fleet_slots_full_desc').replace('{current}', fleetSlots.current).replace('{max}', fleetSlots.max));
             return;
         }
-        if (fleetSlots.isKnown && fleetSlots.available > 0 && fleetSlots.available < queue.length) {
+        if (fleetSlots.isKnown && fleetSlots.available > 0 && fleetSlots.available < effectiveQueue.length) {
             const warnMsg = t('fleet_slots_warning_partial')
                 .replace('{avail}', fleetSlots.available)
                 .replace('{current}', fleetSlots.current)
                 .replace('{max}', fleetSlots.max)
-                .replace('{queue}', queue.length);
+                .replace('{queue}', effectiveQueue.length);
             if (!window.confirm(warnMsg)) {
                 return;
             }
@@ -8429,7 +8515,7 @@
             priorityMode: collectorSettings.priorityMode || 'speed',
             ships: { ...collectorSettings.selectedShips, priorityMode: collectorSettings.priorityMode || 'speed' },
             resources: collectorSettings.selectedRes,
-            queue: queue,
+            queue: effectiveQueue,
             currentIndex: 0,
             startedAt: Date.now()
         };
@@ -8437,15 +8523,15 @@
         sessionStorage.setItem(KEYS.COLLECTOR_RUN, JSON.stringify(session));
         updateAllAutomationStartButtons();
 
-        const firstItem = queue[0];
+        const firstItem = effectiveQueue[0];
         const [g, s, p] = session.targetCoord.split(':');
-        const firstType = firstItem.isMoon ? 3 : 1;
+        const targetType = session.targetType || 1;
         const firstMission = firstItem.mission || session.mission || 3;
-        const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${firstItem.id}&type=${firstType}&galaxy=${g}&system=${s}&position=${p}&mission=${firstMission}`;
+        const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${firstItem.id}&type=${targetType}&galaxy=${g}&system=${s}&position=${p}&mission=${firstMission}`;
 
         const metaId = document.querySelector('meta[name="ogame-planet-id"]')?.getAttribute('content');
         const metaType = document.querySelector('meta[name="ogame-planet-type"]')?.getAttribute('content');
-        const isCurrentOnMoon = (metaType === 'moon');
+        const isCurrentOnMoon = (metaType === 'moon' || metaType === '3');
         const shouldBeOnMoon = !!firstItem.isMoon;
         const typeMismatch = (isCurrentOnMoon !== shouldBeOnMoon);
 
@@ -8491,16 +8577,16 @@
 
         const metaId = document.querySelector('meta[name="ogame-planet-id"]')?.getAttribute('content');
         const metaType = document.querySelector('meta[name="ogame-planet-type"]')?.getAttribute('content');
-        const isCurrentOnMoon = (metaType === 'moon');
+        const isCurrentOnMoon = (metaType === 'moon' || metaType === '3');
         const shouldBeOnMoon = !!currentItem.isMoon;
         const typeMismatch = (isCurrentOnMoon !== shouldBeOnMoon);
 
         // Filo sayfasında değilsek veya sayfa sıradaki gezegenle eşleşmiyorsa yönlendir
         if (!isFleetPage || (metaId && metaId !== String(currentItem.id)) || typeMismatch) {
             const [g, s, p] = session.targetCoord.split(':');
-            const itemType = currentItem.isMoon ? 3 : 1;
+            const targetType = session.targetType || 1;
             const itemMission = currentItem.mission || session.mission || 3;
-            const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${currentItem.id}&type=${itemType}&galaxy=${g}&system=${s}&position=${p}&mission=${itemMission}`;
+            const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${currentItem.id}&type=${targetType}&galaxy=${g}&system=${s}&position=${p}&mission=${itemMission}`;
             window.location.href = url;
             return;
         }
@@ -8511,16 +8597,16 @@
 
             const currentMeta = document.querySelector('meta[name="ogame-planet-id"]')?.getAttribute('content');
             const currentType = document.querySelector('meta[name="ogame-planet-type"]')?.getAttribute('content');
-            const isPollOnMoon = (currentType === 'moon');
+            const isPollOnMoon = (currentType === 'moon' || currentType === '3');
             const pollMismatch = (isPollOnMoon !== !!currentItem.isMoon);
 
             if ((currentMeta && currentMeta !== String(currentItem.id)) || pollMismatch) {
                 // Eğer sayfa eski gezegende kaldıysa doğru gezegene yönlendir
                 clearInterval(pollInterval);
                 const [g, s, p] = session.targetCoord.split(':');
-                const itemType = currentItem.isMoon ? 3 : 1;
+                const targetType = session.targetType || 1;
                 const itemMission = currentItem.mission || session.mission || 3;
-                const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${currentItem.id}&type=${itemType}&galaxy=${g}&system=${s}&position=${p}&mission=${itemMission}`;
+                const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${currentItem.id}&type=${targetType}&galaxy=${g}&system=${s}&position=${p}&mission=${itemMission}`;
                 window.location.href = url;
                 return;
             }
@@ -8570,6 +8656,11 @@
             const skipMsg = t('coll_skip_no_cargo', '⏭️ {name}: Taşınacak maden yok (Rezerv ve yakıt korundu). Sonraki hedefe geçiliyor...')
                 .replace('{name}', currentItem.name || currentItem.coords);
             showCollectorToast(skipMsg, 2500);
+
+            if (!collectorSettings.selectedItems) collectorSettings.selectedItems = {};
+            collectorSettings.selectedItems[currentItem.id] = false;
+            saveCollectorSettings();
+            renderCollector();
 
             session.currentIndex++;
             sessionStorage.setItem(KEYS.COLLECTOR_RUN, JSON.stringify(session));
@@ -9104,8 +9195,9 @@
             if (session.currentIndex < session.queue.length) {
                 const nextItem = session.queue[session.currentIndex];
                 const [g, s, p] = session.targetCoord.split(':');
-                const nextType = nextItem.isMoon ? 3 : 1;
-                nextUrl = `/game/index.php?page=ingame&component=fleetdispatch&cp=${nextItem.id}&type=${nextType}&galaxy=${g}&system=${s}&position=${p}&mission=${session.mission || 3}`;
+                const targetType = session.targetType || 1;
+                const nextMission = nextItem.mission || session.mission || 3;
+                nextUrl = `/game/index.php?page=ingame&component=fleetdispatch&cp=${nextItem.id}&type=${targetType}&galaxy=${g}&system=${s}&position=${p}&mission=${nextMission}`;
             }
 
             // Sayfa bağlamında tekil submit tetikle (nextUrl ile OGame doğrudan yeni gezegene yönlendirilir)
@@ -9149,8 +9241,9 @@
                 if (session.currentIndex < session.queue.length) {
                     const nextItem = session.queue[session.currentIndex];
                     const [g, s, p] = session.targetCoord.split(':');
-                    const nextType = nextItem.isMoon ? 3 : 1;
-                    const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${nextItem.id}&type=${nextType}&galaxy=${g}&system=${s}&position=${p}&mission=${session.mission || 3}`;
+                    const targetType = session.targetType || 1;
+                    const nextMission = nextItem.mission || session.mission || 3;
+                    const url = `/game/index.php?page=ingame&component=fleetdispatch&cp=${nextItem.id}&type=${targetType}&galaxy=${g}&system=${s}&position=${p}&mission=${nextMission}`;
                     window.location.href = url;
                 } else {
                     sessionStorage.removeItem(KEYS.COLLECTOR_RUN);
@@ -13154,7 +13247,7 @@
                         '<div style="display:flex;justify-content:space-between;align-items:center">' +
                             '<div style="display:flex;align-items:center;gap:6px">' +
                                 '<span style="font-size:12px;color:#00bcff;font-weight:bold">⚡ LuckyStrike Helper</span>' +
-                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v15.4</span>' +
+                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v15.5</span>' +
                             '</div>' +
                             '<a href="https://github.com/kadirersoy/luckystrike-ogame-helper" target="_blank" style="font-size:10.5px;color:#00bcff;text-decoration:none;display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,0.05);padding:2px 7px;border-radius:4px;border:1px solid #1a2c3f" title="GitHub Proje Sayfası" data-i18n-title="settings_github_title">' +
                                 '<span>🔗</span> <span data-i18n="settings_github">GitHub</span>' +
@@ -13966,7 +14059,7 @@
             const r3 = Array.from(debugFilterState.row3).join(', ');
 
             let out = '==================================================\n' +
-                      '  LuckyStrike OGame Helper v15.4 - Log Kayıtları\n' +
+                      '  LuckyStrike OGame Helper v15.5 - Log Kayıtları\n' +
                       '  Tarih: ' + nowStr + '\n' +
                       '  URL: ' + window.location.href + '\n' +
                       '  Filtreler: [Akış: ' + r1 + '] [Kapsam: ' + r2 + '] [Seviye: ' + r3 + ']\n' +
@@ -14515,6 +14608,6 @@
     scanAndSaveExpeditionTemplates();
     updateAllAutomationStartButtons();
     setInterval(updateAllAutomationStartButtons, 400);
-    console.log(LS, 'LuckyStrike OGame Helper v15.4 hazır!');
+    console.log(LS, 'LuckyStrike OGame Helper v15.5 hazır!');
 
 })();
