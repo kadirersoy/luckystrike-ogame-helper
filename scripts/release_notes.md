@@ -1,39 +1,41 @@
-### [TR] Türkçe Sürüm Notları (v16.0)
-- **📦 Maden Toplayıcı Rezerv ve Yükleme Motoru Güçlendirildi:**
-  - Rezerv okuma mimarisi normalize edildi (`parseRezVal` & `parseOgNum`); string, sayı veya nesne formatlarındaki rezerv değerlerinin `NaN` üretmesi ve kargo kutularının boş (0) kalması hatası tamamen giderildi.
-  - Step 2 aşamasında canlı ambar kapasitesi doğrudan DOM ve dispatcher üzerinden okunarak dinamik ambar boyutu her adımda hatasız senkronize edildi.
-  - HUD banner'ında Metal, Kristal ve Deuterium taşınan miktarları ve korunan rezerv etiketi canlı olarak eksiksiz gösterilecek şekilde güncellendi.
-- **🛡️ Konuşlandır Görevi ve Madensiz Gezegen Mantığı İyileştirildi:**
-  - Görev "Konuşlandır" (Mission 4) olduğunda veya "Tümü" seçildiğinde, maden olmasa dahi filonun konuşlandırılması hedeflendiğinden `hasNoCargo` kısıtlaması devre dışı bırakıldı; filo gönderme butonu ve Space tetikleyicisi daima aktif tutuldu.
-  - Sayfa yüklenirken gemi stoklarının DOM'a geç gelmesinden ötürü filonun "yok" sanılıp adımların atlanması engellendi.
-  - Gezegen/ay geçişlerinde kazara peş peşe Space tuşuna basılıp hedeflerin pas geçilmesini önlemek amacıyla 500ms Space cooldown / debounce koruması getirildi.
-- **📬 Postacı ve 🛒 Sepet Dağıtım İyileştirmeleri:**
-  - **Çift Fonksiyonlu Dağıtım Alanı:** Dağıtım kutucuğu işaretli değilken `⚡ Eşitle` ile tutarlar seçili tüm hedeflere doğrudan atanır; işaretliyken ise hedeflerin kendi özel girilmiş tutarlarının üzerine ek pay (`+Ek Dağıtım`) olarak dinamik eklenir ve sevkiyatta toplam tutar sevk edilir.
-  - Her koloninin kendi seçili görevi (Nakliye `3` / Konuşlandır `4`) bir sonraki hedef URL'sine tam olarak aktarıldı.
-  - Sonda ve muharip gemilerin akıllı filo hesabında tam desteklenmesi sağlandı.
-- **🎨 Tasarım ve Tema Uyumu (Fenerbahçe & Dark Mod):**
-  - Fenerbahçe temasında `🔄 Yenile` butonları sarı zemin üzerine lacivert metin/ikon (`#ffd700` / `#001736`) olarak standardize edildi; cırtlak mavi tonlar giderildi.
-  - Dark temada ve tüm temalarda `⚡ Eşitle / ➕ Ekle` ile `🔄 Yenile` butonları tema paletine tam uyumlu ve tutarlı hale getirildi.
-  - `⚡ Tümü` butonunun aktifleştiğinde sağa taşması giderildi; genişlik ve padding dengelenerek simge ile metin ortalandı.
-  - Kaynak sıralaması tüm arayüzde standart **Metal ➔ Kristal ➔ Deuterium** (`M · K · D`) sırasına hizalandı.
+### [TR] Türkçe Sürüm Notları (v16.1)
+- **⛽ Yakıt Tüketim Ambar Aşımı (Fuel Overload) Koruması & Yönetimi:**
+  - Özellikle uzun menzilli uçuşlarda Casus Sondası gibi düşük kargo kapasiteli filoların yakıt gereksinimi toplam ambarı aştığında (`consumption > cargoSpace`, örn: `%103`) gönderim kilitlenerek hatalı filo çıkışı engellendi.
+  - Asistan HUD banner'ı bu durumlarda turuncu `⚠️ Hızı Ayarla & Gönder (Space)` butonuna ve bilgilendirici açıklama metnine geçer.
+  - Kullanıcı OGame sayfasından uçuş hızını düşürüp (`%10` - `%90`) yakıt tüketimi ambar kapasitesine uygun hale geldiğinde, buton otomatik olarak tekrar yeşil `🚀 Filoyu Gönder (Space)` hazır durumuna döner.
+  - Tüketim aşımı durumunda butona basılması veya Space tuşuna basılması engellenerek kullanıcıya toast uyarı bildirimi gösterilir; hedefi atlama (`⏭️ Atla`) veya görevi durdurma (`⏹️ İptal`) seçenekleri sunulur.
+  - Hız yüzdesi tıklamalarında `bridge.js` üzerinden anlık 50ms ve 200ms dispatcher senkronizasyonu sağlandı.
+- **🎯 Seçili Gemi Tipine Göre Dinamik "Gemi Yok" Uyarısı:**
+  - Uyarı mesajı kullanıcının seçtiği gemi tipine duyarlı hale getirildi:
+    - Yalnızca Casus Sondası seçiliyse: `⚠️ Sonda yok!`
+    - Yalnızca Rehber seçiliyse: `⚠️ Rehber yok!`
+    - Yalnızca Muharip Gemiler seçiliyse: `⚠️ Muharip gemi yok!`
+    - Büyük/Küçük Nakliye seçiliyse: `⚠️ Nakliye gemisi yok!`
+    - Hiçbiri seçili değilse: `⚠️ Seçili gemi yok!`
+  - Çok düşük kargo kapasitesine sahip gemiler (Casus Sondası vb.) seçildiğinde kargo kapasitesi 0 olsa bile gemilerin varlığı doğru algılanacak şekilde `hasShips` mantığı Toplayıcı, Postacı ve Maliyet Sepeti genelinde eşitlendi.
+- **🛒 Maliyet Sepeti (Cart) Sevkiyat İyileştirmeleri:**
+  - Sepet dağıtımında `sonda` ve diğer muharip gemilerin kargo özet metnine (`shipDesc`) dahil edilmesi sağlandı.
+  - `isAllShips` modu aktifken oluşabilecek değişken kapsamı referans hatası giderildi.
+  - Sepette gemi bulunmadığında doğrudan atlama (`⏭️ Atla (Space)`) akışı ve yetersiz kaynak/gemi uyarıları normalize edildi.
 
 ---
 
-### [ENG] English Release Notes (v16.0)
-- **📦 Resource Collector Reserve & Loading Engine Enhanced:**
-  - Standardized reserve parsing logic (`parseRezVal` & `parseOgNum`), eliminating `NaN` calculations and preventing cargo inputs from remaining zero.
-  - Added live cargo capacity fallback from DOM and fleet dispatcher in Step 2 for resilient ambar sizing.
-  - Live HUD banner transport stats (Metal, Crystal, Deuterium, and Protected Reserve) now accurately reflect realtime values.
-- **🛡️ Deploy Mission & Zero-Cargo Logic Fixed:**
-  - When Deploy mission (4) or "All Ships" mode is selected, empty cargo no longer locks the dispatch button; fleet deployment proceeds normally even with zero transportable cargo.
-  - Resolved timing race conditions where ship quantities were queried before DOM stocks finished rendering.
-  - Added 500ms Spacebar cooldown upon step transitions to prevent accidental double-skips.
-- **📬 Courier & 🛒 Cart Dispatch Synchronization:**
-  - **Dual-Mode Distribution:** When unchecked, `⚡ Equalize` assigns values directly across selected targets; when checked, distribution values are dynamically added on top of target-specific custom values (`+Extra`) and dispatched combined.
-  - Ensured each colony's specific mission selection (Transport vs Deploy) persists correctly across subsequent dispatch URLs.
-  - Full support for combat ships and probes in automated fleet calculations.
-- **🎨 UI & Theme Consistency (Fenerbahçe & Dark Mode):**
-  - Standardized `🔄 Refresh` buttons in the Fenerbahçe theme with elegant yellow background and navy text (`#ffd700` / `#001736`), eliminating jarring contrast.
-  - Ensured identical styling consistency for action and refresh buttons across all tabs and themes.
-  - Fixed `⚡ All` button text clipping by increasing width and centering content.
-  - Standardized resource ordering everywhere to **Metal ➔ Crystal ➔ Deuterium** (`M · C · D`).
+### [ENG] English Release Notes (v16.1)
+- **⛽ Fuel Consumption Overload Protection & Speed Management:**
+  - Prevented dispatch errors when high-distance probe flights require more deuterium fuel than available cargo capacity (`consumption > cargoSpace`, e.g. `103%`).
+  - The assistant HUD banner automatically updates to `⚠️ Adjust Speed & Send (Space)` along with clear guidance to lower flight speed.
+  - When the player manually lowers flight speed on the OGame page (`10%` - `90%`) and fuel consumption drops to `<= 100%`, the button automatically turns green and ready (`🚀 Send Fleet (Space)`).
+  - Clicking or pressing Space while overloaded is blocked with a helpful toast message; skipping (`⏭️ Skip`) or canceling (`⏹️ Cancel`) remains readily available.
+  - Added instant 50ms and 200ms dispatcher state sync upon speed percentage clicks via `bridge.js`.
+- **🎯 Contextual "No Ships" Warning Based on Ship Selection:**
+  - Contextualized warning alerts matching the active ship preferences:
+    - Only Spy Probes selected: `⚠️ No probes available!`
+    - Only Pathfinders selected: `⚠️ No pathfinders available!`
+    - Only Combat ships selected: `⚠️ No combat ships available!`
+    - Transports selected: `⚠️ No cargo ships available!`
+    - No ships selected: `⚠️ No selected ships available!`
+  - Probes with minimal cargo capacity are correctly recognized as valid ships (`hasShips`), preventing false "No cargo ships" states across Collector, Courier, and Cart.
+- **🛒 Cost Cart Delivery Enhancements:**
+  - Added Spy Probes and combat ships to the Cart HUD fleet summary (`shipDesc`).
+  - Fixed block-scoped variable resolution under `isAllShips` mode.
+  - Normalized warning banners and Spacebar skip flow when no ships match criteria.
