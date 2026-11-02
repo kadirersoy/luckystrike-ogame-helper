@@ -2,7 +2,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v16.0 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v16.1 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -251,6 +251,14 @@
             coll_hud_skip: 'Atla',
             coll_hud_cancel: 'İptal',
             coll_hud_no_ships: 'Nakliye gemisi yok!',
+            coll_hud_no_sonda: 'Sonda yok!',
+            coll_hud_no_rehber: 'Rehber yok!',
+            coll_hud_no_combat: 'Muharip gemi yok!',
+            coll_hud_no_transports: 'Nakliye gemisi yok!',
+            coll_hud_no_selected_ships: 'Seçili gemi yok!',
+            fleet_hud_adjust_speed_btn: 'Hızı Ayarla & Gönder',
+            fleet_hud_fuel_overload_desc: '⚠️ Yakıt tüketimi ambarı aşıyor {pct}! Lütfen sayfadan uçuş hızını düşürün, hedefi atlayın ya da görevi iptal edin.',
+            fleet_error_fuel_overload_toast: '⚠️ Yakıt tüketimi ambar kapasitesini aşıyor {pct}! Lütfen uçuş hızını düşürün veya hedefi atlayın.',
             coll_hud_shortage_title: '⚠️ Yetersiz Gemi Kapasitesi!',
             coll_hud_stop_btn: '⏹️ Toplamayı Durdur',
             coll_hud_proceed_btn: '⏩ Olduğu Kadar Gönder (Devam Et)',
@@ -714,6 +722,14 @@
             coll_hud_skip: 'Skip',
             coll_hud_cancel: 'Cancel',
             coll_hud_no_ships: 'No cargo ships available!',
+            coll_hud_no_sonda: 'No probes available!',
+            coll_hud_no_rehber: 'No pathfinders available!',
+            coll_hud_no_combat: 'No combat ships available!',
+            coll_hud_no_transports: 'No cargo ships available!',
+            coll_hud_no_selected_ships: 'No selected ships available!',
+            fleet_hud_adjust_speed_btn: 'Adjust Speed & Send',
+            fleet_hud_fuel_overload_desc: '⚠️ Fuel consumption exceeds cargo {pct}! Please lower speed below, skip target, or cancel.',
+            fleet_error_fuel_overload_toast: '⚠️ Fuel consumption exceeds cargo capacity {pct}! Please lower speed or skip target.',
             coll_hud_shortage_title: '⚠️ Insufficient Cargo Capacity!',
             coll_hud_stop_btn: '⏹️ Stop Collection',
             coll_hud_proceed_btn: '⏩ Send Partial Cargo (Continue)',
@@ -3112,6 +3128,71 @@
         return 0;
     }
 
+    function getFleetFuelOverloadInfo() {
+        let isOverloaded = false;
+        let pct = 0;
+        let text = '';
+
+        const consEl = document.getElementById('consumption') || document.querySelector('#fleet2 #consumption, .consumption, [data-property="consumption"]');
+        if (consEl) {
+            text = (consEl.textContent || '').trim();
+            const matchPct = text.match(/\((\d+)\s*%\)/);
+            if (matchPct && matchPct[1]) {
+                pct = parseInt(matchPct[1], 10);
+                if (pct > 100) {
+                    isOverloaded = true;
+                }
+            }
+            if (consEl.classList.contains('overload') || consEl.classList.contains('red') || consEl.classList.contains('error')) {
+                isOverloaded = true;
+            }
+        }
+
+        if (document.body.dataset.lsFuelOverloaded === 'true') {
+            isOverloaded = true;
+            if (!pct && document.body.dataset.lsFuelOverloadPct) {
+                pct = parseInt(document.body.dataset.lsFuelOverloadPct, 10);
+            }
+        }
+
+        const fuelVal = getFleetFuelConsumption();
+        const cargoVal = getFleetAvailableCargoSpace();
+        if (fuelVal > 0 && cargoVal > 0) {
+            const calcPct = Math.round((fuelVal / cargoVal) * 100);
+            if (fuelVal > cargoVal) {
+                isOverloaded = true;
+                if (!pct || pct <= 100) pct = calcPct;
+            }
+        }
+
+        return {
+            isOverloaded: isOverloaded,
+            pct: pct || (isOverloaded ? 101 : 100),
+            text: text
+        };
+    }
+
+    function getNoShipsWarningText(shipsConfig) {
+        if (!shipsConfig) return t('coll_hud_no_selected_ships', 'Seçili gemi yok!');
+        const activeKeys = [];
+        if (shipsConfig.bn) activeKeys.push('bn');
+        if (shipsConfig.kn) activeKeys.push('kn');
+        if (shipsConfig.rehber) activeKeys.push('rehber');
+        if (shipsConfig.sonda) activeKeys.push('sonda');
+        if (shipsConfig.other) activeKeys.push('other');
+
+        if (activeKeys.length === 1) {
+            const k = activeKeys[0];
+            if (k === 'sonda') return t('coll_hud_no_sonda', 'Sonda yok!');
+            if (k === 'rehber') return t('coll_hud_no_rehber', 'Rehber yok!');
+            if (k === 'other') return t('coll_hud_no_combat', 'Muharip gemi yok!');
+            if (k === 'bn' || k === 'kn') return t('coll_hud_no_transports', 'Nakliye gemisi yok!');
+        } else if (activeKeys.length === 2 && shipsConfig.bn && shipsConfig.kn) {
+            return t('coll_hud_no_transports', 'Nakliye gemisi yok!');
+        }
+        return t('coll_hud_no_selected_ships', 'Seçili gemi yok!');
+    }
+
     function estimateFlightFuel(fromCoord, fromType, toCoord, toType) {
         if (!fromCoord || !toCoord) return 200;
         const [g1, s1, p1] = String(fromCoord).split(':').map(Number);
@@ -3353,6 +3434,7 @@
         if (!isVisible) return false;
         if (sendBtn.disabled || sendBtn.classList.contains('off') || sendBtn.classList.contains('disabled')) return false;
         if (hasVisibleMissionError()) return false;
+        if (getFleetFuelOverloadInfo().isOverloaded) return false;
         return true;
     }
 
@@ -4038,6 +4120,7 @@
         let bnCount = 0, knCount = 0, rehberCount = 0, sondaCount = 0, availOther = 0;
         let otherShipCounts = {};
         let totalCap = 0;
+        let shipCounts = null;
 
         if (isAllShips) {
             if (shipPrefs.bn) bnCount = getAvailableCount(203);
@@ -4053,9 +4136,19 @@
                     }
                 });
             }
-            totalCap = (bnCount * shipCaps.bn) + (knCount * shipCaps.kn) + (rehberCount * shipCaps.rehber) + (sondaCount * shipCaps.sonda);
+            totalCap = (bnCount * shipCaps.bn) + (knCount * shipCaps.kn) + (rehberCount * shipCaps.rehber) + (sondaCount * (shipCaps.sonda || 0));
+            shipCounts = {
+                bn: bnCount,
+                kn: knCount,
+                rehber: rehberCount,
+                sonda: sondaCount,
+                availOther: availOther,
+                otherShipCounts: otherShipCounts,
+                totalCap: totalCap,
+                missingCargo: 0
+            };
         } else {
-            const shipCounts = calculateCartShips(currentItem.totalCargoNeeded, shipPrefs);
+            shipCounts = calculateCartShips(currentItem.totalCargoNeeded, shipPrefs);
             bnCount = shipCounts.bn;
             knCount = shipCounts.kn;
             rehberCount = shipCounts.rehber;
@@ -4161,6 +4254,23 @@
             }
         };
 
+        const updateCartBannerFuelOverload = (info) => {
+            const btn = document.getElementById('ls-cart-banner-send-btn');
+            if (btn) {
+                btn.disabled = false;
+                btn.style.background = '#d35400';
+                btn.style.color = '#fff';
+                btn.style.cursor = 'pointer';
+                btn.innerText = '⚠️ ' + t('fleet_hud_adjust_speed_btn', 'Hızı Ayarla & Gönder') + ' (Space)';
+            }
+            const statusEl = document.getElementById('ls-cart-hud-status');
+            if (statusEl) {
+                const pctText = (info && info.pct) ? ` (%${info.pct})` : '';
+                statusEl.innerText = t('fleet_hud_fuel_overload_desc', '⚠️ Yakıt tüketimi ambarı aşıyor {pct}! Lütfen sayfadan uçuş hızını düşürün, hedefi atlayın ya da görevi iptal edin.').replace('{pct}', pctText);
+                statusEl.style.display = 'block';
+            }
+        };
+
         let targetSet = false;
         let missionSet = false;
         let stableReadyTicks = 0;
@@ -4188,6 +4298,12 @@
                 const slots = getFleetSlotsInfo();
                 if (slots.isKnown && slots.isFull) {
                     updateCartBannerSlotWaiting(slots);
+                    return;
+                }
+
+                const fuelOverload = getFleetFuelOverloadInfo();
+                if (fuelOverload.isOverloaded) {
+                    updateCartBannerFuelOverload(fuelOverload);
                     return;
                 }
 
@@ -4358,7 +4474,11 @@
         if (details.shipCounts.bn > 0) shipDesc.push(details.shipCounts.bn + ' ' + t('cart_ships_lc'));
         if (details.shipCounts.kn > 0) shipDesc.push(details.shipCounts.kn + ' ' + t('cart_ships_sc'));
         if (details.shipCounts.rehber > 0) shipDesc.push(details.shipCounts.rehber + ' ' + t('cart_ships_pathfinder'));
-        const shipText = shipDesc.length > 0 ? shipDesc.join(', ') : '<span style="color:#e74c3c">' + t('coll_hud_no_ships') + '</span>';
+        if (details.shipCounts.sonda > 0) shipDesc.push(details.shipCounts.sonda + ' ' + t('coll_sonda'));
+        if (details.shipCounts.availOther > 0) shipDesc.push(details.shipCounts.availOther + ' ' + t('coll_other'));
+        const cartShipPrefs = getCartShipPrefs();
+        const noShipsFallback = getNoShipsWarningText(cartShipPrefs);
+        const shipText = shipDesc.length > 0 ? shipDesc.join(', ') : '<span style="color:#e74c3c">' + noShipsFallback + '</span>';
 
         const missionName = (currentItem.mission === 4 ? '🚀 ' + t('cart_deploy') : '🚚 ' + t('cart_transport'));
         const missionColor = (currentItem.mission === 4 ? '#2980b9' : '#2ecc71');
@@ -4367,10 +4487,19 @@
 
         const coordText = currentItem.coords ? ' <span style="color:#ffbe3b;font-family:monospace">[' + currentItem.coords + ']</span>' : '';
 
+        const targetShipTotal = (details.shipCounts.bn || 0) + (details.shipCounts.kn || 0) + (details.shipCounts.rehber || 0) + (details.shipCounts.sonda || 0) + (details.shipCounts.availOther || 0);
+        const hasShips = (targetShipTotal > 0 || (details.shipCounts.totalCap > 0) || isFleetStep2Active());
+
         // Uyarı mesajları (Kaynak veya Gemi Yetersizliği)
         let warningHtml = '';
         const hasAnyShortage = details.hasResourceShortage || details.hasShipShortage;
-        if (hasAnyShortage) {
+        if (!hasShips) {
+            warningHtml =
+                '<div id="ls-cart-warning-box" style="background:rgba(231,76,60,0.22);border:1px solid #e74c3c;border-radius:4px;padding:6px 10px;margin-bottom:8px;font-size:11px;color:#ff6b6b;text-align:center">' +
+                    '<div style="font-weight:bold;margin-bottom:2px">⚠️ ' + noShipsFallback + '</div>' +
+                    '<div style="font-size:10.5px;color:#f5b7b1">' + (currentLang === 'tr' ? 'Bu gezegen veya ayda seçtiğiniz kriterlere uygun gemi bulunmuyor.' : 'No ships matching your selection found on this planet/moon.') + '</div>' +
+                '</div>';
+        } else if (hasAnyShortage) {
             let reasons = [];
             if (details.hasShipShortage) {
                 reasons.push(`${t('coll_hud_cap_shortage')} (${formatShort(details.shipCounts.missingCargo)})`);
@@ -4389,8 +4518,6 @@
                     '</div>' +
                 '</div>';
         }
-
-        const hasShips = (details.shipCounts.totalCap > 0) || (details.shipCounts.bn > 0 || details.shipCounts.kn > 0 || details.shipCounts.rehber > 0);
 
         const currentSlots = getFleetSlotsInfo();
         const slotColor = currentSlots.isFull ? '#e74c3c' : '#2ecc71';
@@ -4434,6 +4561,14 @@
             const slots = getFleetSlotsInfo();
             if (slots.isKnown && slots.isFull) {
                 showCollectorToast(t('fleet_slots_full_desc').replace('{current}', slots.current).replace('{max}', slots.max), 4000);
+                return;
+            }
+
+            const fuelOverload = getFleetFuelOverloadInfo();
+            if (fuelOverload.isOverloaded) {
+                const pctText = fuelOverload.pct ? `(%${fuelOverload.pct})` : '';
+                const msg = t('fleet_error_fuel_overload_toast', '⚠️ Yakıt tüketimi ambar kapasitesini aşıyor {pct}! Lütfen uçuş hızını düşürün veya hedefi atlayın.').replace('{pct}', pctText);
+                showCollectorToast(msg, 5000);
                 return;
             }
 
@@ -4634,15 +4769,20 @@
                 e.preventDefault();
                 e.stopPropagation();
 
-                const warningBox = document.getElementById('ls-cart-warning-box');
-                if (warningBox && warningBox.style.display !== 'none') {
-                    // Uyarı açıkken Space doğrudan gönderemez, kullanıcı onay vermelidir
-                    return;
+                if (hasAnyShortage) {
+                    const warningBox = document.getElementById('ls-cart-warning-box');
+                    if (warningBox && warningBox.style.display !== 'none') {
+                        // Uyarı açıkken Space doğrudan gönderemez, kullanıcı onay vermelidir
+                        return;
+                    }
                 }
                 if (!hasShips) {
                     skipStep();
                 } else {
-                    sendFleet();
+                    const sendBtnEl = document.getElementById('ls-cart-banner-send-btn');
+                    if (sendBtnEl && !sendBtnEl.disabled) {
+                        sendFleet();
+                    }
                 }
             }
         };
@@ -9314,6 +9454,23 @@
         let totalTicks = 0;
         let step2CheckTimer = null;
 
+        const updateCollectorBannerFuelOverload = (info) => {
+            const btn = document.getElementById('ls-banner-send-btn');
+            if (btn) {
+                btn.disabled = false;
+                btn.style.background = '#d35400';
+                btn.style.color = '#fff';
+                btn.style.cursor = 'pointer';
+                btn.innerText = '⚠️ ' + t('fleet_hud_adjust_speed_btn', 'Hızı Ayarla & Gönder') + ' (Space)';
+            }
+            const statusEl = document.getElementById('ls-coll-hud-status');
+            if (statusEl) {
+                const pctText = info.pct ? `(%${info.pct})` : '';
+                statusEl.innerText = t('fleet_hud_fuel_overload_desc', '⚠️ Yakıt tüketimi ambarı aşıyor {pct}! Lütfen sayfadan uçuş hızını düşürün, hedefi atlayın ya da görevi iptal edin.').replace('{pct}', pctText);
+                statusEl.style.display = 'block';
+            }
+        };
+
         // Step 2 (Görev ve Kaynaklar) Hazırlık Fonksiyonu
         const prepareStep2 = () => {
             if (isStepCancelled) return;
@@ -9339,6 +9496,12 @@
                 const slots = getFleetSlotsInfo();
                 if (slots.isKnown && slots.isFull) {
                     updateCollectorBannerSlotWaiting(slots);
+                    return;
+                }
+
+                const fuelOverload = getFleetFuelOverloadInfo();
+                if (fuelOverload.isOverloaded) {
+                    updateCollectorBannerFuelOverload(fuelOverload);
                     return;
                 }
 
@@ -9536,7 +9699,7 @@
 
         const totalItems = session.queue.length;
         const currentStep = session.currentIndex + 1;
-        const hasShips = details.totalCap > 0;
+        const hasShips = (details.targetShipTotal > 0 || details.totalCap > 0 || isFleetStep2Active());
         const itemMission = currentItem.mission || session.mission || 3;
         const missionName = (itemMission === 4 ? '🛡️ ' + t('coll_deploy') : '🚚 ' + t('coll_transport'));
 
@@ -9544,7 +9707,10 @@
         if (details.bn > 0) shipDesc.push(details.bn + ' ' + t('coll_bn'));
         if (details.kn > 0) shipDesc.push(details.kn + ' ' + t('coll_kn'));
         if (details.rehber > 0) shipDesc.push(details.rehber + ' ' + t('coll_rehber'));
-        const shipText = shipDesc.length > 0 ? shipDesc.join(', ') : '<span style="color:#e74c3c">' + t('coll_hud_no_ships') + '</span>';
+        if (details.sonda > 0) shipDesc.push(details.sonda + ' ' + t('coll_sonda'));
+        if (details.other > 0) shipDesc.push(details.other + ' ' + t('coll_other'));
+        const noShipsFallback = getNoShipsWarningText(session.ships);
+        const shipText = (shipDesc.length > 0) ? shipDesc.join(', ') : ('<span style="color:#e74c3c">' + noShipsFallback + '</span>');
 
         const effTargetCoord = currentItem.targetCoord || session.targetCoord;
         const effTargetType = currentItem.targetType || session.targetType || 1;
@@ -9575,7 +9741,7 @@
         if (!hasShips) {
             warningHtml =
                 '<div id="ls-coll-warning-box" style="background:rgba(231,76,60,0.22);border:1px solid #e74c3c;border-radius:4px;padding:6px 10px;margin-bottom:8px;font-size:11px;color:#ff6b6b;text-align:center">' +
-                    '<div style="font-weight:bold;margin-bottom:2px">⚠️ ' + t('coll_hud_no_ships', 'Seçili Gemi Bulunamadı') + '</div>' +
+                    '<div style="font-weight:bold;margin-bottom:2px">⚠️ ' + noShipsFallback + '</div>' +
                     '<div style="font-size:10.5px;color:#f5b7b1">' + (currentLang === 'tr' ? 'Bu gezegen veya ayda seçtiğiniz kriterlere uygun gemi bulunmuyor.' : 'No ships matching your selection found on this planet/moon.') + '</div>' +
                 '</div>';
         } else if (details.hasNoCargo) {
@@ -9639,6 +9805,14 @@
             const slots = getFleetSlotsInfo();
             if (slots.isKnown && slots.isFull) {
                 showCollectorToast(t('fleet_slots_full_desc').replace('{current}', slots.current).replace('{max}', slots.max), 4000);
+                return;
+            }
+
+            const fuelOverload = getFleetFuelOverloadInfo();
+            if (fuelOverload.isOverloaded) {
+                const pctText = fuelOverload.pct ? `(%${fuelOverload.pct})` : '';
+                const msg = t('fleet_error_fuel_overload_toast', '⚠️ Yakıt tüketimi ambar kapasitesini aşıyor {pct}! Lütfen uçuş hızını düşürün veya hedefi atlayın.').replace('{pct}', pctText);
+                showCollectorToast(msg, 5000);
                 return;
             }
 
@@ -10836,6 +11010,23 @@
             }
         };
 
+        const updateCourierBannerFuelOverload = (info) => {
+            const btn = document.getElementById('ls-banner-send-btn');
+            if (btn) {
+                btn.disabled = false;
+                btn.style.background = '#d35400';
+                btn.style.color = '#fff';
+                btn.style.cursor = 'pointer';
+                btn.innerText = '⚠️ ' + t('fleet_hud_adjust_speed_btn', 'Hızı Ayarla & Gönder') + ' (Space)';
+            }
+            const statusEl = document.getElementById('ls-cour-hud-status');
+            if (statusEl) {
+                const pctText = info.pct ? `(%${info.pct})` : '';
+                statusEl.innerText = t('fleet_hud_fuel_overload_desc', '⚠️ Yakıt tüketimi ambarı aşıyor {pct}! Lütfen sayfadan uçuş hızını düşürün, hedefi atlayın ya da görevi iptal edin.').replace('{pct}', pctText);
+                statusEl.style.display = 'block';
+            }
+        };
+
         const updateCourierBannerWarning = (slots, reason = '') => {
             const btn = document.getElementById('ls-banner-send-btn');
             if (btn) {
@@ -10886,6 +11077,12 @@
                 const slots = getFleetSlotsInfo();
                 if (slots.isKnown && slots.isFull) {
                     updateCourierBannerSlotWaiting(slots);
+                    return;
+                }
+
+                const fuelOverload = getFleetFuelOverloadInfo();
+                if (fuelOverload.isOverloaded) {
+                    updateCourierBannerFuelOverload(fuelOverload);
                     return;
                 }
 
@@ -11044,7 +11241,7 @@
 
         const totalItems = session.queue.length;
         const currentStep = session.currentIndex + 1;
-        const hasShips = details.totalCap > 0;
+        const hasShips = (details.targetShipTotal > 0 || details.totalCap > 0 || isFleetStep2Active());
         const missionName = (session.mission === 4 ? '🛡️ ' + t('cour_deploy') : '🚚 ' + t('cour_transport'));
 
         let shipDesc = [];
@@ -11052,7 +11249,9 @@
         if (details.kn > 0) shipDesc.push(details.kn + ' ' + t('cour_kn'));
         if (details.rehber > 0) shipDesc.push(details.rehber + ' ' + t('cour_rehber'));
         if (details.sonda > 0) shipDesc.push(details.sonda + ' ' + t('coll_sonda'));
-        const shipText = shipDesc.length > 0 ? shipDesc.join(', ') : '<span style="color:#e74c3c">' + t('coll_hud_no_ships') + '</span>';
+        if (details.other > 0) shipDesc.push(details.other + ' ' + t('coll_other'));
+        const noShipsFallback = getNoShipsWarningText(session.ships);
+        const shipText = (shipDesc.length > 0) ? shipDesc.join(', ') : ('<span style="color:#e74c3c">' + noShipsFallback + '</span>');
 
         const cleanTName = currentItem.isMoon
             ? cleanMoonName(currentItem.name)
@@ -11071,7 +11270,7 @@
         if (hasShortage) {
             let reasons = [];
             if (details.totalCap === 0) {
-                reasons.push(t('coll_hud_no_ships'));
+                reasons.push(noShipsFallback);
             } else if (details.missingCargo > 0) {
                 reasons.push(`${t('coll_hud_cap_shortage')} (${formatShort(details.missingCargo)})`);
             }
@@ -11129,6 +11328,14 @@
             const slots = getFleetSlotsInfo();
             if (slots.isKnown && slots.isFull) {
                 showCollectorToast(t('fleet_slots_full_desc').replace('{current}', slots.current).replace('{max}', slots.max), 4000);
+                return;
+            }
+
+            const fuelOverload = getFleetFuelOverloadInfo();
+            if (fuelOverload.isOverloaded) {
+                const pctText = fuelOverload.pct ? `(%${fuelOverload.pct})` : '';
+                const msg = t('fleet_error_fuel_overload_toast', '⚠️ Yakıt tüketimi ambar kapasitesini aşıyor {pct}! Lütfen uçuş hızını düşürün veya hedefi atlayın.').replace('{pct}', pctText);
+                showCollectorToast(msg, 5000);
                 return;
             }
 
@@ -12253,6 +12460,14 @@
             const slots = getFleetSlotsInfo();
             if (slots.isKnown && slots.isFull) {
                 showCollectorToast(t('fleet_slots_full_desc').replace('{current}', slots.current).replace('{max}', slots.max), 4000);
+                return;
+            }
+
+            const fuelOverload = getFleetFuelOverloadInfo();
+            if (fuelOverload.isOverloaded) {
+                const pctText = fuelOverload.pct ? `(%${fuelOverload.pct})` : '';
+                const msg = t('fleet_error_fuel_overload_toast', '⚠️ Yakıt tüketimi ambar kapasitesini aşıyor {pct}! Lütfen uçuş hızını düşürün veya hedefi atlayın.').replace('{pct}', pctText);
+                showCollectorToast(msg, 5000);
                 return;
             }
             const expSlots = getExpeditionSlotsInfo();
@@ -14027,7 +14242,7 @@
                         '<div style="display:flex;justify-content:space-between;align-items:center">' +
                             '<div style="display:flex;align-items:center;gap:6px">' +
                                 '<span style="font-size:12px;color:#00bcff;font-weight:bold">⚡ LuckyStrike Helper</span>' +
-                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v16.0</span>' +
+                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v16.1</span>' +
                             '</div>' +
                             '<a href="https://github.com/kadirersoy/luckystrike-ogame-helper" target="_blank" style="font-size:10.5px;color:#00bcff;text-decoration:none;display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,0.05);padding:2px 7px;border-radius:4px;border:1px solid #1a2c3f" title="GitHub Proje Sayfası" data-i18n-title="settings_github_title">' +
                                 '<span>🔗</span> <span data-i18n="settings_github">GitHub</span>' +
@@ -14867,7 +15082,7 @@
             const r3 = Array.from(debugFilterState.row3).join(', ');
 
             let out = '==================================================\n' +
-                      '  LuckyStrike OGame Helper v16.0 - Log Kayıtları\n' +
+                      '  LuckyStrike OGame Helper v16.1 - Log Kayıtları\n' +
                       '  Tarih: ' + nowStr + '\n' +
                       '  URL: ' + window.location.href + '\n' +
                       '  Filtreler: [Akış: ' + r1 + '] [Kapsam: ' + r2 + '] [Seviye: ' + r3 + ']\n' +
@@ -15416,6 +15631,6 @@
     scanAndSaveExpeditionTemplates();
     updateAllAutomationStartButtons();
     setInterval(updateAllAutomationStartButtons, 400);
-    console.log(LS, 'LuckyStrike OGame Helper v16.0 hazır!');
+    console.log(LS, 'LuckyStrike OGame Helper v16.1 hazır!');
 
 })();

@@ -93,8 +93,11 @@
                 if (window.fleetDispatcher.mission !== undefined && window.fleetDispatcher.mission !== null) {
                     document.body.dataset.lsSelectedMission = String(window.fleetDispatcher.mission);
                 }
-                if (window.fleetDispatcher.consumption !== undefined && window.fleetDispatcher.consumption !== null) {
-                    document.body.dataset.lsFleetConsumption = String(window.fleetDispatcher.consumption);
+                var consVal = (window.fleetDispatcher.consumption !== undefined && window.fleetDispatcher.consumption !== null)
+                    ? parseInt(window.fleetDispatcher.consumption, 10)
+                    : null;
+                if (consVal !== null && !isNaN(consVal)) {
+                    document.body.dataset.lsFleetConsumption = String(consVal);
                 }
                 var cargoVal = window.fleetDispatcher.cargoSpace !== undefined && window.fleetDispatcher.cargoSpace !== null
                     ? window.fleetDispatcher.cargoSpace
@@ -102,7 +105,15 @@
                         ? window.fleetDispatcher.freeCargoSpace
                         : (window.fleetDispatcher.maxResources !== undefined ? window.fleetDispatcher.maxResources : null));
                 if (cargoVal !== null && !isNaN(parseInt(cargoVal, 10))) {
-                    document.body.dataset.lsFleetCargoSpace = String(cargoVal);
+                    var cNum = parseInt(cargoVal, 10);
+                    document.body.dataset.lsFleetCargoSpace = String(cNum);
+                    if (consVal !== null && !isNaN(consVal) && cNum > 0) {
+                        var isOver = consVal > cNum;
+                        document.body.dataset.lsFuelOverloaded = isOver ? 'true' : 'false';
+                        document.body.dataset.lsFuelOverloadPct = String(Math.round((consVal / cNum) * 100));
+                    } else {
+                        document.body.dataset.lsFuelOverloaded = 'false';
+                    }
                 }
             }
         } catch (e) {}
@@ -110,7 +121,13 @@
 
     try {
         syncFleetDispatcherState();
-        setInterval(syncFleetDispatcherState, 1500);
+        setInterval(syncFleetDispatcherState, 800);
+        document.addEventListener('click', function (e) {
+            if (e.target && (e.target.closest('#speedPercentage') || e.target.closest('.steps') || (e.target.className && String(e.target.className).indexOf('step') !== -1))) {
+                setTimeout(syncFleetDispatcherState, 50);
+                setTimeout(syncFleetDispatcherState, 200);
+            }
+        }, true);
     } catch (e) {}
 
     function selectExpeditionTemplateMain(d) {
