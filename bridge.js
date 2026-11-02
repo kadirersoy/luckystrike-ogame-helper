@@ -96,6 +96,14 @@
                 if (window.fleetDispatcher.consumption !== undefined && window.fleetDispatcher.consumption !== null) {
                     document.body.dataset.lsFleetConsumption = String(window.fleetDispatcher.consumption);
                 }
+                var cargoVal = window.fleetDispatcher.cargoSpace !== undefined && window.fleetDispatcher.cargoSpace !== null
+                    ? window.fleetDispatcher.cargoSpace
+                    : (window.fleetDispatcher.freeCargoSpace !== undefined && window.fleetDispatcher.freeCargoSpace !== null
+                        ? window.fleetDispatcher.freeCargoSpace
+                        : (window.fleetDispatcher.maxResources !== undefined ? window.fleetDispatcher.maxResources : null));
+                if (cargoVal !== null && !isNaN(parseInt(cargoVal, 10))) {
+                    document.body.dataset.lsFleetCargoSpace = String(cargoVal);
+                }
             }
         } catch (e) {}
     }
@@ -190,6 +198,49 @@
                     if ($el.length) {
                         $el.val('' + d.amount).trigger('input').trigger('change').trigger('keyup');
                     }
+                }
+            } else if (d.type === 'SET_TARGET_TYPE') {
+                var targetType = parseInt(d.targetType, 10) || 1;
+                bridgeLog('ACTION', 'BRIDGE', 'Hedef tip ayarlanıyor: ' + targetType);
+                if (window.$) {
+                    var $t = $('#type, input[name="type"]');
+                    if ($t.length && String($t.val()).trim() !== String(targetType).trim()) {
+                        $t.val('' + targetType).trigger('input').trigger('change');
+                    }
+                    if (targetType === 3) {
+                        var $m = $('#mbutton');
+                        if (!$m.length) $m = $('#fleet2 #mbutton, [data-type="3"], [data-planet-type="3"]').first();
+                        if ($m.length && !$m.hasClass('moon_selected') && !$m.hasClass('selected') && !$m.parent().hasClass('moon_selected')) {
+                            realClick($m[0]);
+                        }
+                    } else if (targetType === 2) {
+                        var $d = $('#dbutton');
+                        if (!$d.length) $d = $('#fleet2 #dbutton, [data-type="2"], [data-planet-type="2"]').first();
+                        if ($d.length && !$d.hasClass('debris_selected') && !$d.hasClass('selected') && !$d.parent().hasClass('debris_selected')) {
+                            realClick($d[0]);
+                        }
+                    } else {
+                        var $pb = $('#pbutton');
+                        if (!$pb.length) $pb = $('#fleet2 #pbutton, [data-type="1"], [data-planet-type="1"]').first();
+                        if ($pb.length && !$pb.hasClass('planet_selected') && !$pb.hasClass('selected') && !$pb.parent().hasClass('planet_selected')) {
+                            realClick($pb[0]);
+                        }
+                    }
+                    if (window.fleetDispatcher) {
+                        window.fleetDispatcher.targetPlanetType = targetType;
+                        try {
+                            if (typeof window.fleetDispatcher.selectPlanetType === 'function') {
+                                window.fleetDispatcher.selectPlanetType(targetType);
+                            }
+                            if (typeof window.fleetDispatcher.setTargetPlanetType === 'function') {
+                                window.fleetDispatcher.setTargetPlanetType(targetType);
+                            }
+                            if (typeof window.fleetDispatcher.updateTarget === 'function') {
+                                window.fleetDispatcher.updateTarget();
+                            }
+                        } catch (e) {}
+                    }
+                    syncFleetDispatcherState();
                 }
             } else if (d.type === 'SET_TARGET') {
                 var targetType = parseInt(d.targetType, 10) || 1;

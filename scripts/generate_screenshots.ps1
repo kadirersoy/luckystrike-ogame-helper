@@ -17,8 +17,9 @@ $allTabs = @("cart", "collector", "courier", "debris", "expedition", "scanner", 
 $tabs = if ($Tab -eq "all" -or [string]::IsNullOrWhiteSpace($Tab)) { 
     $allTabs 
 } else { 
-    $cleanTab = $Tab.ToLower().Replace("tab_", "").Trim()
-    if ($allTabs -contains $cleanTab) { @($cleanTab) } else { 
+    $requested = $Tab.Split(',') | ForEach-Object { $_.ToLower().Replace("tab_", "").Trim() } | Where-Object { $_ }
+    $valid = $requested | Where-Object { $allTabs -contains $_ }
+    if ($valid.Count -gt 0) { $valid } else { 
         Write-Error "Invalid tab '$Tab'. Allowed: $($allTabs -join ', ')"
     }
 }
@@ -127,8 +128,10 @@ $htmlTemplate = @'
             originType: 1,
             originName: courierOriginName,
             mission: 3,
+            missions: { '103': 3, '104': 4, '105': 3, '106': 3, '107': 4 },
             priorityMode: 'speed',
-            selectedShips: { bn: true, kn: true, rehber: false },
+            selectedShips: { bn: true, kn: true, rehber: false, sonda: false, other: false },
+            allShips: false,
             syncEnabled: true,
             syncAmount: { met: 2000000, cri: 1000000, deu: 500000 },
             selectedItems: { '103': true, '104': true, '105': true, '106': true, '107': true },
@@ -148,11 +151,21 @@ $htmlTemplate = @'
             targetType: 3,
             targetName: collectorTargetName,
             mission: 3,
+            missions: { '101': 3, '103': 3, '104': 4, '105': 3, '106': 4, '107': 3 },
             priorityMode: 'speed',
-            selectedShips: { bn: true, kn: true, rehber: false },
+            selectedShips: { bn: true, kn: true, rehber: false, sonda: false, other: false },
+            allShips: false,
             selectedRes: { met: true, cri: true, deu: true },
             selectedItems: { '101': true, '103': true, '104': true, '105': true, '106': true, '107': true },
-            reserves: { '101': 250000, '103': 250000, '104': 100000, '105': 250000, '106': 250000, '107': 100000 }
+            globalReserves: { met: 0, cri: 0, deu: 250000 },
+            reserves: {
+                '101': { met: 0, cri: 0, deu: 250000 },
+                '103': { met: 500000, cri: 200000, deu: 250000 },
+                '104': { met: 0, cri: 0, deu: 100000 },
+                '105': { met: 1000000, cri: 500000, deu: 250000 },
+                '106': { met: 0, cri: 0, deu: 250000 },
+                '107': { met: 0, cri: 0, deu: 100000 }
+            }
         }));
 
         localStorage.setItem('LS_EXPEDITION_SETTINGS', JSON.stringify({
