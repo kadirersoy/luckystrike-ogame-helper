@@ -2,7 +2,7 @@
     'use strict';
 
     const LS = '[LS]';
-    console.log(LS, 'LuckyStrike OGame Helper v16.1 yükleniyor...');
+    console.log(LS, 'LuckyStrike OGame Helper v16.2 yükleniyor...');
 
     // ============================================================
     // STORAGE KEYS & STATE
@@ -258,7 +258,9 @@
             coll_hud_no_selected_ships: 'Seçili gemi yok!',
             fleet_hud_adjust_speed_btn: 'Hızı Ayarla & Gönder',
             fleet_hud_fuel_overload_desc: '⚠️ Yakıt tüketimi ambarı aşıyor {pct}! Lütfen sayfadan uçuş hızını düşürün, hedefi atlayın ya da görevi iptal edin.',
+            fleet_hud_insufficient_fuel_desc: '⚠️ Uçuş yakıtı yetersiz! (Gereken: {fuel} Deu, Mevcut: {avail} Deu). Lütfen sayfadan uçuş hızını (%10-%90) düşürün, hedefi atlayın ya da görevi iptal edin.',
             fleet_error_fuel_overload_toast: '⚠️ Yakıt tüketimi ambar kapasitesini aşıyor {pct}! Lütfen uçuş hızını düşürün veya hedefi atlayın.',
+            fleet_error_insufficient_fuel_toast: '⚠️ Uçuş yakıtı yetersiz! (Gereken: {fuel} Deu, Mevcut: {avail} Deu). Lütfen uçuş hızını düşürün veya hedefi atlayın.',
             coll_hud_shortage_title: '⚠️ Yetersiz Gemi Kapasitesi!',
             coll_hud_stop_btn: '⏹️ Toplamayı Durdur',
             coll_hud_proceed_btn: '⏩ Olduğu Kadar Gönder (Devam Et)',
@@ -729,7 +731,9 @@
             coll_hud_no_selected_ships: 'No selected ships available!',
             fleet_hud_adjust_speed_btn: 'Adjust Speed & Send',
             fleet_hud_fuel_overload_desc: '⚠️ Fuel consumption exceeds cargo {pct}! Please lower speed below, skip target, or cancel.',
+            fleet_hud_insufficient_fuel_desc: '⚠️ Insufficient flight fuel! (Required: {fuel} Deu, Available: {avail} Deu). Please lower flight speed (10%-90%) below, skip target, or cancel.',
             fleet_error_fuel_overload_toast: '⚠️ Fuel consumption exceeds cargo capacity {pct}! Please lower speed or skip target.',
+            fleet_error_insufficient_fuel_toast: '⚠️ Insufficient flight fuel! (Required: {fuel} Deu, Available: {avail} Deu). Please lower flight speed or skip target.',
             coll_hud_shortage_title: '⚠️ Insufficient Cargo Capacity!',
             coll_hud_stop_btn: '⏹️ Stop Collection',
             coll_hud_proceed_btn: '⏩ Send Partial Cargo (Continue)',
@@ -3092,14 +3096,14 @@
     }
 
     function getFleetFuelConsumption() {
-        if (document.body.dataset.lsFleetConsumption) {
-            const val = parseInt(document.body.dataset.lsFleetConsumption, 10);
-            if (!isNaN(val) && val > 0) return val;
-        }
         const el = document.getElementById('consumption') || document.querySelector('#fleet2 #consumption, .consumption, [data-property="consumption"]');
         if (el) {
             const val = parseOgNum(el.textContent);
             if (val > 0) return val;
+        }
+        if (document.body.dataset.lsFleetConsumption) {
+            const val = parseInt(document.body.dataset.lsFleetConsumption, 10);
+            if (!isNaN(val) && val > 0) return val;
         }
         return 0;
     }
@@ -3128,8 +3132,20 @@
         return 0;
     }
 
-    function getFleetFuelOverloadInfo() {
+    function getLoadedDeuteriumCargo() {
+        const el = document.getElementById('deuterium') ||
+                   document.querySelector('input#deuterium') ||
+                   document.querySelector('input[name="deuterium"]') ||
+                   document.querySelector('input[data-resource="deuterium"]') ||
+                   document.querySelector('input[id*="deuterium"]') ||
+                   document.querySelector('input[name*="deuterium"]');
+        if (!el) return 0;
+        return parseInt(String(el.value || '0').replace(/[^0-9]/g, '').trim(), 10) || 0;
+    }
+
+    function getFleetFuelIssueInfo(cargoDeuLoaded = null) {
         let isOverloaded = false;
+        let isInsufficientDeu = false;
         let pct = 0;
         let text = '';
 
@@ -3165,11 +3181,71 @@
             }
         }
 
+        let loadedDeu = 0;
+        if (cargoDeuLoaded !== null && cargoDeuLoaded !== undefined) {
+            loadedDeu = Math.max(0, parseInt(cargoDeuLoaded, 10) || 0);
+        } else {
+            loadedDeu = getLoadedDeuteriumCargo();
+        }
+
+        const liveDeu = (typeof getLiveResources === 'function' ? (getLiveResources().deuterium || 0) : 0);
+        const totalDeuNeeded = fuelVal + loadedDeu;
+
+        if (fuelVal > 0 && liveDeu < totalDeuNeeded) {
+            isInsufficientDeu = true;
+        }
+
+        const hasIssue = isOverloaded || isInsufficientDeu;
+
         return {
+            hasIssue: hasIssue,
             isOverloaded: isOverloaded,
+            isInsufficientDeu: isInsufficientDeu,
             pct: pct || (isOverloaded ? 101 : 100),
+            requiredFuel: fuelVal,
+            totalDeuRequired: totalDeuNeeded,
+            availableDeu: liveDeu,
+            cargoDeu: loadedDeu,
             text: text
         };
+    }
+
+    function getFleetFuelOverloadInfo(cargoDeuLoaded = null) {
+        const issue = getFleetFuelIssueInfo(cargoDeuLoaded);
+        return {
+            hasIssue: issue.hasIssue,
+            isOverloaded: issue.hasIssue,
+            isCargoOverloaded: issue.isOverloaded,
+            isInsufficientDeu: issue.isInsufficientDeu,
+            pct: issue.pct,
+            requiredFuel: issue.requiredFuel,
+            totalDeuRequired: issue.totalDeuRequired,
+            availableDeu: issue.availableDeu,
+            cargoDeu: issue.cargoDeu,
+            text: issue.text
+        };
+    }
+
+    function getFuelIssueDescription(info) {
+        if (!info || !info.hasIssue) return '';
+        if (info.isInsufficientDeu) {
+            return t('fleet_hud_insufficient_fuel_desc', '⚠️ Uçuş yakıtı yetersiz! (Gereken: {fuel} Deu, Mevcut: {avail} Deu). Lütfen sayfadan uçuş hızını (%10-%90) düşürün, hedefi atlayın ya da görevi iptal edin.')
+                .replace('{fuel}', formatShort(info.totalDeuRequired || info.requiredFuel))
+                .replace('{avail}', formatShort(info.availableDeu));
+        }
+        const pctText = info.pct ? `(%${info.pct})` : '';
+        return t('fleet_hud_fuel_overload_desc', '⚠️ Yakıt tüketimi ambarı aşıyor {pct}! Lütfen sayfadan uçuş hızını düşürün, hedefi atlayın ya da görevi iptal edin.').replace('{pct}', pctText);
+    }
+
+    function getFuelIssueToast(info) {
+        if (!info || !info.hasIssue) return '';
+        if (info.isInsufficientDeu) {
+            return t('fleet_error_insufficient_fuel_toast', '⚠️ Uçuş yakıtı yetersiz! (Gereken: {fuel} Deu, Mevcut: {avail} Deu). Lütfen uçuş hızını düşürün veya hedefi atlayın.')
+                .replace('{fuel}', formatShort(info.totalDeuRequired || info.requiredFuel))
+                .replace('{avail}', formatShort(info.availableDeu));
+        }
+        const pctText = info.pct ? `(%${info.pct})` : '';
+        return t('fleet_error_fuel_overload_toast', '⚠️ Yakıt tüketimi ambar kapasitesini aşıyor {pct}! Lütfen uçuş hızını düşürün veya hedefi atlayın.').replace('{pct}', pctText);
     }
 
     function getNoShipsWarningText(shipsConfig) {
@@ -3434,7 +3510,7 @@
         if (!isVisible) return false;
         if (sendBtn.disabled || sendBtn.classList.contains('off') || sendBtn.classList.contains('disabled')) return false;
         if (hasVisibleMissionError()) return false;
-        if (getFleetFuelOverloadInfo().isOverloaded) return false;
+        if (getFleetFuelIssueInfo().hasIssue) return false;
         return true;
     }
 
@@ -4265,8 +4341,7 @@
             }
             const statusEl = document.getElementById('ls-cart-hud-status');
             if (statusEl) {
-                const pctText = (info && info.pct) ? ` (%${info.pct})` : '';
-                statusEl.innerText = t('fleet_hud_fuel_overload_desc', '⚠️ Yakıt tüketimi ambarı aşıyor {pct}! Lütfen sayfadan uçuş hızını düşürün, hedefi atlayın ya da görevi iptal edin.').replace('{pct}', pctText);
+                statusEl.innerText = getFuelIssueDescription(info);
                 statusEl.style.display = 'block';
             }
         };
@@ -4298,12 +4373,6 @@
                 const slots = getFleetSlotsInfo();
                 if (slots.isKnown && slots.isFull) {
                     updateCartBannerSlotWaiting(slots);
-                    return;
-                }
-
-                const fuelOverload = getFleetFuelOverloadInfo();
-                if (fuelOverload.isOverloaded) {
-                    updateCartBannerFuelOverload(fuelOverload);
                     return;
                 }
 
@@ -4344,12 +4413,21 @@
                     }
                 }
 
-                // 4. Filo gönderim hazır mı kontrolü (Görev seçili + Kargo yüklü + Buton aktif + Hedef kontrolü bitmiş)
+                // Yakıt / Ambar kontrolü (Hedef ve görev seçiliyken, sunucu kontrolü tamamlandığında)
+                const fuelIssue = getFleetFuelIssueInfo(deuLoad);
+                if (!targetChecking && isMissionSelected(missionId) && fuelIssue.hasIssue) {
+                    stableReadyTicks = 0;
+                    updateCartBannerFuelOverload(fuelIssue);
+                    return;
+                }
+
+                // 4. Filo gönderim hazır mı kontrolü (Görev seçili + Kargo yüklü + Buton tıklanabilir + Hedef kontrolü bitmiş)
                 const sendBtn = findSendFleetButton();
                 const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || sendBtn.offsetHeight > 0);
-                const isReady = isMissionSelected(missionId) && isCargoLoaded;
+                const isSendBtnClickable = isSendBtnVisible && !sendBtn.disabled && !sendBtn.classList.contains('off') && !sendBtn.classList.contains('disabled');
+                const isReady = isMissionSelected(missionId) && isCargoLoaded && isSendBtnClickable && !fuelIssue.hasIssue;
 
-                if (isReady && isSendBtnVisible) {
+                if (isReady) {
                     stableReadyTicks++;
                     if (stableReadyTicks >= 2) {
                         updateCartBannerReady(slots);
@@ -4360,18 +4438,22 @@
                         lastResourceFillTime = Date.now();
                         fillFleetResources(metLoad, criLoad, deuLoad);
                     }
-                    if (totalTicks > 40 && isSendBtnVisible) {
+                    if (totalTicks > 40 && isSendBtnClickable && isReady) {
                         updateCartBannerReady(slots);
                     }
                 }
 
                 // 5. 6 saniye boyunca hazır olmadıysa uyarı göster ama döngüyü kesme
                 if (totalTicks > 75 && (!isSendFleetReady() || !isCargoLoaded)) {
+                    if (fuelIssue.hasIssue) {
+                        updateCartBannerFuelOverload(fuelIssue);
+                        return;
+                    }
                     let reason = '';
                     if (isTargetCheckPending()) reason = t('fleet_hud_wait_target_check', '⏳ Sunucu hedef kontrolü bekleniyor...');
                     else if (!isMissionSelected(currentItem.mission || 3)) reason = t('fleet_hud_wait_mission', '⚠️ Görev seçimi bekleniyor...');
                     else if (!isCargoLoaded) reason = t('fleet_hud_wait_cargo', '⚠️ Kaynak yüklemesi doğrulanıyor...');
-                    else if (!isSendBtnVisible) reason = t('fleet_hud_wait_send_btn', '⚠️ Filo Gönder butonu aktifleşmedi');
+                    else if (!isSendBtnClickable) reason = t('fleet_hud_wait_send_btn', '⚠️ Filo Gönder butonu aktifleşmedi');
                     else if (hasVisibleMissionError()) reason = t('fleet_mission_error_waiting', '⚠️ Görev onaylanamadı, hedef kontrol ediliyor...');
                     updateCartBannerWarning(slots, reason);
                 }
@@ -4564,10 +4646,13 @@
                 return;
             }
 
-            const fuelOverload = getFleetFuelOverloadInfo();
-            if (fuelOverload.isOverloaded) {
-                const pctText = fuelOverload.pct ? `(%${fuelOverload.pct})` : '';
-                const msg = t('fleet_error_fuel_overload_toast', '⚠️ Yakıt tüketimi ambar kapasitesini aşıyor {pct}! Lütfen uçuş hızını düşürün veya hedefi atlayın.').replace('{pct}', pctText);
+            const mLoad = (details.met !== undefined ? details.met : details.metLoad) || 0;
+            const cLoad = (details.cri !== undefined ? details.cri : details.criLoad) || 0;
+            const dLoad = (details.deu !== undefined ? details.deu : details.deuLoad) || 0;
+
+            const fuelIssue = getFleetFuelIssueInfo(dLoad);
+            if (fuelIssue.hasIssue) {
+                const msg = getFuelIssueToast(fuelIssue);
                 showCollectorToast(msg, 5000);
                 return;
             }
@@ -4576,22 +4661,8 @@
                 document.activeElement.blur();
             }
 
-            const fuelReq = getFleetFuelConsumption();
-            const liveDeu = getLiveResources().deuterium;
-            if (fuelReq > 0 && liveDeu < fuelReq) {
-                const fuelMsg = t('fleet_error_insufficient_fuel', '⚠️ Uçuş yakıtı yetersiz! (Gereken: {fuel} Deu, Mevcut: {avail} Deu)')
-                    .replace('{fuel}', formatShort(fuelReq))
-                    .replace('{avail}', formatShort(liveDeu));
-                showCollectorToast(fuelMsg, 5000);
-                return;
-            }
-
             const sendBtn = findSendFleetButton();
             const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || sendBtn.offsetHeight > 0);
-
-            const mLoad = (details.met !== undefined ? details.met : details.metLoad) || 0;
-            const cLoad = (details.cri !== undefined ? details.cri : details.criLoad) || 0;
-            const dLoad = (details.deu !== undefined ? details.deu : details.deuLoad) || 0;
             const needsCargo = (mLoad > 0 || cLoad > 0 || dLoad > 0);
             if (needsCargo && !areFleetResourcesLoaded(mLoad, cLoad, dLoad)) {
                 if (sendBtnEl) {
@@ -9465,8 +9536,7 @@
             }
             const statusEl = document.getElementById('ls-coll-hud-status');
             if (statusEl) {
-                const pctText = info.pct ? `(%${info.pct})` : '';
-                statusEl.innerText = t('fleet_hud_fuel_overload_desc', '⚠️ Yakıt tüketimi ambarı aşıyor {pct}! Lütfen sayfadan uçuş hızını düşürün, hedefi atlayın ya da görevi iptal edin.').replace('{pct}', pctText);
+                statusEl.innerText = getFuelIssueDescription(info);
                 statusEl.style.display = 'block';
             }
         };
@@ -9496,12 +9566,6 @@
                 const slots = getFleetSlotsInfo();
                 if (slots.isKnown && slots.isFull) {
                     updateCollectorBannerSlotWaiting(slots);
-                    return;
-                }
-
-                const fuelOverload = getFleetFuelOverloadInfo();
-                if (fuelOverload.isOverloaded) {
-                    updateCollectorBannerFuelOverload(fuelOverload);
                     return;
                 }
 
@@ -9597,12 +9661,21 @@
                     }
                 }
 
-                // 4. Filo gönderim hazır mı kontrolü (Görev seçili + Kargo yüklü + Buton aktif + Hedef kontrolü bitmiş)
+                // Yakıt / Ambar kontrolü (Hedef ve görev seçiliyken, sunucu kontrolü tamamlandığında)
+                const fuelIssue = getFleetFuelIssueInfo(curDeuLoad);
+                if (!targetChecking && isMissionSelected(missionId) && fuelIssue.hasIssue) {
+                    stableReadyTicks = 0;
+                    updateCollectorBannerFuelOverload(fuelIssue);
+                    return;
+                }
+
+                // 4. Filo gönderim hazır mı kontrolü (Görev seçili + Kargo yüklü + Buton tıklanabilir + Hedef kontrolü bitmiş)
                 const sendBtn = findSendFleetButton();
                 const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || sendBtn.offsetHeight > 0);
-                const isReady = isMissionSelected(missionId) && isCargoLoaded;
+                const isSendBtnClickable = isSendBtnVisible && !sendBtn.disabled && !sendBtn.classList.contains('off') && !sendBtn.classList.contains('disabled');
+                const isReady = isMissionSelected(missionId) && isCargoLoaded && isSendBtnClickable && !fuelIssue.hasIssue;
 
-                if (isReady && isSendBtnVisible) {
+                if (isReady) {
                     stableReadyTicks++;
                     if (stableReadyTicks >= 2) {
                         updateCollectorBannerReady(slots);
@@ -9613,18 +9686,22 @@
                         lastResourceFillTime = Date.now();
                         fillFleetResources(curMetLoad, curCriLoad, curDeuLoad);
                     }
-                    if (totalTicks > 40 && isSendBtnVisible && isReady) {
+                    if (totalTicks > 40 && isSendBtnClickable && isReady) {
                         updateCollectorBannerReady(slots);
                     }
                 }
 
                 // 5. 6 saniye boyunca hazır olmadıysa uyarı göster
                 if (totalTicks > 75 && (!isSendFleetReady() || !isCargoLoaded)) {
+                    if (fuelIssue.hasIssue) {
+                        updateCollectorBannerFuelOverload(fuelIssue);
+                        return;
+                    }
                     let reason = '';
                     if (targetChecking) reason = t('fleet_hud_wait_target_check', '⏳ Sunucu hedef kontrolü bekleniyor...');
                     else if (!isMissionSelected(missionId)) reason = t('fleet_hud_wait_mission', '⚠️ Görev seçimi bekleniyor (Nakliye/Konuşlandır)...');
                     else if (!isCargoLoaded) reason = t('fleet_hud_wait_cargo', '⚠️ Kaynak yüklemesi doğrulanıyor...');
-                    else if (!isSendBtnVisible) reason = t('fleet_hud_wait_send_btn', '⚠️ Filo Gönder butonu aktifleşmedi');
+                    else if (!isSendBtnClickable) reason = t('fleet_hud_wait_send_btn', '⚠️ Filo Gönder butonu aktifleşmedi');
                     else if (hasVisibleMissionError()) reason = t('fleet_mission_error_waiting', '⚠️ Görev onaylanamadı, hedef kontrol ediliyor...');
                     updateCollectorBannerWarning(slots, reason);
                 }
@@ -9808,10 +9885,13 @@
                 return;
             }
 
-            const fuelOverload = getFleetFuelOverloadInfo();
-            if (fuelOverload.isOverloaded) {
-                const pctText = fuelOverload.pct ? `(%${fuelOverload.pct})` : '';
-                const msg = t('fleet_error_fuel_overload_toast', '⚠️ Yakıt tüketimi ambar kapasitesini aşıyor {pct}! Lütfen uçuş hızını düşürün veya hedefi atlayın.').replace('{pct}', pctText);
+            const mLoad = (details.met !== undefined ? details.met : details.metLoad) || 0;
+            const cLoad = (details.cri !== undefined ? details.cri : details.criLoad) || 0;
+            const dLoad = (details.deu !== undefined ? details.deu : details.deuLoad) || 0;
+
+            const fuelIssue = getFleetFuelIssueInfo(dLoad);
+            if (fuelIssue.hasIssue) {
+                const msg = getFuelIssueToast(fuelIssue);
                 showCollectorToast(msg, 5000);
                 return;
             }
@@ -9820,22 +9900,8 @@
                 document.activeElement.blur();
             }
 
-            const fuelReq = getFleetFuelConsumption();
-            const liveDeu = getLiveResources().deuterium;
-            if (fuelReq > 0 && liveDeu < fuelReq) {
-                const fuelMsg = t('fleet_error_insufficient_fuel', '⚠️ Uçuş yakıtı yetersiz! (Gereken: {fuel} Deu, Mevcut: {avail} Deu)')
-                    .replace('{fuel}', formatShort(fuelReq))
-                    .replace('{avail}', formatShort(liveDeu));
-                showCollectorToast(fuelMsg, 5000);
-                return;
-            }
-
             const sendBtn = findSendFleetButton();
             const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || sendBtn.offsetHeight > 0);
-
-            const mLoad = (details.met !== undefined ? details.met : details.metLoad) || 0;
-            const cLoad = (details.cri !== undefined ? details.cri : details.criLoad) || 0;
-            const dLoad = (details.deu !== undefined ? details.deu : details.deuLoad) || 0;
             const needsCargo = (mLoad > 0 || cLoad > 0 || dLoad > 0);
             if (needsCargo && !areFleetResourcesLoaded(mLoad, cLoad, dLoad)) {
                 if (sendBtnEl) {
@@ -11021,8 +11087,7 @@
             }
             const statusEl = document.getElementById('ls-cour-hud-status');
             if (statusEl) {
-                const pctText = info.pct ? `(%${info.pct})` : '';
-                statusEl.innerText = t('fleet_hud_fuel_overload_desc', '⚠️ Yakıt tüketimi ambarı aşıyor {pct}! Lütfen sayfadan uçuş hızını düşürün, hedefi atlayın ya da görevi iptal edin.').replace('{pct}', pctText);
+                statusEl.innerText = getFuelIssueDescription(info);
                 statusEl.style.display = 'block';
             }
         };
@@ -11080,12 +11145,6 @@
                     return;
                 }
 
-                const fuelOverload = getFleetFuelOverloadInfo();
-                if (fuelOverload.isOverloaded) {
-                    updateCourierBannerFuelOverload(fuelOverload);
-                    return;
-                }
-
                 // 1. Hedef koordinatlarını ve tipini ata (Sunucu hedef sorgu kilitlenmesini önlemek için kontrollü çağrı)
                 if (!targetSet) {
                     if (g && s && p) {
@@ -11123,12 +11182,21 @@
                     }
                 }
 
-                // 4. Filo gönderim hazır mı kontrolü (Görev seçili + Kargo yüklü + Buton aktif + Hedef kontrolü bitmiş)
+                // Yakıt / Ambar kontrolü (Hedef ve görev seçiliyken, sunucu kontrolü tamamlandığında)
+                const fuelIssue = getFleetFuelIssueInfo(deuLoad);
+                if (!targetChecking && isMissionSelected(missionId) && fuelIssue.hasIssue) {
+                    stableReadyTicks = 0;
+                    updateCourierBannerFuelOverload(fuelIssue);
+                    return;
+                }
+
+                // 4. Filo gönderim hazır mı kontrolü (Görev seçili + Kargo yüklü + Buton tıklanabilir + Hedef kontrolü bitmiş)
                 const sendBtn = findSendFleetButton();
                 const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || sendBtn.offsetHeight > 0);
-                const isReady = isMissionSelected(missionId) && isCargoLoaded;
+                const isSendBtnClickable = isSendBtnVisible && !sendBtn.disabled && !sendBtn.classList.contains('off') && !sendBtn.classList.contains('disabled');
+                const isReady = isMissionSelected(missionId) && isCargoLoaded && isSendBtnClickable && !fuelIssue.hasIssue;
 
-                if (isReady && isSendBtnVisible) {
+                if (isReady) {
                     stableReadyTicks++;
                     if (stableReadyTicks >= 2) {
                         updateCourierBannerReady(slots);
@@ -11139,18 +11207,22 @@
                         lastResourceFillTime = Date.now();
                         fillFleetResources(metLoad, criLoad, deuLoad);
                     }
-                    if (totalTicks > 40 && isSendBtnVisible) {
+                    if (totalTicks > 40 && isSendBtnClickable && isReady) {
                         updateCourierBannerReady(slots);
                     }
                 }
 
                 // 5. 6 saniye boyunca hazır olmadıysa uyarı göster ama döngüyü kesme
                 if (totalTicks > 75 && (!isSendFleetReady() || !isCargoLoaded)) {
+                    if (fuelIssue.hasIssue) {
+                        updateCourierBannerFuelOverload(fuelIssue);
+                        return;
+                    }
                     let reason = '';
                     if (targetChecking) reason = t('fleet_hud_wait_target_check', '⏳ Sunucu hedef kontrolü bekleniyor...');
                     else if (!isMissionSelected(missionId)) reason = t('fleet_hud_wait_mission', '⚠️ Görev seçimi bekleniyor (Nakliye/Konuşlandır)...');
                     else if (!isCargoLoaded) reason = t('fleet_hud_wait_cargo', '⚠️ Kaynak yüklemesi doğrulanıyor...');
-                    else if (!isSendBtnVisible) reason = t('fleet_hud_wait_send_btn', '⚠️ Filo Gönder butonu aktifleşmedi');
+                    else if (!isSendBtnClickable) reason = t('fleet_hud_wait_send_btn', '⚠️ Filo Gönder butonu aktifleşmedi');
                     else if (hasVisibleMissionError()) reason = t('fleet_mission_error_waiting', '⚠️ Görev onaylanamadı, hedef kontrol ediliyor...');
                     updateCourierBannerWarning(slots, reason);
                 }
@@ -11331,10 +11403,13 @@
                 return;
             }
 
-            const fuelOverload = getFleetFuelOverloadInfo();
-            if (fuelOverload.isOverloaded) {
-                const pctText = fuelOverload.pct ? `(%${fuelOverload.pct})` : '';
-                const msg = t('fleet_error_fuel_overload_toast', '⚠️ Yakıt tüketimi ambar kapasitesini aşıyor {pct}! Lütfen uçuş hızını düşürün veya hedefi atlayın.').replace('{pct}', pctText);
+            const mLoad = (details.met !== undefined ? details.met : details.metLoad) || 0;
+            const cLoad = (details.cri !== undefined ? details.cri : details.criLoad) || 0;
+            const dLoad = (details.deu !== undefined ? details.deu : details.deuLoad) || 0;
+
+            const fuelIssue = getFleetFuelIssueInfo(dLoad);
+            if (fuelIssue.hasIssue) {
+                const msg = getFuelIssueToast(fuelIssue);
                 showCollectorToast(msg, 5000);
                 return;
             }
@@ -11343,22 +11418,8 @@
                 document.activeElement.blur();
             }
 
-            const fuelReq = getFleetFuelConsumption();
-            const liveDeu = getLiveResources().deuterium;
-            if (fuelReq > 0 && liveDeu < fuelReq) {
-                const fuelMsg = t('fleet_error_insufficient_fuel', '⚠️ Uçuş yakıtı yetersiz! (Gereken: {fuel} Deu, Mevcut: {avail} Deu)')
-                    .replace('{fuel}', formatShort(fuelReq))
-                    .replace('{avail}', formatShort(liveDeu));
-                showCollectorToast(fuelMsg, 5000);
-                return;
-            }
-
             const sendBtn = findSendFleetButton();
             const isSendBtnVisible = sendBtn && (sendBtn.offsetWidth > 0 || sendBtn.offsetHeight > 0);
-
-            const mLoad = (details.met !== undefined ? details.met : details.metLoad) || 0;
-            const cLoad = (details.cri !== undefined ? details.cri : details.criLoad) || 0;
-            const dLoad = (details.deu !== undefined ? details.deu : details.deuLoad) || 0;
             const needsCargo = (mLoad > 0 || cLoad > 0 || dLoad > 0);
             if (needsCargo && !areFleetResourcesLoaded(mLoad, cLoad, dLoad)) {
                 if (sendBtnEl) {
@@ -12463,10 +12524,9 @@
                 return;
             }
 
-            const fuelOverload = getFleetFuelOverloadInfo();
-            if (fuelOverload.isOverloaded) {
-                const pctText = fuelOverload.pct ? `(%${fuelOverload.pct})` : '';
-                const msg = t('fleet_error_fuel_overload_toast', '⚠️ Yakıt tüketimi ambar kapasitesini aşıyor {pct}! Lütfen uçuş hızını düşürün veya hedefi atlayın.').replace('{pct}', pctText);
+            const fuelIssue = getFleetFuelIssueInfo(0);
+            if (fuelIssue.hasIssue) {
+                const msg = getFuelIssueToast(fuelIssue);
                 showCollectorToast(msg, 5000);
                 return;
             }
@@ -12482,16 +12542,6 @@
             if (isSendBtnVisible) {
                 if (document.activeElement && document.activeElement.blur) {
                     document.activeElement.blur();
-                }
-
-                const fuelReq = getFleetFuelConsumption();
-                const liveDeu = getLiveResources().deuterium;
-                if (fuelReq > 0 && liveDeu < fuelReq) {
-                    const fuelMsg = t('fleet_error_insufficient_fuel', '⚠️ Uçuş yakıtı yetersiz! (Gereken: {fuel} Deu, Mevcut: {avail} Deu)')
-                        .replace('{fuel}', formatShort(fuelReq))
-                        .replace('{avail}', formatShort(liveDeu));
-                    showCollectorToast(fuelMsg, 5000);
-                    return;
                 }
 
                 isDispatching = true;
@@ -14242,7 +14292,7 @@
                         '<div style="display:flex;justify-content:space-between;align-items:center">' +
                             '<div style="display:flex;align-items:center;gap:6px">' +
                                 '<span style="font-size:12px;color:#00bcff;font-weight:bold">⚡ LuckyStrike Helper</span>' +
-                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v16.1</span>' +
+                                '<span id="ls-setting-cur-ver" style="font-size:10px;color:#00bcff;background:rgba(0,188,255,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,188,255,0.3);font-weight:bold">v16.2</span>' +
                             '</div>' +
                             '<a href="https://github.com/kadirersoy/luckystrike-ogame-helper" target="_blank" style="font-size:10.5px;color:#00bcff;text-decoration:none;display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,0.05);padding:2px 7px;border-radius:4px;border:1px solid #1a2c3f" title="GitHub Proje Sayfası" data-i18n-title="settings_github_title">' +
                                 '<span>🔗</span> <span data-i18n="settings_github">GitHub</span>' +
@@ -15082,7 +15132,7 @@
             const r3 = Array.from(debugFilterState.row3).join(', ');
 
             let out = '==================================================\n' +
-                      '  LuckyStrike OGame Helper v16.1 - Log Kayıtları\n' +
+                      '  LuckyStrike OGame Helper v16.2 - Log Kayıtları\n' +
                       '  Tarih: ' + nowStr + '\n' +
                       '  URL: ' + window.location.href + '\n' +
                       '  Filtreler: [Akış: ' + r1 + '] [Kapsam: ' + r2 + '] [Seviye: ' + r3 + ']\n' +
@@ -15631,6 +15681,6 @@
     scanAndSaveExpeditionTemplates();
     updateAllAutomationStartButtons();
     setInterval(updateAllAutomationStartButtons, 400);
-    console.log(LS, 'LuckyStrike OGame Helper v16.1 hazır!');
+    console.log(LS, 'LuckyStrike OGame Helper v16.2 hazır!');
 
 })();

@@ -1,3 +1,31 @@
+### [TR] Türkçe Sürüm Notları (v16.2)
+- **⛽ Gezegen Döteryum Yetersizliği & Dinamik Hız Ayarı Desteği:**
+  - Filo gönderiminde gereken uçuş yakıtı ve kargo döteryumu toplamının gezegendeki mevcut döteryumu aştığı durumlar (`consumption + cargoDeu > liveDeuterium`) tespit edildiğinde ekranın `⚠️ Hedefi Tekrar Dene` uyarısında takılı kalması sorunu kökten çözüldü.
+  - HUD banner'ı anında turuncu `⚠️ Hızı Ayarla & Gönder (Space)` butonuna geçer ve tam döteryum farkını gösteren açıklama metnini yayınlar:
+    `⚠️ Uçuş yakıtı yetersiz! (Gereken: {fuel} Deu, Mevcut: {avail} Deu). Lütfen sayfadan uçuş hızını (%10-%90) düşürün, hedefi atlayın ya da görevi iptal edin.`
+  - Kullanıcı OGame sayfasından uçuş hızını düşürdüğünde (%10 - %90), gereken yakıt gezegendeki döteryum miktarına indiği anda buton otomatik olarak tekrar yeşil `🚀 Filoyu Gönder (Space)` hazır durumuna döner ve açıklama metni gizlenir.
+  - Yetersiz yakıt durumundayken butona tıklanması veya `Space` tuşuna basılması güvenle engellenerek kullanıcıya detaylı toast uyarısı sunulur.
+  - Toplayıcı (Collector), Postacı (Courier) ve Maliyet Sepeti (Cart) akışlarının tamamında hazırlık ve gönderim kontrolleri eşitlendi.
+- **⚡ Anlık Tüketim & Dispatcher Reaktivitesi:**
+  - Sayfadaki hız yüzdesi tıklamalarında `#consumption` elementi doğrudan ve öncelikli okunarak 0 gecikmeyle arayüze yansıtılması sağlandı.
+  - `bridge.js` periyodik senkronizasyon aralığı 800ms'den 300ms'ye indirildi ve hız yüzdesi tıklamalarına 30ms, 100ms ve 250ms tetikleyicileri eklendi.
+
+---
+
+### [ENG] English Release Notes (v16.2)
+- **⛽ Planet Deuterium Shortage & Dynamic Speed Adjustment Support:**
+  - Resolved an issue where insufficient flight deuterium fuel on the planet (`consumption + cargoDeu > liveDeuterium`) caused the HUD to get stuck on `⚠️ Retry Target` with an empty reason text.
+  - The HUD banner now immediately switches to `⚠️ Adjust Speed & Send (Space)` and displays an informative explanation with exact amounts:
+    `⚠️ Insufficient flight fuel! (Required: {fuel} Deu, Available: {avail} Deu). Please lower flight speed (10%-90%) below, skip target, or cancel.`
+  - When the user lowers flight speed on the OGame page (10% - 90%) and required fuel falls within available deuterium, the button automatically turns green and ready (`🚀 Send Fleet (Space)`).
+  - Clicking or pressing Space while fuel is insufficient is safely prevented with an informative toast warning.
+  - Readiness and dispatch guards unified across Collector, Courier, and Cost Cart.
+- **⚡ Instant Fuel Consumption & Dispatcher Reactivity:**
+  - DOM `#consumption` element is now read with priority, enabling instant reactivity upon speed percentage clicks.
+  - `bridge.js` dispatcher state sync reduced from 800ms to 300ms, with 30ms, 100ms, and 250ms click triggers.
+
+---
+
 ### [TR] Türkçe Sürüm Notları (v16.1)
 - **⛽ Yakıt Tüketim Ambar Aşımı (Fuel Overload) Koruması & Yönetimi:**
   - Özellikle uzun menzilli uçuşlarda Casus Sondası gibi düşük kargo kapasiteli filoların yakıt gereksinimi toplam ambarı aştığında (`consumption > cargoSpace`, örn: `%103`) gönderim kilitlenerek hatalı filo çıkışı engellendi.

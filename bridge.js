@@ -121,11 +121,12 @@
 
     try {
         syncFleetDispatcherState();
-        setInterval(syncFleetDispatcherState, 800);
+        setInterval(syncFleetDispatcherState, 300);
         document.addEventListener('click', function (e) {
-            if (e.target && (e.target.closest('#speedPercentage') || e.target.closest('.steps') || (e.target.className && String(e.target.className).indexOf('step') !== -1))) {
-                setTimeout(syncFleetDispatcherState, 50);
-                setTimeout(syncFleetDispatcherState, 200);
+            if (e.target && (e.target.closest('#speedPercentage, .steps, .step, [data-step], .speed') || (e.target.className && String(e.target.className).indexOf('step') !== -1))) {
+                setTimeout(syncFleetDispatcherState, 30);
+                setTimeout(syncFleetDispatcherState, 100);
+                setTimeout(syncFleetDispatcherState, 250);
             }
         }, true);
     } catch (e) {}
